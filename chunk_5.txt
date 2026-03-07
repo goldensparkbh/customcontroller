@@ -1,0 +1,166 @@
+        quantity: 1,
+        config: snapshot,
+        preview
+      };
+
+      cartItems.push(cartItem);
+      saveCart(cartItems);
+
+      window.location.href = "/cart";
+    });
+
+    /* ----- Apply language to UI ----- */
+
+    function applyLanguage() {
+      document.documentElement.lang = currentLang;
+      document.documentElement.dir = currentLang === "ar" ? "rtl" : "ltr";
+
+      if (currentLang === "ar") {
+        document.body.style.fontFamily = "'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      } else {
+        document.body.style.fontFamily = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      }
+
+      const logoEl = document.querySelector("[data-i18n='logo']");
+      if (logoEl) logoEl.textContent = t("logo");
+
+      const totalLabelEl = document.querySelector("[data-i18n='totalLabel']");
+      if (totalLabelEl) totalLabelEl.textContent = t("totalLabel");
+
+      const addToCartTextEl = document.querySelector("[data-i18n='addToCart']");
+      if (addToCartTextEl) {
+        const labelEl = addToCartTextEl.querySelector(".add-label");
+        if (labelEl) labelEl.textContent = t("addToCart");
+        else addToCartTextEl.textContent = t("addToCart");
+      }
+
+      const loadingTextEl = document.querySelector("[data-i18n='loadingConfigurator']");
+      if (loadingTextEl) loadingTextEl.textContent = t("loadingConfigurator");
+
+      document.querySelectorAll("[data-i18n='navPremade']").forEach(el => {
+        el.textContent = t("navPremade");
+      });
+      document.querySelectorAll("[data-i18n='navContact']").forEach(el => {
+        el.textContent = t("navContact");
+      });
+      document.querySelectorAll("[data-i18n='navBuildCta']").forEach(el => {
+        el.textContent = t("navBuildCta");
+      });
+
+      if (langSwitchBtn) {
+        const labelEl = langSwitchBtn.querySelector("[data-i18n='chooseLanguage']");
+        const targetLang = currentLang === "ar" ? "en" : "ar";
+        if (labelEl) labelEl.textContent = targetLang.toUpperCase();
+        else langSwitchBtn.textContent = targetLang.toUpperCase();
+        langSwitchBtn.dataset.lang = currentLang === "ar" ? "en" : "ar";
+        langSwitchBtn.setAttribute("aria-label", t("chooseLanguage"));
+      }
+      document.querySelectorAll("[data-i18n='partsOptionsHeading']").forEach(el => {
+        el.textContent = t("availableOptions");
+      });
+      document.querySelectorAll("[data-i18n='partsColorsHeading']").forEach(el => {
+        el.textContent = t("availableColors");
+      });
+
+      // const previewBtnEl = document.getElementById("previewBtn");
+      // if (previewBtnEl) previewBtnEl.textContent = t("preview");
+
+      updateNavLangLabel();
+      updateThemeLabel();
+      updateFlipControl();
+
+      buildPartsList();
+
+      if (selectedPartId) {
+        controllerArea.classList.add("has-selection");
+        const part = ALL_PARTS.find(p => p.id === selectedPartId);
+        if (part) {
+          controllerArea.style.setProperty("--selected-mask-url", 'url(' + part.mask + ')');
+        }
+
+        const rows = partsRowsById[selectedPartId] || [];
+        rows.forEach(row => row.classList.add("active"));
+        const layer = layers[selectedPartId];
+        if (layer) layer.classList.add("selected");
+        openColorPanelForPart(selectedPartId);
+      } else {
+        controllerArea.classList.remove("has-selection");
+        controllerArea.style.removeProperty("--selected-mask-url");
+        resetColorPanel();
+        resetOptionsPanel();
+
+      }
+
+      updateSummary();
+    }
+
+    function updateFlipControl() {
+      const label = currentSide === "front" ? t("front") : t("back");
+      if (flipControlBtn) {
+        flipControlBtn.setAttribute("aria-label", label);
+        flipControlBtn.classList.toggle("is-back", currentSide === "back");
+      }
+      if (controllerFlipBtn) {
+        controllerFlipBtn.setAttribute("aria-label", label);
+        controllerFlipBtn.classList.toggle("is-back", currentSide === "back");
+      }
+    }
+
+    function refreshAccordionHeights() {
+      accordionItems.forEach(item => {
+        const content = item.querySelector(".accordion-content");
+        if (!content) return;
+        if (item.classList.contains("open")) {
+          content.style.maxHeight = content.scrollHeight + "px";
+        } else {
+          content.style.maxHeight = "0px";
+        }
+      });
+    }
+
+    accordionItems.forEach(item => {
+      const header = item.querySelector(".accordion-header");
+      const content = item.querySelector(".accordion-content");
+      if (!header || !content) return;
+      header.addEventListener("click", () => {
+        const isOpen = item.classList.contains("open");
+        item.classList.toggle("open", !isOpen);
+        refreshAccordionHeights();
+      });
+    });
+
+    window.addEventListener("resize", refreshAccordionHeights);
+
+    // Initial language application
+    applyLanguage();
+    bootstrapZohoInventory();
+    refreshAccordionHeights();
+  
+
+`;
+
+function ConfiguratorPage() {
+  useEffect(() => {
+    document.body.classList.add('configurator-page-active');
+    const scriptEl = document.createElement('script');
+    // Wrap configurator script to avoid leaking globals and redeclaration errors on remount.
+    // Ensure we handle backticks correctly if they exist in script, although our script uses mostly single/double quotes.
+    // The previous implementation used backticks for `configuratorScript` definition itself, but inside the component it puts it inside another backtick block?
+    // Wait, `configuratorScript` IS the backticked string constant. 
+    // We are putting it INTO a backticked string: `(function(){\n${configuratorScript}\n})();`
+    scriptEl.textContent = `(function(){\n${configuratorScript}\n})();`;
+    document.body.appendChild(scriptEl);
+    return () => {
+      document.body.classList.remove('configurator-page-active');
+      document.body.removeChild(scriptEl);
+    };
+  }, []);
+
+  return (
+    <div className="configurator-page">
+      <div dangerouslySetInnerHTML={{ __html: configuratorMarkup }} />
+    </div>
+  );
+}
+
+export default ConfiguratorPage;

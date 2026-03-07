@@ -1,0 +1,30 @@
+{
+  "name": "functions",
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "echo \"No lint configured\"",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^6.8.0",
+    "dotenv": "^17.2.3",
+    "firebase-admin": "^11.11.1",
+    "firebase-functions": "^7.0.2",
+    "pdfkit": "^0.15.0",
+    "svg-to-pdfkit": "^0.1.8",
+    "undici": "^7.16.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "14.1.2",
+    "acorn": "8.15.0",
+    "markdown-it": "14.1.0"
+  }
+}

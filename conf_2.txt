@@ -1,0 +1,1025 @@
+    const controllerWrapper = document.getElementById("controllerWrapper");
+    const controllerArea = document.getElementById("controllerArea");
+    const faceFrontEl = document.getElementById("controllerFaceFront");
+    const faceBackEl = document.getElementById("controllerFaceBack");
+
+    const controllerFlipBtn = document.getElementById("controllerFlipBtn");
+    //const previewBtn = document.getElementById("previewBtn");
+
+    const summaryAmountEl = document.getElementById("summaryAmount");
+    const addToCartBtn = document.getElementById("addToCartBtn");
+    const addToCartHome = addToCartBtn ? { parent: addToCartBtn.parentElement, next: addToCartBtn.nextSibling } : null;
+
+    const colorPanelTitle = document.getElementById("colorPanelTitle");
+    const colorPanelSub = document.getElementById("colorPanelSub");
+    const optionsPanelSub = document.getElementById("optionsPanelSub");
+    const colorPanelGrid = document.getElementById("colorPanelGrid");       // colors grid
+    const optionsPanelGrid = document.getElementById("optionsPanelGrid");   // options grid
+    const colorPanelHeaderTop = document.getElementById("colorPanelHeaderTop");
+    const colorPanelHeaderBottom = document.getElementById("colorPanelHeaderBottom");
+    const colorEmptyState = document.getElementById("colorEmptyState");
+
+    const partsLists = Array.from(document.querySelectorAll(".parts-list"));
+    const primaryList = document.querySelector('.parts-list[data-list="primary"]');
+    const secondaryList = document.querySelector('.parts-list[data-list="secondary"]');
+    const accordionItems = Array.from(document.querySelectorAll(".accordion-item"));
+    const partTooltip = document.getElementById("partTooltip");
+
+    const navLangToggle = document.getElementById("langToggle");
+    const mobileLangToggle = document.getElementById("mobileLangToggle");
+    const themeToggle = document.getElementById("themeToggle");
+    const mobileThemeToggle = document.getElementById("mobileThemeToggle");
+    const navMenuBtn = document.querySelector(".nav-menu-btn");
+    const mobileNavOverlay = document.getElementById("mobileNavOverlay");
+    const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+    const langSwitchBtn = document.getElementById("langSwitchBtn");
+    const configuratorControls = document.getElementById("configuratorControls");
+    const panelButtons = configuratorControls ? configuratorControls.querySelectorAll("[data-panel]") : [];
+    const panelSwitchButtons = document.querySelectorAll(".panel-switch-btn");
+    const flipControlBtn = document.getElementById("flipControlBtn");
+    const zohoLoadingOverlay = document.getElementById("zohoLoadingOverlay");
+    
+    // We repurpose the grid container for both Parts list and Color swatches on mobile
+    const mobileOptionsGrid = document.getElementById("mobileOptionsGrid");
+    
+    const mobileSelectedPart = document.getElementById("mobileSelectedPart");
+    const mobileSelectedPartImg = mobileSelectedPart ? mobileSelectedPart.querySelector("img") : null;
+    const mobileQuery = window.matchMedia("(max-width: 900px)");
+    let currentPanel = "options"; 
+    let mobileDrawerOptions = [];
+    let mobileDrawerColors = [];
+    // showMobileDrawer flag is now less relevant since we always show the bar, but we can use it to track 'expanded' state if needed
+    // For now, the bar is always visible.
+
+    const layers = {};
+    const maskDataById = {};
+    let masksReady = false;
+    let currentSide = "front";
+    let selectedPartId = null;
+    let selectionPaletteMode = null; // "options" or "colors"
+    let baseControllerPrice = 0;
+    let hoverPartId = null;
+    let tooltipVisible = false;
+
+    const partsRowsById = {};
+    const configState = {};
+    ALL_PARTS.forEach(p => { configState[p.id] = null; });
+
+    function setZohoLoading(isLoading) {
+      if (!zohoLoadingOverlay) return;
+      zohoLoadingOverlay.classList.toggle("is-hidden", !isLoading);
+      zohoLoadingOverlay.setAttribute("aria-hidden", isLoading ? "false" : "true");
+    }
+
+    function setPanel(panel) {
+      // If clicking the SAME panel tab while a part is selected, DESELECT the part to go back to list
+      if (currentPanel === panel && selectedPartId && isMobileLayout()) {
+        clearSelection();
+        return;
+      }
+
+      currentPanel = panel;
+      const mobile = isMobileLayout();
+      selectionPaletteMode = mobile ? null : panel;
+      
+      // If switching panels on mobile, we might want to clear selection to show the new list
+      if (mobile) {
+         clearSelection();
+      }
+
+      document.body.classList.toggle("config-panel-options", panel === "options");
+      document.body.classList.toggle("config-panel-colors", panel === "colors");
+
+      panelButtons.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.panel === panel);
+        btn.setAttribute("aria-pressed", btn.dataset.panel === panel ? "true" : "false");
+      });
+      panelSwitchButtons.forEach(btn => {
+        const isActive = btn.dataset.panel === panel;
+        btn.classList.toggle("active", isActive);
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+
+      if (!mobile && accordionItems.length >= 2) {
+        accordionItems.forEach((item, idx) => {
+          const isOptions = panel === "options";
+          item.classList.toggle("open", isOptions ? idx === 0 : idx === 1);
+        });
+        refreshAccordionHeights();
+      }
+
+      if (selectedPartId) {
+        openColorPanelForPart(selectedPartId);
+      } else {
+        // If no part selected, ensure mobile bar shows the list
+        if (mobile) updateMobileOptionsBar();
+      }
+    }
+
+    function isMobileLayout() {
+      return mobileQuery && mobileQuery.matches;
+    }
+
+    function disableMobilePanels() {
+      document.body.classList.remove("config-panel-options", "config-panel-colors");
+      selectionPaletteMode = null;
+      panelButtons.forEach(btn => {
+        btn.classList.remove("active");
+        btn.setAttribute("aria-pressed", "false");
+      });
+    }
+
+    function setMobileActionBar(isMobile) {
+      if (!addToCartBtn || !addToCartHome) return;
+      if (addToCartBtn.parentElement !== addToCartHome.parent) {
+        if (addToCartHome.next && addToCartHome.next.parentNode === addToCartHome.parent) {
+          addToCartHome.parent.insertBefore(addToCartBtn, addToCartHome.next);
+        } else {
+          addToCartHome.parent.appendChild(addToCartBtn);
+        }
+      }
+    }
+
+    function updateMobileSelectedPartBadge() {
+      if (!mobileSelectedPart || !mobileSelectedPartImg) return;
+      // We don't really use this floating badge in the new design
+      mobileSelectedPart.style.display = "none";
+    }
+
+    // No mobile drawer listeners anymore, we use the main grid
+
+    if (mobileSelectedPart) {
+      mobileSelectedPart.addEventListener("click", () => {
+        // legacy
+      });
+    }
+
+    panelSwitchButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const panel = btn.dataset.panel;
+        if (!panel) return;
+        setPanel(panel);
+      });
+    });
+
+    if (configuratorControls) {
+      configuratorControls.addEventListener("click", (e) => {
+        if (!isMobileLayout()) return;
+        const btn = e.target.closest(".control-btn");
+        if (!btn) return;
+        if (btn.id === "langSwitchBtn") {
+          currentLang = currentLang === "ar" ? "en" : "ar";
+          applyLanguage();
+          return;
+        }
+        if (btn.dataset.action === "flip") {
+          setSide(currentSide === "front" ? "back" : "front");
+          playClick();
+          return;
+        }
+        const panel = btn.dataset.panel;
+        if (panel) setPanel(panel);
+      });
+      if (isMobileLayout()) {
+        setPanel(currentPanel);
+        setMobileActionBar(true);
+      } else {
+        disableMobilePanels();
+        setMobileActionBar(false);
+      }
+
+      const mqlHandler = (e) => {
+          if (e.matches) {
+            setPanel(currentPanel);
+            setMobileActionBar(true);
+          } else {
+            disableMobilePanels();
+            setMobileActionBar(false);
+          }
+      };
+
+      if (mobileQuery && mobileQuery.addEventListener) {
+        mobileQuery.addEventListener("change", mqlHandler);
+      } else if (mobileQuery && mobileQuery.addListener) {
+        mobileQuery.addListener(mqlHandler);
+      }
+    }
+
+    function updateNavLangLabel() {
+      const label = currentLang === "ar" ? "EN" : "AR";
+      if (navLangToggle) navLangToggle.textContent = label;
+      if (mobileLangToggle) mobileLangToggle.textContent = label;
+    }
+
+    function toggleLanguage() {
+      currentLang = currentLang === "ar" ? "en" : "ar";
+      applyLanguage();
+    }
+
+    let currentTheme = localStorage.getItem("ez_theme") || "dark";
+
+    function applyTheme() {
+      document.body.classList.toggle("theme-light", currentTheme === "light");
+    }
+
+    function themeLabel() {
+      const lightLabel = t("themeLight");
+      const darkLabel = t("themeDark");
+      return currentTheme === "dark" ? lightLabel : darkLabel;
+    }
+
+    function updateThemeLabel() {
+      const label = themeLabel();
+      if (themeToggle) themeToggle.textContent = label;
+      if (mobileThemeToggle) mobileThemeToggle.textContent = label;
+    }
+
+    function toggleTheme() {
+      currentTheme = currentTheme === "dark" ? "light" : "dark";
+      localStorage.setItem("ez_theme", currentTheme);
+      applyTheme();
+      updateThemeLabel();
+    }
+
+    if (navLangToggle) {
+      navLangToggle.addEventListener("click", toggleLanguage);
+    }
+
+    if (mobileLangToggle) {
+      mobileLangToggle.addEventListener("click", toggleLanguage);
+    }
+
+    if (themeToggle) {
+      themeToggle.addEventListener("click", toggleTheme);
+    }
+
+    if (mobileThemeToggle) {
+      mobileThemeToggle.addEventListener("click", toggleTheme);
+    }
+
+    function setMobileNavOpen(isOpen) {
+      if (!mobileNavOverlay || !mobileNavDrawer) return;
+      mobileNavOverlay.classList.toggle("open", isOpen);
+      mobileNavDrawer.classList.toggle("open", isOpen);
+      document.body.classList.toggle("mobile-nav-open", isOpen);
+      if (navMenuBtn) {
+        navMenuBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      }
+    }
+
+    if (navMenuBtn && mobileNavOverlay && mobileNavDrawer) {
+      navMenuBtn.addEventListener("click", () => {
+        const isOpen = mobileNavDrawer.classList.contains("open");
+        setMobileNavOpen(!isOpen);
+      });
+      mobileNavOverlay.addEventListener("click", () => setMobileNavOpen(false));
+      mobileNavDrawer.querySelectorAll("a, button").forEach((el) => {
+        el.addEventListener("click", () => setMobileNavOpen(false));
+      });
+    }
+
+    applyTheme();
+    updateThemeLabel();
+
+    /* ----- Layers & masks ----- */
+
+    function buildPartLayers() {
+      ALL_PARTS.forEach(part => {
+        const layer = document.createElement("div");
+        layer.className = "part-layer";
+        layer.dataset.partId = part.id;
+        layer.style.setProperty("--mask-url", "url('" + part.mask + "')");
+        if (part.side === "front") faceFrontEl.appendChild(layer);
+        else faceBackEl.appendChild(layer);
+        layers[part.id] = layer;
+      });
+    }
+    buildPartLayers();
+
+    function loadMask(part) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.src = part.mask;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          maskDataById[part.id] = {
+            width: canvas.width,
+            height: canvas.height,
+            data: imageData.data
+          };
+          resolve();
+        };
+        img.onerror = () => resolve();
+      });
+    }
+
+    (async function () {
+      for (const part of ALL_PARTS) await loadMask(part);
+      masksReady = true;
+    })();
+
+    /* ----- Money & summary ----- */
+
+    function formatMoney(v) {
+      return i18n[currentLang].currencyPrefix + v.toFixed(2);
+    }
+
+    function hasCustomizations() {
+      return Object.values(configState).some(Boolean);
+    }
+
+    function getBasePrice(partId) {
+      const chosen = selectedPriceByPart[partId];
+      if (typeof chosen === "number" && !Number.isNaN(chosen)) return chosen;
+      const dynamic = dynamicPricesByPart[partId];
+      if (typeof dynamic === "number" && !Number.isNaN(dynamic)) return dynamic;
+      return PRICES[partId] || 0;
+    }
+
+    function computeTotal() {
+      let tSum = baseControllerPrice || 0;
+      for (const p of ALL_PARTS) {
+        if (!configState[p.id]) continue;
+        tSum += getBasePrice(p.id);
+      }
+      return tSum;
+    }
+
+    function updateSummary() {
+      summaryAmountEl.textContent = formatMoney(computeTotal());
+      const summaryAmountAltEl = document.getElementById("summaryAmountAlt");
+      if (summaryAmountAltEl) summaryAmountAltEl.textContent = formatMoney(computeTotal());
+      const navLabelEl = document.querySelector(".nav-amount-label");
+      if (navLabelEl) {
+        navLabelEl.textContent = hasCustomizations()
+          ? "PS5 Controller (Customized)"
+          : "PS5 Original Controller (No Customizations)";
+      }
+    }
+
+    /* ----- Color application ----- */
+
+    function setPartPrice(partId, variantHex, isOption) {
+      const palette = isOption ? dynamicOptionsByPart[partId] : dynamicColorsByPart[partId];
+      const hexLower = (variantHex || "").toLowerCase();
+      const match = palette ? palette.find(entry => (entry.hex || "").toLowerCase() === hexLower) : null;
+      if (match && typeof match.price === "number" && !Number.isNaN(match.price)) {
+        selectedPriceByPart[partId] = match.price;
+      } else if (typeof dynamicPricesByPart[partId] === "number" && !Number.isNaN(dynamicPricesByPart[partId])) {
+        selectedPriceByPart[partId] = dynamicPricesByPart[partId];
+      } else {
+        selectedPriceByPart[partId] = PRICES[partId] || 0;
+      }
+    }
+
+    function formatQtyDisplay(qty) {
+      if (typeof qty !== "number" || Number.isNaN(qty)) return "";
+      if (qty <= 0) return currentLang === "ar" ? "(نفدت الكمية)" : "(Out of Stock)";
+      if (qty < 5) {
+        if (qty === 1) return currentLang === "ar" ? "(المتبقي قطعة واحدة فقط)" : "(1 piece left)";
+        return currentLang === "ar" ? "(المتبقي " + qty + " قطع)" : "(" + qty + " pieces left)";
+      }
+      return "";
+    }
+
+    function applyColor(partId, colorHex) {
+      configState[partId] = colorHex;
+      setPartPrice(partId, colorHex, false);
+      const layer = layers[partId];
+      if (!layer) return;
+      layer.style.setProperty("--tint", colorHex);
+      if (TRANSPARENT_HEXES.has(colorHex.toLowerCase())) {
+        layer.style.setProperty("--tint-opacity", "0.35");
+      } else {
+        layer.style.setProperty("--tint-opacity", "1");
+      }
+      updateSummary();
+    }
+
+    function applyOptions(partId, colorHex) {
+      configState[partId] = colorHex;
+      setPartPrice(partId, colorHex, true);
+      const layer = layers[partId];
+      if (!layer) return;
+      layer.style.setProperty("--tint", colorHex);
+      if (TRANSPARENT_HEXES.has(colorHex.toLowerCase())) {
+        layer.style.setProperty("--tint-opacity", "0.35");
+      } else {
+        layer.style.setProperty("--tint-opacity", "1");
+      }
+      updateSummary();
+    }
+
+    function clearSelection() {
+      selectedPartId = null;
+      selectionPaletteMode = null;
+      controllerArea.classList.remove("has-selection");
+      controllerArea.style.removeProperty("--selected-mask-url");
+
+      Object.values(layers).forEach(layer => {
+        if (!layer) return;
+        layer.classList.remove("selected");
+      });
+
+      Object.values(partsRowsById).forEach(rows => {
+        if (!rows) return;
+        rows.forEach(row => row.classList.remove("active"));
+      });
+      
+      // On mobile, clearing selection means going back to the parts list
+      if (isMobileLayout()) {
+          updateMobileOptionsBar();
+      }
+    }
+
+    function resetColorPanel() {
+      colorPanelTitle.textContent = t("selectPart");
+      colorPanelSub.textContent = "";
+      optionsPanelSub.textContent = "";
+
+      colorPanelGrid.innerHTML = "";
+      optionsPanelGrid.innerHTML = "";
+
+      // hide headers + grids
+      colorPanelHeaderTop.style.display = "none";
+      colorPanelHeaderBottom.style.display = "none";
+      colorPanelGrid.style.display = "none";
+      optionsPanelGrid.style.display = "none";
+
+      // show empty placeholder
+      colorEmptyState.style.display = "flex";
+      mobileDrawerOptions = [];
+      mobileDrawerColors = [];
+      // No drawer update here, handled by updateMobileOptionsBar
+    }
+
+    function resetOptionsPanel() {
+      optionsPanelSub.textContent = "";
+      optionsPanelGrid.innerHTML = "";
+    }
+
+    function buildPaletteCells(target, entries, isOption) {
+      target.innerHTML = "";
+      // On mobile, if we are in "parts list" mode, this function is NOT called for parts.
+      // This is only for Swatches.
+      
+      const isMobileInfinite = target && target.id === "mobileOptionsGrid" && isMobileLayout();
+      const sourceEntries = isMobileInfinite && entries && entries.length
+        ? entries.concat(entries) // Infinite scrolling duplication
+        : entries;
+
+      (sourceEntries || []).forEach(({ hex, key, qty, price }) => {
+        const cell = document.createElement("div");
+        cell.className = isOption ? "cd-cell-op" : "cd-cell";
+
+        const sw = document.createElement("button");
+        sw.className = isOption ? "cd-swatch-op" : "cd-swatch";
+        sw.style.backgroundColor = hex;
+        const numericQty = typeof qty === "number" ? qty : null;
+        const isOut = numericQty !== null && numericQty <= 0;
+        if (isOut) {
+          sw.setAttribute("disabled", "disabled");
+          sw.classList.add("out-of-stock");
+          sw.style.filter = "none";
+          sw.style.boxShadow = "none";
+        }
+        sw.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!selectedPartId || isOut) return;
+          if (isOption) {
+            applyOptions(selectedPartId, hex);
+          } else {
+            applyColor(selectedPartId, hex);
+            playClick2();
+          }
+        });
+
+        const lbl = document.createElement("div");
+        lbl.className = "cd-color-name";
+        lbl.style.textAlign = "center";
+        const labelText = isOption ? t(key) : (key && t(key) ? t(key) : hex);
+        const priceVal = typeof price === "number" ? i18n[currentLang].currencyPrefix + price.toFixed(2) : "";
+        const qtyDisplay = formatQtyDisplay(numericQty);
+        const lines = [labelText];
+        if (priceVal) lines.push(priceVal);
+        if (qtyDisplay) lines.push(qtyDisplay);
+        lbl.innerHTML = lines.join("<br/>");
+
+        cell.appendChild(sw);
+        cell.appendChild(lbl);
+        target.appendChild(cell);
+      });
+    }
+
+    function renderMobilePartsList() {
+        if (!mobileOptionsGrid) return;
+        mobileOptionsGrid.innerHTML = "";
+        
+        // Filter parts based on currentPanel
+        const relevantParts = [...FRONT_PARTS, ...BACK_PARTS].filter(p => {
+             if (!isPartActive(p)) return false;
+             if (currentPanel === "options") {
+                 return (dynamicOptionsByPart[p.id] || []).length > 0;
+             } else {
+                 return (dynamicColorsByPart[p.id] || []).length > 0;
+             }
+        });
+
+        relevantParts.forEach(part => {
+             // Reuse createPartRow but simpler for mobile strip
+             const cell = document.createElement("div");
+             cell.className = "mobile-part-item";
+             // Optional styling inline if CSS is missing, but better in CSS
+             
+             const btn = document.createElement("button");
+             btn.className = "mobile-part-btn";
+             
+             const img = document.createElement("img");
+             img.src = part.icon || "/assets/icons/shells.png";
+             img.alt = getPartLabel(part.id);
+             
+             btn.appendChild(img);
+             
+             const lbl = document.createElement("div");
+             lbl.className = "mobile-part-label";
+             lbl.textContent = getPartLabel(part.id);
+             
+             btn.addEventListener("click", () => {
+                const targetSide = part.side;
+                if (currentSide !== targetSide) setSide(targetSide);
+                
+                clearSelection(); // This effectively resets UI but we want to select
+                
+                selectedPartId = part.id;
+                selectionPaletteMode = currentPanel; // Keep current mode
+                controllerArea.classList.add("has-selection");
+                controllerArea.style.setProperty("--selected-mask-url", "url('" + part.mask + "')");
+                
+                const layer = layers[part.id];
+                if (layer) layer.classList.add("selected");
+                
+                playClick();
+                openColorPanelForPart(part.id);
+             });
+             
+             cell.appendChild(btn);
+             cell.appendChild(lbl);
+             mobileOptionsGrid.appendChild(cell);
+        });
+    }
+
+    function updateMobileOptionsBar() {
+      if (!mobileOptionsGrid || !isMobileLayout()) return;
+      
+      if (!selectedPartId) {
+          // If no part selected, show the PARTS LIST for the current category
+          renderMobilePartsList();
+          updateMobileSelectedPartBadge();
+          return;
+      }
+   
+      // If part IS selected, show the swatches (already handled by openColorPanelForPart calls usually, but let's centralize)
+      // Actually openColorPanelForPart calls this? No, it used to call updateMobileOptionsDrawer.
+      // We should check if openColorPanelForPart populates the grid.
+      // logic moved to openColorPanelForPart
+    }
+
+    /* ----- Palette panel ----- */
+
+    function openColorPanelForPart(partId) {
+      const label = getPartLabel(partId);
+
+      // hide everything by default (Desktop stuff)
+      colorEmptyState.style.display = "none";
+      colorPanelHeaderTop.style.display = "none";
+      colorPanelHeaderBottom.style.display = "none";
+      colorPanelGrid.style.display = "none";
+      optionsPanelGrid.style.display = "none";
+
+      colorPanelTitle.textContent = label;
+      colorPanelSub.textContent = "";
+      optionsPanelSub.textContent = "";
+
+      colorPanelGrid.innerHTML = "";
+      optionsPanelGrid.innerHTML = "";
+
+      const palette = getPaletteForPart(partId);
+      const optionspalette = getOptionsForPart(partId);
+
+      const hasOptions = optionspalette && optionspalette.length;
+      const hasColors = palette && palette.length;
+
+      const mobile = isMobileLayout();
+      
+      // Determine what to show
+      let showOptions = false;
+      let showColors = false;
+
+      // Logic: if currentPanel is options, show options first.
+      if (currentPanel === "options" && hasOptions) showOptions = true;
+      else if (currentPanel === "colors" && hasColors) showColors = true;
+      else {
+          // Fallback if mismatch
+          if (hasColors) showColors = true;
+          else if (hasOptions) showOptions = true;
+      }
+      
+      // Desktop rendering
+      if (!mobile) {
+          if (showOptions) {
+            optionsPanelSub.style.display = "block";
+            optionsPanelGrid.style.display = "grid";
+            colorPanelHeaderTop.style.display = "block";
+            optionsPanelSub.textContent = t("availableOptions");
+            buildPaletteCells(optionsPanelGrid, optionspalette, true);
+          }
+          if (showColors) {
+            colorPanelHeaderTop.style.display = "block";
+            colorPanelHeaderBottom.style.display = "block";
+            colorPanelGrid.style.display = "grid";
+            colorPanelSub.textContent = t("availableColors");
+            buildPaletteCells(colorPanelGrid, palette, false);
+          }
+      } else {
+          // Mobile Rendering into Grid
+          // We render whichever ONE is active
+          const entries = showOptions ? optionspalette : (showColors ? palette : []);
+          buildPaletteCells(mobileOptionsGrid, entries, showOptions);
+      }
+      
+      updateMobileSelectedPartBadge();
+    }
+
+    /* ----- Side toggle ----- */
+
+    function setSide(side) {
+      if (side === currentSide) return;
+      currentSide = side;
+
+      if (currentSide === "back") controllerWrapper.classList.add("is-back");
+      else controllerWrapper.classList.remove("is-back");
+
+      updateFlipControl();
+
+      clearSelection();
+      resetColorPanel();
+      resetOptionsPanel();
+    }
+
+    if (controllerFlipBtn) {
+      controllerFlipBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setSide(currentSide === "front" ? "back" : "front");
+        playClick();
+      });
+    }
+
+    /* ----- Preview button ----- */
+
+    // previewBtn.addEventListener("click", () => {
+    //   clearSelection();
+    //   resetColorPanel();
+    //   playClick2();
+    // });
+
+    /* ----- Parts list ----- */
+
+    function createPartRow(part, listType) {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "parts-item";
+      row.dataset.partId = part.id;
+      row.dataset.side = part.side;
+      row.dataset.listType = listType || "";
+
+      const thumb = document.createElement("div");
+      thumb.className = "parts-thumb";
+
+      const img = document.createElement("img");
+      img.src = part.icon || "/assets/icons/shells.png";
+      img.alt = getPartLabel(part.id);
+      thumb.appendChild(img);
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "parts-name";
+      nameEl.textContent = getPartLabel(part.id);
+
+      row.appendChild(thumb);
+      row.appendChild(nameEl);
+
+      row.addEventListener("click", () => {
+        const targetSide = part.side;
+        if (currentSide !== targetSide) setSide(targetSide);
+
+        clearSelection();
+
+        selectedPartId = part.id;
+        selectionPaletteMode = listType || null;
+        controllerArea.classList.add("has-selection");
+        controllerArea.style.setProperty("--selected-mask-url", "url('" + part.mask + "')");
+
+        const layer = layers[part.id];
+        if (layer) layer.classList.add("selected");
+
+        Object.values(partsRowsById).forEach(rArr => {
+          if (!rArr) return;
+          rArr.forEach(r => r.classList.remove("active"));
+        });
+        (partsRowsById[part.id] || []).forEach(r => r.classList.add("active"));
+
+        playClick();
+        openColorPanelForPart(part.id);
+      });
+
+      if (!partsRowsById[part.id]) partsRowsById[part.id] = [];
+      partsRowsById[part.id].push(row);
+      return row;
+    }
+
+    function isPartActive(part) {
+      return availablePartsSet.has(part.id);
+    }
+
+    function buildPartsList() {
+      partsLists.forEach(list => list.innerHTML = "");
+      Object.keys(partsRowsById).forEach(k => delete partsRowsById[k]);
+
+      const optionParts = [...FRONT_PARTS, ...BACK_PARTS].filter(p => {
+        const hasGamemode = (dynamicOptionsByPart[p.id] || []).length > 0;
+        return hasGamemode && isPartActive(p);
+      });
+
+      const colorOnlyParts = [...FRONT_PARTS, ...BACK_PARTS].filter(p => {
+        const hasColors = (dynamicColorsByPart[p.id] || []).length > 0;
+        return hasColors && isPartActive(p);
+      });
+
+      if (primaryList) {
+        optionParts.forEach(p => primaryList.appendChild(createPartRow(p, "options")));
+      }
+      if (secondaryList) {
+        colorOnlyParts.forEach(p => secondaryList.appendChild(createPartRow(p, "colors")));
+      }
+      refreshAccordionHeights();
+      
+      // Update Mobile Bar as well
+      if (isMobileLayout()) {
+          updateMobileOptionsBar();
+      }
+    }
+
+    /* ----- Hit testing ----- */
+
+    function getPartsForSide(side) {
+      const base = side === "back" ? BACK_PARTS : FRONT_PARTS;
+      return base.filter(isPartActive);
+    }
+
+    function hitTestPart(designX, designY, side) {
+      const parts = getPartsForSide(side);
+      const sorted = [...parts].sort((a, b) => b.priority - a.priority);
+      for (const part of sorted) {
+        const mask = maskDataById[part.id];
+        if (!mask) continue;
+        const x = Math.floor(designX / BASE_WIDTH * mask.width);
+        const y = Math.floor(designY / BASE_HEIGHT * mask.height);
+        if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) continue;
+        const idx = (y * mask.width + x) * 4 + 3;
+        const alpha = mask.data[idx];
+        if (alpha > 20) return part.id;
+      }
+      return null;
+    }
+
+    /* ----- Controller click ----- */
+
+    controllerArea.addEventListener("click", (e) => {
+      if (!masksReady) return;
+      const rect = controllerArea.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width;
+      const relY = (e.clientY - rect.top) / rect.height;
+      if (relX < 0 || relX > 1 || relY < 0 || relY > 1) return;
+      const designX = relX * BASE_WIDTH;
+      const designY = relY * BASE_HEIGHT;
+      const partId = hitTestPart(designX, designY, currentSide);
+      if (!partId) return;
+      const partObj = ALL_PARTS.find(p => p.id === partId);
+      if (partObj && !isPartActive(partObj)) return;
+
+      clearSelection();
+
+      selectedPartId = partId;
+      selectionPaletteMode = null;
+      controllerArea.classList.add("has-selection");
+
+      const part = ALL_PARTS.find(p => p.id === partId);
+      if (part) {
+        controllerArea.style.setProperty("--selected-mask-url", "url('" + part.mask + "')");
+      }
+
+      const layer = layers[partId];
+      if (layer) layer.classList.add("selected");
+
+      const rows = partsRowsById[partId] || [];
+      if (rows.length) {
+        Object.values(partsRowsById).forEach(rArr => {
+          if (!rArr) return;
+          rArr.forEach(r => r.classList.remove("active"));
+        });
+        rows.forEach(r => r.classList.add("active"));
+      }
+
+      playClick();
+      // On desktop we might want to default to options or colors.
+      // On mobile we respect the current TAB.
+      if (!isMobileLayout()) {
+        if (!selectionPaletteMode) {
+            const hasOpts = (dynamicOptionsByPart[partId] || []).length > 0;
+            selectionPaletteMode = hasOpts ? "options" : "colors";
+        }
+      }
+      
+      openColorPanelForPart(partId);
+    });
+
+    /* ----- Hover tooltip (desktop only) ----- */
+
+    controllerArea.addEventListener("mousemove", (e) => {
+      if (!masksReady || isMobile) return;
+
+      const rect = controllerArea.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width;
+      const relY = (e.clientY - rect.top) / rect.height;
+
+      if (relX < 0 || relX > 1 || relY < 0 || relY > 1) {
+        if (tooltipVisible) {
+          partTooltip.classList.remove("visible");
+          tooltipVisible = false;
+          hoverPartId = null;
+        }
+        return;
+      }
+
+      const designX = relX * BASE_WIDTH;
+      const designY = relY * BASE_HEIGHT;
+      const partId = hitTestPart(designX, designY, currentSide);
+
+      if (!partId) {
+        if (tooltipVisible) {
+          partTooltip.classList.remove("visible");
+          tooltipVisible = false;
+          hoverPartId = null;
+        }
+        return;
+      }
+
+      const label = getPartLabel(partId);
+      partTooltip.textContent = label;
+      partTooltip.style.left = e.clientX + "px";
+      partTooltip.style.top = e.clientY + "px";
+
+      if (!tooltipVisible || hoverPartId !== partId) {
+        hoverPartId = partId;
+        partTooltip.classList.add("visible");
+        tooltipVisible = true;
+      }
+    });
+
+    controllerArea.addEventListener("mouseleave", () => {
+      if (tooltipVisible) {
+        partTooltip.classList.remove("visible");
+        tooltipVisible = false;
+        hoverPartId = null;
+      }
+    });
+
+    /* ----- Click outside → clear selection + color drawer ----- */
+
+    document.addEventListener("click", (e) => {
+      const clickInsideController = controllerArea.contains(e.target);
+
+      const clickInsideColors =
+        colorPanelGrid.contains(e.target) ||
+        optionsPanelGrid.contains(e.target) ||
+        colorPanelHeaderTop.contains(e.target) ||
+        colorPanelHeaderBottom.contains(e.target) ||
+        colorEmptyState.contains(e.target);
+
+      const clickInsideParts = partsLists.some(list => list.contains(e.target));
+      const clickInsideSideToggle = controllerFlipBtn ? controllerFlipBtn.contains(e.target) : false;
+      const clickInsideNav = document.querySelector(".top-nav").contains(e.target);
+      // Also check mobile grid
+      const clickInsideMobileGrid = mobileOptionsGrid && mobileOptionsGrid.contains(e.target);
+      const clickInsideMobileSwitch = document.getElementById("mobilePanelSwitch") && document.getElementById("mobilePanelSwitch").contains(e.target);
+
+
+      if (
+        !clickInsideController &&
+        !clickInsideColors &&
+        !clickInsideParts &&
+        !clickInsideSideToggle &&
+        !clickInsideNav &&
+        !clickInsideMobileGrid &&
+        !clickInsideMobileSwitch
+      ) {
+        clearSelection();
+        resetColorPanel();
+        resetOptionsPanel();
+        // const colorsColumn = document.getElementById("colors-column");
+        // colorsColumn.style.display = "none";
+      }
+    });
+
+    /* ----- Add to cart button (with localStorage + redirect to cart) ----- */
+
+    const CART_KEY = "ezCart";
+
+    function buildConfigSnapshot() {
+      const snapshot = {};
+      for (const partId in configState) {
+        if (Object.prototype.hasOwnProperty.call(configState, partId)) {
+          snapshot[partId] = configState[partId];
+        }
+      }
+      return snapshot;
+    }
+
+    function loadCart() {
+      try {
+        const raw = localStorage.getItem(CART_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCart(items) {
+      try {
+        localStorage.setItem(CART_KEY, JSON.stringify(items));
+      } catch {
+        // ignore
+      }
+    }
+
+    addToCartBtn.addEventListener("click", () => {
+      const total = computeTotal();
+      if (total <= 0) {
+        alert(t("alertNone"));
+        return;
+      }
+
+      const cartItems = loadCart();
+      const snapshot = buildConfigSnapshot();
+      const hasCustom = hasCustomizations();
+      const cartName = hasCustom
+        ? "PS5 Controller (Customized)"
+        : "PS5 Original Controller (No Customizations)";
+
+      // Build a richer SVG preview for the sales order (controller + colored markers)
+      function buildPreviewSvg(config) {
+        const entries = Object.entries(config || {}).filter(([, val]) => val);
+        const width = 500;
+        const height = 300;
+        const partPos = {
+          stickL: { x: 220, y: 200 },
+          stickR: { x: 320, y: 210 },
+          faceButtons: { x: 400, y: 160 },
+          touchpad: { x: 260, y: 120 },
+          shell: { x: 260, y: 150 },
+          trimpiece: { x: 260, y: 180 },
+          bumpers: { x: 260, y: 90 },
+          psButton: { x: 260, y: 210 },
+          backShellMain: { x: 260, y: 150 },
+          backTriggers: { x: 260, y: 110 }
+        };
+        const dots = entries.map(([part, hex]) => {
+          const pos = partPos[part] || { x: width / 2, y: height / 2 };
+          const fill = typeof hex === "string" ? hex : (hex && hex.hex) || "#444";
+          return (
+            '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="18" fill="' + fill + '" opacity="0.85" />' +
+            "</g>"
+          );
+        }).join("");
+        const ctrl = document.querySelector(".controller-face-front img");
+        const ctrlSrc = (ctrl && ctrl.src) || "/assets/controller.png";
+        const svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height + '" style="background:#0b0b0f">' +
+          '<image href="' + ctrlSrc + '" x="10" y="20" width="480" height="260" preserveAspectRatio="xMidYMid meet" opacity="0.9"/>' +
+          dots +
+          "</svg>";
+        return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+      }
+
+      const preview = hasCustom ? buildPreviewSvg(snapshot) : null;
+
+      const cartItem = {
+        id: Date.now(),
+        name: cartName,
+        unitPrice: total,

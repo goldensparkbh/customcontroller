@@ -1,0 +1,28 @@
+:root {
+  --page-bg: radial-gradient(circle at center, #353b57 0%, #0f1221 68%, #05060a 100%);
+  --color-text: #fff;
+  --color-text-muted: rgba(255, 255, 255, 0.78);
+  --accent1: #077CE5;
+  --accent2: #D1053A;
+  --accent3: #D1053A;
+  --accent-glow: #077CE5;
+  --card-bg: rgba(8, 8, 12, 0.96);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --nav-link-color: var(--accent1);
+  --nav-link-hover-border: rgba(255, 255, 255, 0.55);
+  --nav-pill-bg: rgba(0, 0, 0, 0.4);
+  --nav-pill-border: rgba(255, 255, 255, 0.12);
+  --nav-bg: radial-gradient(circle at top, rgba(6, 10, 20, 0.98), rgba(1, 2, 6, 0.96));
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-shadow: 0 10px 26px rgba(0, 0, 0, 0.9);
+  --button-primary-bg: linear-gradient(135deg, var(--accent1), var(--accent2));
+  --button-primary-text: #000;
+  --button-primary-shadow: 0 12px 24px rgba(0, 0, 0, 1), 0 0 18px rgba(0, 229, 255, 0.7);
+  --button-secondary-bg: radial-gradient(circle at top, rgba(255, 255, 255, 0.09), rgba(6, 6, 10, 0.96));
+  --button-secondary-border: rgba(255, 255, 255, 0.4);
+  --button-secondary-text: var(--accent1);
+  --input-text-color: var(--accent1);
+  --input-bg: rgba(0, 0, 0, 0.8);
+  --input-border: rgba(255, 255, 255, 0.25);
+  --logo-url: url("/assets/CC_WhiteButtons.svg");
+}

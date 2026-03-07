@@ -1,0 +1,48 @@
+
+/* ------------------------------------------------------------------ */
+/* MOBILE LAYOUT & SELECTION UPDATE */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  /* Hide the parts column completely on mobile */
+  .parts-column {
+    display: none !important;
+  }
+
+  /* Make main layout grid use only controller and colors (full width below) */
+  .main-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "controller"
+      "colors";
+    gap: 0;
+    padding-bottom: 100px; /* Space for fixed bottom bar */
+  }
+
+  /* Make colors column take full width */
+  .colors-column {
+    width: 100%;
+    margin-top: 10px;
+    grid-area: colors;
+  }
+
+  /* Ensure color panel is visible and takes available space */
+  .color-panel {
+    width: 100%;
+    max-height: none;
+    height: auto;
+    min-height: 250px;
+  }
+  
+  /* Selected state for mobile part items in horizontal bar */
+  .mobile-part-btn.selected {
+    border-color: #fff;
+    background: rgba(255,255,255,0.15);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+  }
+  
+  .mobile-part-btn.selected img {
+    filter: none;
+    transform: scale(1.1);
+  }
+}

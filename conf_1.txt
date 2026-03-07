@@ -1,0 +1,603 @@
+import React, { useEffect } from 'react';
+
+const configuratorMarkup = `
+
+
+<canvas id="bgCanvas"></canvas>
+<div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
+<div class="zoho-loading-card">
+<div class="zoho-loading-spinner" aria-hidden="true"></div>
+<div class="zoho-loading-text" data-i18n="loadingConfigurator">Loading configurator...</div>
+</div>
+</div>
+<audio id="sfxClick" preload="auto" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
+<audio id="sfxClick2" preload="auto" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
+<div class="top-nav">
+<div class="nav-logo">
+<a class="nav-left" href="index.html" style="display:block;">
+<div class="nav-logo-mark"></div>
+</a>
+</div>
+<button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+<span></span>
+<span></span>
+<span></span>
+</button>
+<div class="nav-right">
+<a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
+<a class="nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
+<a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
+<button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
+<button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
+</div>
+</div>
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
+<a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
+<a class="mobile-nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
+<a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
+<button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
+<button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
+</aside>
+<div class="page-content">
+<div class="main-layout">
+<!-- CONTROLLER COLUMN (LEFT) -->
+<div class="controller-column">
+<div class="controller-wrapper" id="controllerWrapper">
+<div class="controller-area" id="controllerArea">
+<div class="controller-bg"></div>
+<div class="controller-flip" id="controllerFlip">
+<div class="controller-face controller-face-front" id="controllerFaceFront">
+<img alt="PS5 Controller Front" src="/assets/controller.png"/>
+</div>
+<div class="controller-face controller-face-back" id="controllerFaceBack">
+<img alt="PS5 Controller Back" src="/assets/controller_back.png"/>
+</div>
+</div>
+</div>
+<!-- buttons under the controller -->
+<div class="controller-buttons-stack">
+<button class="flip-toggle" id="controllerFlipBtn" type="button" aria-label="الأمام">
+<span class="flip-toggle-preview" aria-hidden="true">
+<img class="flip-toggle-front" alt="" src="/assets/controller.png"/>
+<img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
+</span>
+</button>
+</div>
+    <div class="mobile-panel-switch" id="mobilePanelSwitch" aria-label="تبديل لوحة الأجزاء والألوان">
+      <button class="panel-switch-btn active" data-panel="options" type="button" aria-pressed="true">
+        <span data-i18n="partsOptionsHeading">الخيارات</span>
+      </button>
+      <button class="panel-switch-btn" data-panel="colors" type="button" aria-pressed="false">
+        <span data-i18n="partsColorsHeading">الألوان</span>
+      </button>
+    </div>
+    <div class="mobile-options-grid horizontal-scroll" id="mobileOptionsGrid"></div>
+  </div>
+</div>
+<!-- COLORS COLUMN (MIDDLE) -->
+<div class="colors-column" id="colors-column">
+<div class="color-panel">
+<!-- Top header: part name + options title -->
+<div class="color-panel-header" id="colorPanelHeaderTop">
+<div class="color-panel-title" id="colorPanelTitle">اختر جزءًا</div>
+<div class="color-panel-sub" id="optionsPanelSub">الخيارات</div>
+</div>
+<!-- Options grid (stick type ...) -->
+<div class="color-panel-grid" id="optionsPanelGrid"></div>
+<!-- Bottom header: colors title -->
+<div class="color-panel-header" id="colorPanelHeaderBottom">
+<div class="color-panel-sub" id="colorPanelSub">الألوان</div>
+</div>
+<!-- Colors grid -->
+<div class="color-panel-grid2" id="colorPanelGrid"></div>
+<!-- Empty state (shown when no part is selected) -->
+<div class="color-empty-placeholder" id="colorEmptyState">
+<!-- change the image path to whatever big icon you want -->
+<img alt="Select a part" src="/assets/icons/shells.png"/>
+</div>
+</div>
+</div>
+<!-- PARTS COLUMN (RIGHT) -->
+<div class="parts-column">
+<button class="mobile-selected-part" id="mobileSelectedPart" type="button" aria-label="Selected part">
+<img alt="" src="/assets/icons/shells.png"/>
+</button>
+<div class="parts-panel">
+<div class="parts-accordion">
+<div class="accordion-item open">
+<button class="accordion-header" type="button">
+<div class="parts-title" data-i18n="partsOptionsHeading">الخيارات</div>
+<span aria-hidden="true" class="accordion-icon"></span>
+</button>
+<div class="accordion-content">
+<div class="accordion-body">
+<div class="parts-list" data-list="primary"></div>
+</div>
+</div>
+</div>
+<div class="accordion-item">
+<button class="accordion-header" type="button">
+<div class="parts-title" data-i18n="partsColorsHeading">الألوان</div>
+<span aria-hidden="true" class="accordion-icon"></span>
+</button>
+<div class="accordion-content">
+<div class="accordion-body">
+<div class="parts-list" data-list="secondary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="configurator-controls" id="configuratorControls" aria-label="Configurator controls">
+<button class="control-btn control-colors" data-panel="colors" type="button" aria-label="الألوان">
+<span class="control-icon" aria-hidden="true">
+<svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+<circle cx="7" cy="9" r="3.2" fill="#ff5c7a"/>
+<circle cx="16.5" cy="8.5" r="3" fill="#42a5ff"/>
+<circle cx="13" cy="16" r="4" fill="#f6d743"/>
+</svg>
+</span>
+<span class="control-label" data-i18n="partsColorsHeading">الألوان</span>
+</button>
+<button class="control-btn control-options active" data-panel="options" type="button" aria-label="الخيارات">
+<span class="control-icon" aria-hidden="true">
+<svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+<path d="M4 7h10"/>
+<path d="M4 12h16"/>
+<path d="M4 17h8"/>
+<circle cx="17" cy="7" r="2.2" fill="currentColor"/>
+<circle cx="9" cy="17" r="2.2" fill="currentColor"/>
+</svg>
+</span>
+<span class="control-label" data-i18n="partsOptionsHeading">الخيارات</span>
+</button>
+<button class="control-btn control-flip" id="flipControlBtn" data-action="flip" type="button" aria-label="الأمام">
+<span class="flip-preview" aria-hidden="true">
+<img class="flip-preview-front" alt="" src="/assets/controller.png"/>
+<img class="flip-preview-back" alt="" src="/assets/controller_back.png"/>
+</span>
+</button>
+<button class="control-btn control-lang" id="langSwitchBtn" type="button" aria-label="اختيار اللغة">
+<span class="control-icon" aria-hidden="true">
+<svg class="flag-icon flag-en" viewBox="0 0 24 16" role="img" aria-hidden="true">
+<rect width="24" height="16" fill="#0a3d8f"/>
+<rect x="10" width="4" height="16" fill="#ffffff"/>
+<rect y="6" width="24" height="4" fill="#ffffff"/>
+<rect x="11" width="2" height="16" fill="#d91c1c"/>
+<rect y="7" width="24" height="2" fill="#d91c1c"/>
+</svg>
+<svg class="flag-icon flag-ar" viewBox="0 0 24 16" role="img" aria-hidden="true">
+<rect width="24" height="16" fill="#0b7a3b"/>
+<rect x="3" y="6" width="18" height="4" fill="#f4f4f4"/>
+</svg>
+</span>
+<span class="control-label" data-i18n="chooseLanguage">EN</span>
+</button>
+</div>
+<!-- FIXED BOTTOM BAR: total + add to cart -->
+<div class="controller-bottom-bar">
+<div class="nav-amount-block">
+<div class="nav-amount-label" data-i18n="totalLabel">الإجمالي</div>
+<div class="nav-amount-value" id="summaryAmount">د.ب 0.00</div>
+</div>
+<button class="add-to-cart-btn" data-i18n="addToCart" id="addToCartBtn">
+        <span class="cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="9" cy="20" r="1.8"></circle>
+            <circle cx="18" cy="20" r="1.8"></circle>
+            <path d="M3 4h2l2.2 10.5a2 2 0 0 0 2 1.5h8.5a2 2 0 0 0 2-1.5l1.6-7.5H6.2"></path>
+          </svg>
+        </span>
+        <span class="add-label">أضِف إلى السلة</span>
+        <span class="add-amount" id="summaryAmountAlt">د.ب 0.00</span>
+      </button>
+</div>
+</div>
+<div class="part-tooltip" id="partTooltip"></div>
+
+
+
+`;
+const configuratorScript = `
+
+
+    const isMobile =
+      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      window.innerWidth < 700;
+
+    const sfxClickEl = document.getElementById("sfxClick");
+    const sfxClick2El = document.getElementById("sfxClick2");
+
+    function playSfx(el) {
+      if (!el) return;
+      try {
+        el.currentTime = 0;
+        el.play();
+      } catch { }
+    }
+    const playClick = () => playSfx(sfxClickEl);
+    const playClick2 = () => playSfx(sfxClick2El);
+
+    const ZOHO_ACCESS_TOKEN = "${import.meta.env.VITE_ZOHO_ACCESS_TOKEN || ""}";
+    const ZOHO_ORG_ID = "${import.meta.env.VITE_ZOHO_ORG_ID || ""}";
+    // Always go through our proxy (rewritten in Firebase Hosting to the cloud function).
+    const ZOHO_BASE = "/zoho/inventory/v1";
+    const ZOHO_ITEMS_ENDPOINT = ZOHO_BASE + "/items";
+
+    const dynamicColorsByPart = {};
+    const dynamicOptionsByPart = {};
+    const dynamicPricesByPart = {};
+    const selectedPriceByPart = {};
+    let availablePartsSet = new Set();
+
+    function normalizeVariant(str) {
+      return (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    /* ---------- I18N ---------- */
+    const i18n = window.__EZ_I18N__ || {};
+
+    let currentLang = "ar";
+
+    function t(key) {
+      return (i18n[currentLang] && i18n[currentLang][key]) || key;
+    }
+
+    /* ---------- Controller / color configuration ---------- */
+
+    const BASE_WIDTH = 1166;
+    const BASE_HEIGHT = 768;
+
+    const FRONT_PARTS = [
+      { id: "shell", icon: "/assets/icons/shells.png", mask: "/assets/masks/leftShell.png", priority: 4, side: "front" },
+      { id: "trimpiece", icon: "/assets/icons/trimpiece.png", mask: "/assets/masks/centerBody.png", priority: 1, side: "front" },
+      { id: "stickL", icon: "/assets/icons/stickL.png", mask: "/assets/masks/stickL.png", priority: 3, side: "front" },
+      { id: "stickR", icon: "/assets/icons/stickR.png", mask: "/assets/masks/stickR.png", priority: 3, side: "front" },
+      { id: "faceButtons", icon: "/assets/icons/faceButtons.png", mask: "/assets/masks/faceButtons.png", priority: 4, side: "front" },
+      { id: "touchpad", icon: "/assets/icons/touchpad.png", mask: "/assets/masks/touchpad.png", priority: 2, side: "front" },
+      { id: "bumpers", icon: "/assets/icons/bumpers.png", mask: "/assets/masks/bumperL.png", priority: 2, side: "front" },
+      { id: "psButton", icon: "/assets/icons/psButton.png", mask: "/assets/masks/psButton.png", priority: 1, side: "front" },
+      { id: "share", icon: "/assets/icons/share.png", mask: "/assets/masks/share.png", priority: 4, side: "front" },
+      { id: "options", icon: "/assets/icons/options.png", mask: "/assets/masks/options.png", priority: 4, side: "front" },
+    ];
+
+    const BACK_PARTS = [
+      { id: "backShellMain", icon: "/assets/icons/backShellMain.png", mask: "/assets/masks/backShellMain.png", priority: 1, side: "back" },
+      { id: "backTriggers", icon: "/assets/icons/backTriggers.png", mask: "/assets/masks/backTriggers.png", priority: 2, side: "back" }
+    ];
+
+    const ALL_PARTS = [...FRONT_PARTS, ...BACK_PARTS];
+
+    const PART_KEYS = {
+      shell: "part_shell",
+      trimpiece: "part_trimpiece",
+      psButton: "part_psButton",
+      share: "part_share",
+      options: "part_options",
+      faceButtons: "part_faceButtons",
+      stickL: "part_stickL",
+      stickR: "part_stickR",
+      touchpad: "part_touchpad",
+      bumpers: "part_bumpers",
+      backShellMain: "part_backShellMain",
+      backHandles: "part_backHandles",
+      backTriggers: "part_backTriggers"
+    };
+
+    const PART_SLUG_TO_ID = {};
+    ALL_PARTS.forEach(p => {
+      PART_SLUG_TO_ID[normalizeVariant(p.id)] = p.id;
+    });
+
+    function getPartLabel(partId) {
+      const key = PART_KEYS[partId] || partId;
+      return t(key);
+    }
+
+    const PRICES = {
+      psButton: 4.0,
+      share: 3.0,
+      options: 3.0,
+      faceButtons: 6.0,
+      stickL: 5.0,
+      stickR: 5.0,
+      touchpad: 10.0,
+      bumpers: 8.0,
+      trimpiece: 12.0,
+      shell: 15.0,
+      backShellMain: 15.0,
+      backHandles: 10.0,
+      backTriggers: 8.0
+    };
+
+    const SHELL_COLORS = [
+      { hex: "#FF7A21", key: "color_orange" },
+      { hex: "#E6D63A", key: "color_yellow" },
+      { hex: "#6ECFFF", key: "color_lightBlue" },
+      { hex: "#8E8E8E", key: "color_steelGray" },
+      { hex: "#0C4BFF", key: "color_blue" },
+      { hex: "#001F63", key: "color_midnightBlue" },
+      { hex: "#C2185B", key: "color_magenta" },
+      { hex: "#F5F5F5", key: "color_softWhite" },
+      { hex: "#D400A8", key: "color_hotPink_shell" },
+      { hex: "#0A0A0A", key: "color_matteBlack" }
+    ];
+
+    const THUMB_OPTIONS = [
+      { hex: "#6ECFFF", key: "option_tmr" },
+      { hex: "#E6D63A", key: "option_halleffect" },
+      { hex: "#FF7A21", key: "option_standard" }
+    ];
+
+    const ACCESSORY_COLORS = [
+      { hex: "#0A0A0A", key: "color_black" },
+      { hex: "#D8D8D8", key: "color_lightGray" },
+      { hex: "#C41E2E", key: "color_red" },
+      { hex: "#2B2C79", key: "color_darkBluePurple" },
+      { hex: "#F2D400", key: "color_yellow" },
+      { hex: "#E56A1E", key: "color_orange" },
+      { hex: "#A6DA8C", key: "color_mintGreen" },
+      { hex: "#4A23A8", key: "color_royalPurple" },
+      { hex: "#E03875", key: "color_hotPink" },
+      { hex: "#77CBF7", key: "color_skyBlue" },
+      { hex: "#C75AC9", key: "color_pinkViolet" },
+      { hex: "#5C2DAF", key: "color_indigoPurple" },
+      { hex: "#EDEDED", key: "color_clear" },
+      { hex: "#D43838", key: "color_transRed" },
+      { hex: "#2448B5", key: "color_transBlue" },
+      { hex: "#68D78B", key: "color_transGreen" },
+      { hex: "#4E2B8C", key: "color_transPurple" },
+      { hex: "#4A4A4A", key: "color_gunmetal" },
+      { hex: "#8C3B2F", key: "color_transBrown" },
+      { hex: "#E3E3E3", key: "color_frostedWhite" }
+    ];
+
+    const COLOR_LOOKUP = {};
+    const OPTION_LOOKUP = {};
+
+    function seedColorLookup() {
+      const colorSources = [...SHELL_COLORS, ...ACCESSORY_COLORS];
+      colorSources.forEach(({ hex, key }) => {
+        const slugFromKey = normalizeVariant(key.replace(/^color_/, ""));
+        if (slugFromKey) COLOR_LOOKUP[slugFromKey] = { hex, key };
+        const labelEn = i18n.en[key];
+        const slugFromLabel = normalizeVariant(labelEn);
+        if (slugFromLabel) COLOR_LOOKUP[slugFromLabel] = { hex, key };
+      });
+    }
+
+    function seedOptionLookup() {
+      THUMB_OPTIONS.forEach(({ hex, key }) => {
+        const slugFromKey = normalizeVariant(key.replace(/^option_/, ""));
+        if (slugFromKey) OPTION_LOOKUP[slugFromKey] = { hex, key };
+        const labelEn = i18n.en[key];
+        const slugFromLabel = normalizeVariant(labelEn);
+        if (slugFromLabel) OPTION_LOOKUP[slugFromLabel] = { hex, key };
+      });
+    }
+
+    seedColorLookup();
+    seedOptionLookup();
+
+    const TRANSPARENT_HEXES = new Set([
+      "#ededed",
+      "#d43838",
+      "#2448b5",
+      "#68d78b",
+      "#4e2b8c",
+      "#8c3b2f",
+      "#e3e3e3"
+    ]);
+
+    const SHELL_PART_IDS = new Set([
+      "shell",
+      "trimpiece",
+      "backShellMain",
+      "backHandles"
+    ]);
+
+    const THUMB_PART_IDS = new Set([
+      "stickL",
+      "stickR",
+    ]);
+
+    function getPaletteForPart(partId) {
+      // Only use Zoho-provided colors; no fallback palette.
+      const dynamicPalette = dynamicColorsByPart[partId];
+      return Array.isArray(dynamicPalette) ? dynamicPalette : [];
+    }
+
+    function getOptionsForPart(partId) {
+      // Only use Zoho-provided gamemode options; no fallback options.
+      const dynamicOptions = dynamicOptionsByPart[partId];
+      return Array.isArray(dynamicOptions) ? dynamicOptions : [];
+    }
+
+    function addVariantToMap(targetMap, partId, variant) {
+      if (!targetMap[partId]) targetMap[partId] = [];
+      const variantSlug = normalizeVariant(variant.key || "");
+      const existing = targetMap[partId].find(v => normalizeVariant(v.key || "") === variantSlug);
+      if (existing) {
+        if (variant.price != null) existing.price = variant.price;
+        if (variant.qty != null) existing.qty = variant.qty;
+      } else {
+        targetMap[partId].push(variant);
+      }
+    }
+
+    function parseColorVariant(valueRaw) {
+      const value = (valueRaw || "").trim();
+      const normalized = normalizeVariant(value.replace(/^color_/, ""));
+      // Hex color?
+      const stripped = value.replace("#", "");
+      if (/^[0-9a-f]{6}$/i.test(stripped)) {
+        const hex = value.startsWith("#") ? value : "#" + value;
+        return { hex, key: hex };
+      }
+      if (COLOR_LOOKUP[normalized]) return COLOR_LOOKUP[normalized];
+      return null;
+    }
+
+    function parseOptionVariant(valueRaw) {
+      const normalized = normalizeVariant(valueRaw);
+      if (OPTION_LOOKUP[normalized]) return OPTION_LOOKUP[normalized];
+      return null;
+    }
+
+    function recomputeAvailableParts() {
+      const nextSet = new Set();
+      ALL_PARTS.forEach(part => {
+        const hasColors = (dynamicColorsByPart[part.id] || []).length > 0;
+        const hasOptions = (dynamicOptionsByPart[part.id] || []).length > 0;
+        const hasPrice = dynamicPricesByPart[part.id] != null;
+        if (hasColors || hasOptions || hasPrice) nextSet.add(part.id);
+      });
+      availablePartsSet = nextSet;
+    }
+
+    function addPriceFallback(partId, price) {
+      if (typeof price === "number" && !Number.isNaN(price) && price >= 0) {
+        if (dynamicPricesByPart[partId] == null) dynamicPricesByPart[partId] = price;
+      }
+    }
+
+    function getItemQty(item) {
+      const candidates = [
+        item.available_stock,
+        item.available_quantity,
+        item.availablequantity,
+        item.stock_on_hand,
+        item.quantity_available,
+        item.quantityavailable
+      ];
+      for (const c of candidates) {
+        const n = Number(c);
+        if (!Number.isNaN(n)) return n;
+      }
+      return null;
+    }
+
+    function parseZohoItem(item) {
+      const rawName = (item && (item.name || item.item_name)) || "";
+      const normalizedName = normalizeVariant(rawName);
+
+      // Base controller item: ps5_original_controller
+      if (normalizedName === "ps5originalcontroller") {
+        const basePrice = typeof item.rate === "number" ? item.rate : parseFloat(item.rate);
+        if (!Number.isNaN(basePrice)) baseControllerPrice = basePrice;
+        return;
+      }
+
+      const match = /^ps5_([^_]+)_([^_]+)_(.+)$/i.exec(rawName.trim());
+      if (!match) return;
+      const partSlug = normalizeVariant(match[1]);
+      const typeSlug = normalizeVariant(match[2]);
+      const valueRaw = match[3];
+      const partId = PART_SLUG_TO_ID[partSlug];
+      if (!partId) return;
+      const price = typeof item.rate === "number" ? item.rate : parseFloat(item.rate);
+      const qty = getItemQty(item);
+
+      if (typeSlug === "gamemode") {
+        const opt = parseOptionVariant(valueRaw);
+        if (!opt) return;
+        addVariantToMap(dynamicOptionsByPart, partId, { ...opt, price, qty });
+        addPriceFallback(partId, price);
+        return;
+      }
+
+      if (typeSlug === "color") {
+        const col = parseColorVariant(valueRaw);
+        if (!col) return;
+        addVariantToMap(dynamicColorsByPart, partId, { ...col, price, qty });
+        addPriceFallback(partId, price);
+        return;
+      }
+    }
+
+    async function fetchZohoItems() {
+
+      const perPage = 200;
+      const maxPages = 10; // safety cap to avoid runaway loops
+      const allItems = [];
+
+      for (let page = 1; page <= maxPages; page++) {
+        const params = new URLSearchParams();
+        params.set("page", String(page));
+        params.set("per_page", String(perPage));
+        if (ZOHO_ORG_ID) {
+          params.set("organization_id", ZOHO_ORG_ID);
+        }
+        const url = ZOHO_ITEMS_ENDPOINT + "?" + params.toString();
+        console.log("[Zoho Debug] Fetching items page", page, "from:", url);
+        try {
+          const headers = {};
+          if (ZOHO_ACCESS_TOKEN) {
+            headers.Authorization = "Zoho-oauthtoken " + ZOHO_ACCESS_TOKEN;
+          }
+          const res = await fetch(url, Object.keys(headers).length ? { headers } : undefined);
+          if (!res.ok) {
+            let body = "";
+            try { body = await res.text(); } catch { /* ignore */ }
+            console.error("[Zoho Debug] Response body:", body);
+            throw new Error("HTTP " + res.status + (body ? (": " + body) : ""));
+          }
+          const data = await res.json();
+          const items = (data && Array.isArray(data.items)) ? data.items.filter(it => {
+            const status = (it.status || it.item_status || "").toLowerCase();
+            return status === "" || status === "active";
+          }) : [];
+          allItems.push(...items);
+          console.log("[Zoho Debug] Page", page, "items:", items.length, "Total so far:", allItems.length);
+          if (items.length < perPage) break;
+        } catch (err) {
+          console.error("[Zoho] Failed to fetch items", err);
+          break;
+        }
+      }
+      return allItems;
+    }
+
+    function logZohoSummary(items) {
+      const sample = items.map(it => ({
+        name: it.name || it.item_name,
+        id: it.item_id || it.itemid || "n/a"
+      }));
+      console.log("[Zoho Debug] Items fetched:", items.length, "Names/ids:", sample);
+    }
+
+    async function bootstrapZohoInventory() {
+      setZohoLoading(true);
+      try {
+        const items = await fetchZohoItems();
+        if (!items.length) return;
+        items.forEach(parseZohoItem);
+        Object.keys(configState).forEach(pid => {
+          const val = configState[pid];
+          if (!val) return;
+          const hasOptionMatch = (dynamicOptionsByPart[pid] || []).some(entry => (entry.hex || "").toLowerCase() === (val || "").toLowerCase());
+          setPartPrice(pid, val, hasOptionMatch);
+        });
+        recomputeAvailableParts();
+        logZohoSummary(items);
+        buildPartsList();
+        if (selectedPartId) {
+          const selPartObj = ALL_PARTS.find(p => p.id === selectedPartId);
+          if (!selPartObj || !isPartActive(selPartObj)) {
+            clearSelection();
+            resetColorPanel();
+            resetOptionsPanel();
+          }
+        }
+        if (selectedPartId) {
+          openColorPanelForPart(selectedPartId);
+        }
+        updateSummary();
+      } finally {
+        setZohoLoading(false);
+      }
+    }
+

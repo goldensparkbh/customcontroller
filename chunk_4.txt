@@ -1,0 +1,434 @@
+    /* ----- Palette panel ----- */
+
+    function openColorPanelForPart(partId) {
+      const label = getPartLabel(partId);
+
+      // hide everything by default (Desktop stuff)
+      colorEmptyState.style.display = "none";
+      colorPanelHeaderTop.style.display = "none";
+      colorPanelHeaderBottom.style.display = "none";
+      colorPanelGrid.style.display = "none";
+      optionsPanelGrid.style.display = "none";
+
+      colorPanelTitle.textContent = label;
+      colorPanelSub.textContent = "";
+      optionsPanelSub.textContent = "";
+
+      colorPanelGrid.innerHTML = "";
+      optionsPanelGrid.innerHTML = "";
+
+      const palette = getPaletteForPart(partId);
+      const optionspalette = getOptionsForPart(partId);
+
+      const hasOptions = optionspalette && optionspalette.length;
+      const hasColors = palette && palette.length;
+
+      const mobile = isMobileLayout();
+      
+      // Determine what to show
+      let showOptions = false;
+      let showColors = false;
+
+      // Logic: if currentPanel is options, show options first.
+      if (currentPanel === "options" && hasOptions) showOptions = true;
+      else if (currentPanel === "colors" && hasColors) showColors = true;
+      else {
+          // Fallback if mismatch
+          if (hasColors) showColors = true;
+          else if (hasOptions) showOptions = true;
+      }
+      
+      // Desktop rendering
+      if (!mobile) {
+          if (showOptions) {
+            optionsPanelSub.style.display = "block";
+            optionsPanelGrid.style.display = "grid";
+            colorPanelHeaderTop.style.display = "block";
+            optionsPanelSub.textContent = t("availableOptions");
+            buildPaletteCells(optionsPanelGrid, optionspalette, true);
+          }
+          if (showColors) {
+            colorPanelHeaderTop.style.display = "block";
+            colorPanelHeaderBottom.style.display = "block";
+            colorPanelGrid.style.display = "grid";
+            colorPanelSub.textContent = t("availableColors");
+            buildPaletteCells(colorPanelGrid, palette, false);
+          }
+      } else {
+          // Mobile Rendering into Grid
+          // We render whichever ONE is active
+          const entries = showOptions ? optionspalette : (showColors ? palette : []);
+          buildPaletteCells(mobileOptionsGrid, entries, showOptions);
+      }
+      
+      updateMobileSelectedPartBadge();
+    }
+
+    /* ----- Side toggle ----- */
+
+    function setSide(side) {
+      if (side === currentSide) return;
+      currentSide = side;
+
+      if (currentSide === "back") controllerWrapper.classList.add("is-back");
+      else controllerWrapper.classList.remove("is-back");
+
+      updateFlipControl();
+
+      clearSelection();
+      resetColorPanel();
+      resetOptionsPanel();
+    }
+
+    if (controllerFlipBtn) {
+      controllerFlipBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setSide(currentSide === "front" ? "back" : "front");
+        playClick();
+      });
+    }
+
+    /* ----- Preview button ----- */
+
+    // previewBtn.addEventListener("click", () => {
+    //   clearSelection();
+    //   resetColorPanel();
+    //   playClick2();
+    // });
+
+    /* ----- Parts list ----- */
+
+    function createPartRow(part, listType) {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "parts-item";
+      row.dataset.partId = part.id;
+      row.dataset.side = part.side;
+      row.dataset.listType = listType || "";
+
+      const thumb = document.createElement("div");
+      thumb.className = "parts-thumb";
+
+      const img = document.createElement("img");
+      img.src = part.icon || "/assets/icons/shells.png";
+      img.alt = getPartLabel(part.id);
+      thumb.appendChild(img);
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "parts-name";
+      nameEl.textContent = getPartLabel(part.id);
+
+      row.appendChild(thumb);
+      row.appendChild(nameEl);
+
+      row.addEventListener("click", () => {
+        const targetSide = part.side;
+        if (currentSide !== targetSide) setSide(targetSide);
+
+        clearSelection();
+
+        selectedPartId = part.id;
+        selectionPaletteMode = listType || null;
+        controllerArea.classList.add("has-selection");
+        controllerArea.style.setProperty("--selected-mask-url", "url('" + part.mask + "')");
+
+        const layer = layers[part.id];
+        if (layer) layer.classList.add("selected");
+
+        Object.values(partsRowsById).forEach(rArr => {
+          if (!rArr) return;
+          rArr.forEach(r => r.classList.remove("active"));
+        });
+        (partsRowsById[part.id] || []).forEach(r => r.classList.add("active"));
+
+        playClick();
+        openColorPanelForPart(part.id);
+      });
+
+      if (!partsRowsById[part.id]) partsRowsById[part.id] = [];
+      partsRowsById[part.id].push(row);
+      return row;
+    }
+
+    function isPartActive(part) {
+      return availablePartsSet.has(part.id);
+    }
+
+    function buildPartsList() {
+      partsLists.forEach(list => list.innerHTML = "");
+      Object.keys(partsRowsById).forEach(k => delete partsRowsById[k]);
+
+      const optionParts = [...FRONT_PARTS, ...BACK_PARTS].filter(p => {
+        const hasGamemode = (dynamicOptionsByPart[p.id] || []).length > 0;
+        return hasGamemode && isPartActive(p);
+      });
+
+      const colorOnlyParts = [...FRONT_PARTS, ...BACK_PARTS].filter(p => {
+        const hasColors = (dynamicColorsByPart[p.id] || []).length > 0;
+        return hasColors && isPartActive(p);
+      });
+
+      if (primaryList) {
+        optionParts.forEach(p => primaryList.appendChild(createPartRow(p, "options")));
+      }
+      if (secondaryList) {
+        colorOnlyParts.forEach(p => secondaryList.appendChild(createPartRow(p, "colors")));
+      }
+      refreshAccordionHeights();
+      
+      // Update Mobile Bar as well
+      if (isMobileLayout()) {
+          updateMobileOptionsBar();
+      }
+    }
+
+    /* ----- Hit testing ----- */
+
+    function getPartsForSide(side) {
+      const base = side === "back" ? BACK_PARTS : FRONT_PARTS;
+      return base.filter(isPartActive);
+    }
+
+    function hitTestPart(designX, designY, side) {
+      const parts = getPartsForSide(side);
+      const sorted = [...parts].sort((a, b) => b.priority - a.priority);
+      for (const part of sorted) {
+        const mask = maskDataById[part.id];
+        if (!mask) continue;
+        const x = Math.floor(designX / BASE_WIDTH * mask.width);
+        const y = Math.floor(designY / BASE_HEIGHT * mask.height);
+        if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) continue;
+        const idx = (y * mask.width + x) * 4 + 3;
+        const alpha = mask.data[idx];
+        if (alpha > 20) return part.id;
+      }
+      return null;
+    }
+
+    /* ----- Controller click ----- */
+
+    controllerArea.addEventListener("click", (e) => {
+      if (!masksReady) return;
+      const rect = controllerArea.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width;
+      const relY = (e.clientY - rect.top) / rect.height;
+      if (relX < 0 || relX > 1 || relY < 0 || relY > 1) return;
+      const designX = relX * BASE_WIDTH;
+      const designY = relY * BASE_HEIGHT;
+      const partId = hitTestPart(designX, designY, currentSide);
+      if (!partId) return;
+      const partObj = ALL_PARTS.find(p => p.id === partId);
+      if (partObj && !isPartActive(partObj)) return;
+
+      clearSelection();
+
+      selectedPartId = partId;
+      selectionPaletteMode = null;
+      controllerArea.classList.add("has-selection");
+
+      const part = ALL_PARTS.find(p => p.id === partId);
+      if (part) {
+        controllerArea.style.setProperty("--selected-mask-url", "url('" + part.mask + "')");
+      }
+
+      const layer = layers[partId];
+      if (layer) layer.classList.add("selected");
+
+      const rows = partsRowsById[partId] || [];
+      if (rows.length) {
+        Object.values(partsRowsById).forEach(rArr => {
+          if (!rArr) return;
+          rArr.forEach(r => r.classList.remove("active"));
+        });
+        rows.forEach(r => r.classList.add("active"));
+      }
+
+      playClick();
+      // On desktop we might want to default to options or colors.
+      // On mobile we respect the current TAB.
+      if (!isMobileLayout()) {
+        if (!selectionPaletteMode) {
+            const hasOpts = (dynamicOptionsByPart[partId] || []).length > 0;
+            selectionPaletteMode = hasOpts ? "options" : "colors";
+        }
+      }
+      
+      openColorPanelForPart(partId);
+    });
+
+    /* ----- Hover tooltip (desktop only) ----- */
+
+    controllerArea.addEventListener("mousemove", (e) => {
+      if (!masksReady || isMobile) return;
+
+      const rect = controllerArea.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width;
+      const relY = (e.clientY - rect.top) / rect.height;
+
+      if (relX < 0 || relX > 1 || relY < 0 || relY > 1) {
+        if (tooltipVisible) {
+          partTooltip.classList.remove("visible");
+          tooltipVisible = false;
+          hoverPartId = null;
+        }
+        return;
+      }
+
+      const designX = relX * BASE_WIDTH;
+      const designY = relY * BASE_HEIGHT;
+      const partId = hitTestPart(designX, designY, currentSide);
+
+      if (!partId) {
+        if (tooltipVisible) {
+          partTooltip.classList.remove("visible");
+          tooltipVisible = false;
+          hoverPartId = null;
+        }
+        return;
+      }
+
+      const label = getPartLabel(partId);
+      partTooltip.textContent = label;
+      partTooltip.style.left = e.clientX + "px";
+      partTooltip.style.top = e.clientY + "px";
+
+      if (!tooltipVisible || hoverPartId !== partId) {
+        hoverPartId = partId;
+        partTooltip.classList.add("visible");
+        tooltipVisible = true;
+      }
+    });
+
+    controllerArea.addEventListener("mouseleave", () => {
+      if (tooltipVisible) {
+        partTooltip.classList.remove("visible");
+        tooltipVisible = false;
+        hoverPartId = null;
+      }
+    });
+
+    /* ----- Click outside → clear selection + color drawer ----- */
+
+    document.addEventListener("click", (e) => {
+      const clickInsideController = controllerArea.contains(e.target);
+
+      const clickInsideColors =
+        colorPanelGrid.contains(e.target) ||
+        optionsPanelGrid.contains(e.target) ||
+        colorPanelHeaderTop.contains(e.target) ||
+        colorPanelHeaderBottom.contains(e.target) ||
+        colorEmptyState.contains(e.target);
+
+      const clickInsideParts = partsLists.some(list => list.contains(e.target));
+      const clickInsideSideToggle = controllerFlipBtn ? controllerFlipBtn.contains(e.target) : false;
+      const clickInsideNav = document.querySelector(".top-nav").contains(e.target);
+      // Also check mobile grid
+      const clickInsideMobileGrid = mobileOptionsGrid && mobileOptionsGrid.contains(e.target);
+      const clickInsideMobileSwitch = document.getElementById("mobilePanelSwitch") && document.getElementById("mobilePanelSwitch").contains(e.target);
+
+
+      if (
+        !clickInsideController &&
+        !clickInsideColors &&
+        !clickInsideParts &&
+        !clickInsideSideToggle &&
+        !clickInsideNav &&
+        !clickInsideMobileGrid &&
+        !clickInsideMobileSwitch
+      ) {
+        clearSelection();
+        resetColorPanel();
+        resetOptionsPanel();
+        // const colorsColumn = document.getElementById("colors-column");
+        // colorsColumn.style.display = "none";
+      }
+    });
+
+    /* ----- Add to cart button (with localStorage + redirect to cart) ----- */
+
+    const CART_KEY = "ezCart";
+
+    function buildConfigSnapshot() {
+      const snapshot = {};
+      for (const partId in configState) {
+        if (Object.prototype.hasOwnProperty.call(configState, partId)) {
+          snapshot[partId] = configState[partId];
+        }
+      }
+      return snapshot;
+    }
+
+    function loadCart() {
+      try {
+        const raw = localStorage.getItem(CART_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCart(items) {
+      try {
+        localStorage.setItem(CART_KEY, JSON.stringify(items));
+      } catch {
+        // ignore
+      }
+    }
+
+    addToCartBtn.addEventListener("click", () => {
+      const total = computeTotal();
+      if (total <= 0) {
+        alert(t("alertNone"));
+        return;
+      }
+
+      const cartItems = loadCart();
+      const snapshot = buildConfigSnapshot();
+      const hasCustom = hasCustomizations();
+      const cartName = hasCustom
+        ? "PS5 Controller (Customized)"
+        : "PS5 Original Controller (No Customizations)";
+
+      // Build a richer SVG preview for the sales order (controller + colored markers)
+      function buildPreviewSvg(config) {
+        const entries = Object.entries(config || {}).filter(([, val]) => val);
+        const width = 500;
+        const height = 300;
+        const partPos = {
+          stickL: { x: 220, y: 200 },
+          stickR: { x: 320, y: 210 },
+          faceButtons: { x: 400, y: 160 },
+          touchpad: { x: 260, y: 120 },
+          shell: { x: 260, y: 150 },
+          trimpiece: { x: 260, y: 180 },
+          bumpers: { x: 260, y: 90 },
+          psButton: { x: 260, y: 210 },
+          backShellMain: { x: 260, y: 150 },
+          backTriggers: { x: 260, y: 110 }
+        };
+        const dots = entries.map(([part, hex]) => {
+          const pos = partPos[part] || { x: width / 2, y: height / 2 };
+          const fill = typeof hex === "string" ? hex : (hex && hex.hex) || "#444";
+          return (
+            '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="18" fill="' + fill + '" opacity="0.85" />' +
+            "</g>"
+          );
+        }).join("");
+        const ctrl = document.querySelector(".controller-face-front img");
+        const ctrlSrc = (ctrl && ctrl.src) || "/assets/controller.png";
+        const svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height + '" style="background:#0b0b0f">' +
+          '<image href="' + ctrlSrc + '" x="10" y="20" width="480" height="260" preserveAspectRatio="xMidYMid meet" opacity="0.9"/>' +
+          dots +
+          "</svg>";
+        return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+      }
+
+      const preview = hasCustom ? buildPreviewSvg(snapshot) : null;
+
+      const cartItem = {
+        id: Date.now(),
+        name: cartName,
+        unitPrice: total,
