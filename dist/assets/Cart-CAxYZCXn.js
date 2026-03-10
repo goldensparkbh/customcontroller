@@ -1,4 +1,4 @@
-import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
+import{r as a,j as t}from"./index-IyhjX7Ud.js";const n=`
 
 
 <canvas id="bgCanvas"></canvas>
@@ -18,7 +18,6 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
 </button>
 <div class="nav-right">
 <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-<a class="nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
 <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
 <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
 <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
@@ -34,7 +33,6 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
 <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-<a class="mobile-nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
 <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
 <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
 <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
@@ -239,20 +237,36 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
       return prefix + value.toFixed(2);
     }
 
-    // Safely decode and inject SVG strings from base64
     function renderPreview(container, data) {
-      if (!data || !data.startsWith("data:image/svg+xml")) {
+      if (!data) {
         container.innerHTML = '<div style="padding:20px; text-align:center; opacity:0.3;">?</div>';
         return;
       }
-      try {
-        const base64Code = data.split(",")[1];
-        const svgMarkup = decodeURIComponent(escape(atob(base64Code)));
-        container.innerHTML = svgMarkup;
-      } catch (err) {
-        console.error("SVG Render Error:", err);
-        container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">!</div>';
+      
+      if (data.startsWith("data:image/png") || data.startsWith("data:image/jpeg")) {
+        const img = document.createElement("img");
+        img.src = data;
+        img.style.width = "100%";
+        img.style.height = "auto";
+        img.style.display = "block";
+        container.innerHTML = "";
+        container.appendChild(img);
+        return;
       }
+
+      if (data.startsWith("data:image/svg+xml")) {
+        try {
+          const base64Code = data.split(",")[1];
+          const svgMarkup = decodeURIComponent(escape(atob(base64Code)));
+          container.innerHTML = svgMarkup;
+        } catch (err) {
+          console.error("SVG Render Error:", err);
+          container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">!</div>';
+        }
+        return;
+      }
+
+      container.innerHTML = '<div style="padding:20px; text-align:center; opacity:0.3;">?</div>';
     }
 
     // ---------- CART CORE ----------
@@ -283,7 +297,7 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
       "#8c3b2f",
       "#e3e3e3"
     ]);
-    const TRANSPARENT_TINT_OPACITY = 0.55;
+    const TRANSPARENT_TINT_OPACITY = 0.7;
 
     // masks as in configurator (front view only – for thumbnail)
     const THUMB_PARTS = [
@@ -305,17 +319,12 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
     const ORDERED_PART_IDS = [
       "shell",
       "trimpiece",
-      "faceButtons",
-      "stickL",
-      "stickR",
+      "allButtons",
+      "sticks",
       "touchpad",
-      "share",
-      "options",
-      "psButton",
-      "bumpers",
+      "bumpersTriggers",
       "backShellMain",
-      "backHandles",
-      "backTriggers"
+      "backHandles"
     ];
 
     const cartItemsContainer = document.getElementById("cartItems");
@@ -327,16 +336,30 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
     const checkoutBtn = document.getElementById("checkoutBtn");
     const navCheckoutBtn = document.getElementById("navCheckoutBtn");
 
-    let cartItems = loadCart();
+    let cartItems = loadCart().map(item => {
+      let unitPrice = 0;
+      if (typeof item.unitPrice === "number" && !Number.isNaN(item.unitPrice)) {
+        unitPrice = item.unitPrice;
+      } else if (typeof item.total === "number" && !Number.isNaN(item.total)) {
+        unitPrice = item.total;
+      }
+      return {
+        ...item,
+        unitPrice: unitPrice,
+        quantity: (typeof item.quantity === "number" && !Number.isNaN(item.quantity) && item.quantity > 0) ? item.quantity : 1
+      };
+    });
 
     function computeCartTotals() {
       let total = 0;
       let count = 0;
       for (const item of cartItems) {
-        count += item.quantity;
-        total += item.unitPrice * item.quantity;
+        const qty = Number(item.quantity) || 1;
+        const up = Number(item.unitPrice) || 0;
+        count += qty;
+        total += up * qty;
       }
-      return { total, count };
+      return { total: Number(total) || 0, count: Number(count) || 0 };
     }
 
     // build thumbnail of controller with same colors as configurator
@@ -362,10 +385,11 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
       tc.appendChild(base);
 
       THUMB_PARTS.forEach(part => {
-        const value = (config || {})[part.id];
-        if (!value) return;
+        const partsData = item.parts || {};
+        const state = partsData[part.id];
+        if (!state || !state.color) return;
 
-        const hex = typeof value === "string" ? value : value.hex;
+        const hex = state.color.hex;
         if (!hex) return;
 
         const layer = document.createElement("div");
@@ -469,46 +493,48 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
 
         const config = item.config || {};
 
+        const partsData = item.parts || {};
+
         // show each configured part as: colored circle + part label (+ optional color name if available)
         ORDERED_PART_IDS.forEach(partId => {
-          const values = [
-            { val: config[partId], type: "color" },
-            { val: config[partId + "_opt"], type: "option" }
-          ].filter(item => item.val);
+          const state = partsData[partId];
+          if (!state) return;
 
-          values.forEach(({ val: value, type }) => {
-            let hex = "";
-            let colorName = "";
+          const entries = [];
+          if (state.color) entries.push({ val: state.color, type: "color" });
+          if (state.option && state.option.key !== "standard") entries.push({ val: state.option, type: "option" });
 
-            if (typeof value === "string") {
-              hex = value;
-            } else if (value && typeof value === "object") {
-              hex = value.hex || "";
-              if (currentLang === "ar") {
-                colorName = value.name_ar || "";
-              } else {
-                colorName = value.name_en || "";
-              }
+          entries.forEach(({ val: value, type }) => {
+            const hex = value.hex || "";
+            let name = "";
+            if (currentLang === "ar") {
+              name = value.name_ar || value.label_ar || value.name || "";
+            } else {
+              name = value.name_en || value.label_en || value.name || "";
             }
 
-            if (!hex) return;
+            if (!hex && type === "color") return;
 
             const li = document.createElement("li");
             li.className = "cart-color-line";
 
             const dot = document.createElement("span");
             dot.className = "cart-color-dot";
-            dot.style.backgroundColor = hex;
+            if (hex) {
+               dot.style.backgroundColor = hex;
+            } else {
+               dot.style.display = "none";
+            }
 
             const text = document.createElement("span");
             text.className = "cart-color-text";
 
             const partLabel = getPartLabel(partId);
-            const typeLabel = type === "option" ? (currentLang === "ar" ? " [تطوير]" : " [Upgrade]") : "";
+            const typeSuffix = type === "option" ? (currentLang === "ar" ? " [تطوير]" : " [Upgrade]") : "";
             
-            text.textContent = colorName
-              ? partLabel + typeLabel + ": " + colorName
-              : partLabel + typeLabel;
+            text.textContent = name
+              ? partLabel + typeSuffix + ": " + name
+              : partLabel + typeSuffix;
 
             li.appendChild(dot);
             li.appendChild(text);
@@ -621,4 +647,4 @@ import{r as a,j as t}from"./index-uZjsNsd9.js";const n=`
     applyLanguage();
   
 
-`;function r(){return a.useEffect(()=>{const e=document.createElement("script");return e.textContent=o,document.body.appendChild(e),()=>{document.body.removeChild(e)}},[]),t.jsx("div",{className:"cart-page",children:t.jsx("div",{dangerouslySetInnerHTML:{__html:n}})})}export{r as default};
+`;function i(){return a.useEffect(()=>{const e=document.createElement("script");return e.textContent=o,document.body.appendChild(e),()=>{document.body.removeChild(e)}},[]),t.jsx("div",{className:"cart-page",children:t.jsx("div",{dangerouslySetInnerHTML:{__html:n}})})}export{i as default};

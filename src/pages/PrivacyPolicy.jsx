@@ -58,7 +58,6 @@ const PrivacyPolicy = () => {
                 </button>
                 <div className="nav-right">
                     <button className="nav-link" type="button" onClick={() => navigate('/')}>{t('navPremade')}</button>
-                    <button className="nav-link" type="button" onClick={() => navigate('/#contactSection')}>{t('navContact')}</button>
                     <button className="nav-cta" type="button" onClick={() => navigate('/configurator')}>{t('navBuildCta')}</button>
                     <button className="nav-link nav-lang" type="button" onClick={toggleLang}>{currentLang === 'ar' ? 'EN' : 'AR'}</button>
                 </div>
@@ -67,7 +66,6 @@ const PrivacyPolicy = () => {
             <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
             <aside className={`mobile-nav-drawer ${isMobileMenuOpen ? 'open' : ''}`} id="mobileNavDrawer" aria-hidden={!isMobileMenuOpen}>
                 <button className="mobile-nav-link" type="button" onClick={() => { navigate('/'); closeMobileMenu(); }}>{t('navPremade')}</button>
-                <button className="mobile-nav-link" type="button" onClick={() => { navigate('/#contactSection'); closeMobileMenu(); }}>{t('navContact')}</button>
                 <button className="mobile-nav-link mobile-nav-cta" type="button" onClick={() => { navigate('/configurator'); closeMobileMenu(); }}>{t('navBuildCta')}</button>
                 <button className="mobile-nav-link mobile-nav-lang" type="button" onClick={() => { toggleLang(); closeMobileMenu(); }}>{currentLang === 'ar' ? 'EN' : 'AR'}</button>
             </aside>

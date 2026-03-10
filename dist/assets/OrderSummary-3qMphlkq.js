@@ -1,10 +1,10 @@
-import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
+import{r as t,j as a}from"./index-IyhjX7Ud.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav">
   <div class="nav-logo">
     <a class="nav-left" href="index.html">
       <div class="nav-logo-mark"></div>
-      <div class="nav-page-title" data-i18n="confirmationTitle">تأكيد الدفع</div>
+      <div class="nav-page-title" data-i18n="orderSummaryTitle">ملخص الطلب</div>
     </a>
   </div>
   <button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
@@ -14,7 +14,6 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
   </button>
   <div class="nav-right">
     <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
     <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
     <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
     <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
@@ -23,16 +22,16 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
   <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-  <a class="mobile-nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
   <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
   <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
   <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
 </aside>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
-  <div class="card" style="max-width:480px; width:100%; text-align:center;">
-    <div class="card-title" data-i18n="confirmationTitle">تأكيد الدفع</div>
-    <div id="confirmStatus" data-i18n="confirmationStatus" style="font-size:1rem; margin:10px 0;">تم تأكيد الدفع</div>
-    <button class="place-order-btn" id="goSummaryBtn" type="button" data-i18n="confirmationCta">الانتقال إلى ملخص الطلب</button>
+  <div class="card" style="max-width:640px; width:100%;">
+    <div class="card-title" data-i18n="orderSummaryTitle">ملخص الطلب</div>
+    <div id="orderStatus" style="margin-bottom:8px;"></div>
+    <div id="orderItems"></div>
+    <div id="orderTotals" style="margin-top:10px; font-weight:700;"></div>
   </div>
 </div>
 `,l=`
@@ -127,8 +126,28 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
     });
   }
 
-  const btn = document.getElementById("goSummaryBtn");
-  const statusEl = document.getElementById("confirmStatus");
-  btn.addEventListener("click", () => window.location.href = "/order-summary");
-  statusEl.textContent = t("confirmationStatus");
+  const resultRaw = localStorage.getItem("ezOrderResult");
+  const draftRaw = localStorage.getItem("ezOrderDraft");
+  const statusEl = document.getElementById("orderStatus");
+  const itemsEl = document.getElementById("orderItems");
+  const totalsEl = document.getElementById("orderTotals");
+
+  if (!resultRaw || !draftRaw) {
+    statusEl.textContent = t("orderStatusMissing");
+    setTimeout(() => window.location.href = "/cart", 1200);
+  } else {
+    const result = JSON.parse(resultRaw);
+    const draft = JSON.parse(draftRaw);
+    const cart = draft.cart || [];
+    const total = cart.reduce((s, it) => s + (it.unitPrice * it.quantity), 0);
+    statusEl.innerHTML = t("orderStatusLabel") + " <strong>" + t("orderStatusConfirmed") + "</strong>";
+    const list = document.createElement("ul");
+    cart.forEach(it => {
+      const li = document.createElement("li");
+      li.textContent = (it.name || t("orderItemFallback")) + " × " + it.quantity + " — " + (draft.currencyPrefix || "BHD ") + (it.unitPrice * it.quantity).toFixed(2);
+      list.appendChild(li);
+    });
+    itemsEl.appendChild(list);
+    totalsEl.textContent = t("orderTotalLabel") + " " + (draft.currencyPrefix || "BHD ") + total.toFixed(2);
+  }
 `;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>document.body.removeChild(e)},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};

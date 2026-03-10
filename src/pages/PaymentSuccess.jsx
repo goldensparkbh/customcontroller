@@ -76,7 +76,9 @@ function PaymentSuccessPage() {
     <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
       <div class="card" style="max-width:480px; width:100%; text-align:center;">
         <div class="card-title">Pending Confirmation</div>
-        <div style="font-size:3rem; margin:20px 0;">⏳</div>
+        <div style="margin:20px 0;">
+          <img src="/assets/loading.gif" alt="Loading" style="width:100px; height:auto; display:inline-block;" />
+        </div>
         <div style="font-size:1.2rem; margin:10px 0; font-weight:bold;">${message}</div>
       </div>
     </div>

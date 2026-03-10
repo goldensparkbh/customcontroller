@@ -367,7 +367,6 @@ function HomePage() {
         </button>
         <div className="nav-right">
           <button className="nav-link" type="button" data-i18n="navPremade" onClick={() => scrollToSection('premadeSection')}></button>
-          <button className="nav-link" type="button" data-i18n="navContact" onClick={() => scrollToSection('contactSection')}></button>
           <button className="nav-cta" type="button" data-i18n="navBuildCta" onClick={goToConfigurator}></button>
           <button className="nav-link nav-lang" id="langToggle" type="button">EN</button>
         </div>
@@ -375,7 +374,6 @@ function HomePage() {
       <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
       <aside className={`mobile-nav-drawer ${isMobileMenuOpen ? 'open' : ''}`} id="mobileNavDrawer" aria-hidden={!isMobileMenuOpen}>
         <button className="mobile-nav-link" type="button" data-i18n="navPremade" onClick={() => { scrollToSection('premadeSection'); closeMobileMenu(); }}></button>
-        <button className="mobile-nav-link" type="button" data-i18n="navContact" onClick={() => { scrollToSection('contactSection'); closeMobileMenu(); }}></button>
         <button className="mobile-nav-link mobile-nav-cta" type="button" data-i18n="navBuildCta" onClick={() => { goToConfigurator(); closeMobileMenu(); }}></button>
         <button className="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
       </aside>

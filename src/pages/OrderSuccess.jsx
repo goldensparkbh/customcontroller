@@ -16,7 +16,6 @@ const orderSuccessMarkup = `
   </button>
   <div class="nav-right">
     <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
     <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
     <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
     <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
@@ -25,7 +24,6 @@ const orderSuccessMarkup = `
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
   <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-  <a class="mobile-nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
   <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
   <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
   <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
@@ -144,16 +142,16 @@ const orderSuccessScript = `
 `;
 
 function OrderSuccessPage() {
-    useEffect(() => {
-        const scriptEl = document.createElement('script');
-        scriptEl.textContent = orderSuccessScript;
-        document.body.appendChild(scriptEl);
-        return () => {
-            if (document.body.contains(scriptEl)) document.body.removeChild(scriptEl);
-        };
-    }, []);
+  useEffect(() => {
+    const scriptEl = document.createElement('script');
+    scriptEl.textContent = orderSuccessScript;
+    document.body.appendChild(scriptEl);
+    return () => {
+      if (document.body.contains(scriptEl)) document.body.removeChild(scriptEl);
+    };
+  }, []);
 
-    return <div dangerouslySetInnerHTML={{ __html: orderSuccessMarkup }} />;
+  return <div dangerouslySetInnerHTML={{ __html: orderSuccessMarkup }} />;
 }
 
 export default OrderSuccessPage;

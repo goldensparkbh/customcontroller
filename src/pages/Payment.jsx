@@ -120,7 +120,6 @@ function PaymentPage() {
         </button>
         <div className="nav-right">
           <a className="nav-link" href="/#premadeSection">{t("navPremade")}</a>
-          <a className="nav-link" href="/#contactSection">{t("navContact")}</a>
           <a className="nav-cta" href="/configurator">{t("navBuildCta")}</a>
           <button className="nav-link nav-lang" onClick={toggleLang}>
             {currentLang === "ar" ? "EN" : "AR"}
@@ -135,7 +134,6 @@ function PaymentPage() {
       ></div>
       <aside className={`mobile-nav-drawer ${mobileNavOpen ? 'open' : ''}`} aria-hidden={!mobileNavOpen}>
         <a className="mobile-nav-link" href="/#premadeSection">{t("navPremade")}</a>
-        <a className="mobile-nav-link" href="/#contactSection">{t("navContact")}</a>
         <a className="mobile-nav-link mobile-nav-cta" href="/configurator">{t("navBuildCta")}</a>
         <button className="mobile-nav-link mobile-nav-lang" onClick={toggleLang}>
           {currentLang === "ar" ? "EN" : "AR"}
@@ -164,6 +162,16 @@ function PaymentPage() {
         >
           {isProcessing ? (t("paymentProcessing") || "Processing...") : (t("paymentPayNow") || "Pay Now")}
         </button>
+
+        {isProcessing && (
+          <div style={{ marginTop: 20 }}>
+            <img
+              src="/assets/loading.gif"
+              alt="Loading"
+              style={{ width: 80, height: "auto", display: "inline-block" }}
+            />
+          </div>
+        )}
 
         {paymentStatus && (
           <div style={{ marginTop: 15, color: "#ff4444", fontSize: "0.9rem" }}>

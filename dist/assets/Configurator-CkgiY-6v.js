@@ -1,4 +1,4 @@
-import{r as o,i as s,j as t}from"./index-uZjsNsd9.js";const i=`
+import{r as o,i as s,j as t}from"./index-IyhjX7Ud.js";const i=`
 <canvas id="bgCanvas"></canvas>
 <div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
 <div class="zoho-loading-card">
@@ -72,7 +72,8 @@ import{r as o,i as s,j as t}from"./index-uZjsNsd9.js";const i=`
 </div>
 <div class="color-panel-grid2" id="colorPanelGrid"></div>
 <div class="color-empty-placeholder" id="colorEmptyState">
-<img src="/assets/icons/shells.png"/>
+<img src="/assets/icons/darklogo.png"/>
+<span class="empty-msg" data-i18n="pickPartInstructions">Select a part from the list above to start customizing</span>
 </div>
 </div>
 </div>
@@ -119,4 +120,4 @@ import{r as o,i as s,j as t}from"./index-uZjsNsd9.js";const i=`
 </div>
 </div>
 <div class="part-tooltip" id="partTooltip"></div>
-`;function n(){return o.useEffect(()=>{document.body.classList.add("configurator-page-active"),window.__CONFIG_DATA__={i18n:s,zohoAccessToken:"1000.7e717720fad33ceb86442de697965dc7.af8c67230ddae4d39636b74a46f1c951",zohoOrgId:"892379608"};const a=document.createElement("script");return a.src="/configurator-logic.js?v="+new Date().getTime(),a.async=!0,document.body.appendChild(a),()=>{document.body.classList.remove("configurator-page-active"),document.body.removeChild(a),delete window.__CONFIG_DATA__}},[]),t.jsx("div",{className:"configurator-page",children:t.jsx("div",{dangerouslySetInnerHTML:{__html:i}})})}export{n as default};
+`;function l(){return o.useEffect(()=>{document.body.classList.add("configurator-page-active"),window.__CONFIG_DATA__={i18n:s,zohoAccessToken:"1000.7e717720fad33ceb86442de697965dc7.af8c67230ddae4d39636b74a46f1c951",zohoOrgId:"892379608"};const a=document.createElement("script");return a.src="/configurator-logic.js?v="+new Date().getTime(),a.async=!0,document.body.appendChild(a),()=>{document.body.classList.remove("configurator-page-active"),document.body.removeChild(a),delete window.__CONFIG_DATA__}},[]),t.jsx("div",{className:"configurator-page",children:t.jsx("div",{dangerouslySetInnerHTML:{__html:i}})})}export{l as default};

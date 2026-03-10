@@ -75,7 +75,8 @@ const configuratorMarkup = `
 </div>
 <div class="color-panel-grid2" id="colorPanelGrid"></div>
 <div class="color-empty-placeholder" id="colorEmptyState">
-<img src="/assets/icons/shells.png"/>
+<img src="/assets/icons/darklogo.png"/>
+<span class="empty-msg" data-i18n="pickPartInstructions">Select a part from the list above to start customizing</span>
 </div>
 </div>
 </div>

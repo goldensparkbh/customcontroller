@@ -17,7 +17,6 @@ const checkoutMarkup = `
   </button>
   <div class="nav-right">
     <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
     <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
     <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
   </div>
@@ -32,7 +31,6 @@ const checkoutMarkup = `
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
   <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-  <a class="mobile-nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
   <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
   <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
 </aside>
@@ -59,7 +57,7 @@ const checkoutMarkup = `
           <div class="phone-field-group">
             <div class="form-field main-phone-field">
               <label data-i18n="phoneLabel" for="phone">رقم الهاتف *</label>
-              <input id="phone" name="phone" required="" type="tel" placeholder="XXXXXXXX" minlength="8" pattern="\d{8}" title="Phone must be exactly 8 digits" />
+              <input id="phone" name="phone" required="" type="tel" placeholder="XXXXXXXX" minlength="8" maxlength="15" pattern="[0-9]{8,15}" title="Phone number should be between 8 and 15 digits" />
             </div>
             <div class="form-field prefix-field">
               <label data-i18n="phonePrefixLabel">رمز الدولة *</label>
@@ -99,7 +97,7 @@ const checkoutMarkup = `
           <div class="radio-group" style="display: flex; gap: 20px;">
             <label class="radio-option">
               <input type="radio" name="shippingType" value="delivery" checked />
-              <span data-i18n="shippingBahrainDelivery">توصيل (3 د.ب)</span>
+              <span data-i18n="shippingBahrainDelivery">توصيل (2 د.ب)</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="shippingType" value="pickup" />
@@ -251,20 +249,36 @@ const checkoutScript = `
       return prefix + (Number(value) || 0).toFixed(2);
     }
 
-    // Safely decode and inject SVG strings from base64
     function renderPreview(container, data) {
-      if (!data || !data.startsWith("data:image/svg+xml")) {
+      if (!data) {
         container.innerHTML = '<div style="padding:10px; text-align:center; opacity:0.3;">?</div>';
         return;
       }
-      try {
-        const base64Code = data.split(",")[1];
-        const svgMarkup = decodeURIComponent(escape(atob(base64Code)));
-        container.innerHTML = svgMarkup;
-      } catch (err) {
-        console.error("SVG Render Error:", err);
-        container.innerHTML = '<div style="padding:10px; text-align:center; color:red;">!</div>';
+      
+      if (data.startsWith("data:image/png") || data.startsWith("data:image/jpeg")) {
+        const img = document.createElement("img");
+        img.src = data;
+        img.style.width = "100%";
+        img.style.height = "auto";
+        img.style.display = "block";
+        container.innerHTML = "";
+        container.appendChild(img);
+        return;
       }
+
+      if (data.startsWith("data:image/svg+xml")) {
+        try {
+          const base64Code = data.split(",")[1];
+          const svgMarkup = decodeURIComponent(escape(atob(base64Code)));
+          container.innerHTML = svgMarkup;
+        } catch (err) {
+          console.error("SVG Render Error:", err);
+          container.innerHTML = '<div style="padding:10px; text-align:center; color:red;">!</div>';
+        }
+        return;
+      }
+
+      container.innerHTML = '<div style="padding:10px; text-align:center; opacity:0.3;">?</div>';
     }
 
     // --- UI Update Function ---
@@ -292,7 +306,7 @@ const checkoutScript = `
                 shippingCost = 0;
                 requiresAddress = false;
             } else {
-                shippingCost = 3.00;
+                shippingCost = 2.00;
                 requiresAddress = true;
             }
         } else {
@@ -359,10 +373,12 @@ const checkoutScript = `
       let total = 0;
       let count = 0;
       for (const item of cartItems) {
-        count += item.quantity;
-        total += item.unitPrice * item.quantity;
+        const qty = Number(item.quantity) || 1;
+        const up = Number(item.unitPrice) || Number(item.total) || 0;
+        count += qty;
+        total += up * qty;
       }
-      return { total, count };
+      return { total: Number(total) || 0, count: Number(count) || 0 };
     }
 
     function renderSummary() {
@@ -460,6 +476,13 @@ const checkoutScript = `
     const btnText = placeOrderBtn.querySelector(".btn-text");
     const btnLoader = placeOrderBtn.querySelector(".btn-loader");
 
+    const phoneInput = document.getElementById("phone");
+    if (phoneInput) {
+      phoneInput.addEventListener("input", (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, "");
+      });
+    }
+
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!cartItems.length) { alert(t("alertNoItems")); return; }
@@ -495,8 +518,12 @@ const checkoutScript = `
         localStorage.setItem("ezOrderDraft", JSON.stringify(data));
         window.location.href = "/payment";
       } catch (err) {
-        console.error(err);
-        alert(t("paymentStartFailed"));
+        console.error("Storage Error:", err);
+        if (err.name === 'QuotaExceededError' || err.code === 22) {
+           alert(currentLang === "ar" ? "خطأ: مساحة التخزين في متصفحك ممتلئة. يرجى إزالة بعض العناصر من السلة والمحاولة مرة أخرى." : "Error: Browser storage is full. Please remove some items from the cart and try again.");
+        } else {
+           alert(t("paymentStartFailed"));
+        }
         placeOrderBtn.disabled = false;
         btnText.style.opacity = "1";
         btnLoader.style.display = "none";

@@ -1,10 +1,10 @@
-import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
+import{r as a,j as t}from"./index-IyhjX7Ud.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav">
   <div class="nav-logo">
-    <a class="nav-left" href="index.html">
+    <a class="nav-left" href="/">
       <div class="nav-logo-mark"></div>
-      <div class="nav-page-title" data-i18n="orderSummaryTitle">ملخص الطلب</div>
+      <div class="nav-page-title" data-i18n="paymentFailedTitle">فشل الدفع</div>
     </a>
   </div>
   <button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
@@ -14,7 +14,6 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
   </button>
   <div class="nav-right">
     <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
     <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
     <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
     <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
@@ -23,17 +22,16 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
   <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-  <a class="mobile-nav-link" href="/#contactSection" data-i18n="navContact">تواصل معنا</a>
   <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
   <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
   <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
 </aside>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
-  <div class="card" style="max-width:640px; width:100%;">
-    <div class="card-title" data-i18n="orderSummaryTitle">ملخص الطلب</div>
-    <div id="orderStatus" style="margin-bottom:8px;"></div>
-    <div id="orderItems"></div>
-    <div id="orderTotals" style="margin-top:10px; font-weight:700;"></div>
+  <div class="card" style="max-width:480px; width:100%; text-align:center;">
+    <div class="card-title" data-i18n="paymentFailedTitle" style="color: #ff4d4d;">فشل الدفع</div>
+    <div style="font-size:3rem; margin:20px 0;">❌</div>
+    <div id="failMessage" data-i18n="paymentFailedMessage" style="font-size:1rem; margin:10px 0;">لم تكتمل عملية الدفع بنجاح.</div>
+    <div id="redirectMsg" data-i18n="redirectingCart" style="font-size:0.9rem; margin-top:10px; opacity:0.7;">جاري التحويل للسلة...</div>
   </div>
 </div>
 `,l=`
@@ -46,6 +44,7 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
   const navMenuBtn = document.querySelector(".nav-menu-btn");
   const mobileNavOverlay = document.getElementById("mobileNavOverlay");
   const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+  
   function t(key) {
     return (i18n[navLang] && i18n[navLang][key]) || key;
   }
@@ -102,6 +101,7 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
   applyTheme();
   updateThemeLabel();
   applyTranslations();
+  
   if (navLangToggle) navLangToggle.addEventListener("click", toggleNavLang);
   if (mobileLangToggle) mobileLangToggle.addEventListener("click", toggleNavLang);
   if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
@@ -128,28 +128,9 @@ import{r as t,j as a}from"./index-uZjsNsd9.js";const n=`
     });
   }
 
-  const resultRaw = localStorage.getItem("ezOrderResult");
-  const draftRaw = localStorage.getItem("ezOrderDraft");
-  const statusEl = document.getElementById("orderStatus");
-  const itemsEl = document.getElementById("orderItems");
-  const totalsEl = document.getElementById("orderTotals");
-
-  if (!resultRaw || !draftRaw) {
-    statusEl.textContent = t("orderStatusMissing");
-    setTimeout(() => window.location.href = "/cart", 1200);
-  } else {
-    const result = JSON.parse(resultRaw);
-    const draft = JSON.parse(draftRaw);
-    const cart = draft.cart || [];
-    const total = cart.reduce((s, it) => s + (it.unitPrice * it.quantity), 0);
-    statusEl.innerHTML = t("orderStatusLabel") + " <strong>" + t("orderStatusConfirmed") + "</strong>";
-    const list = document.createElement("ul");
-    cart.forEach(it => {
-      const li = document.createElement("li");
-      li.textContent = (it.name || t("orderItemFallback")) + " × " + it.quantity + " — " + (draft.currencyPrefix || "BHD ") + (it.unitPrice * it.quantity).toFixed(2);
-      list.appendChild(li);
-    });
-    itemsEl.appendChild(list);
-    totalsEl.textContent = t("orderTotalLabel") + " " + (draft.currencyPrefix || "BHD ") + total.toFixed(2);
-  }
-`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>document.body.removeChild(e)},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};
+  // --- FAILURE LOGIC ---
+  // Redirect to cart after 5 seconds
+  setTimeout(() => {
+    window.location.href = "/cart";
+  }, 5000);
+`;function o(){return a.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>{document.body.contains(e)&&document.body.removeChild(e)}},[]),t.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{o as default};

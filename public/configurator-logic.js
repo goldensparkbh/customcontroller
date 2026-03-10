@@ -351,9 +351,9 @@
             }
 
             if (col) {
-                const isTransparent = typeof transparencyHint === "boolean"
+                const isTransparent = (partId === "allButtons") ? false : (typeof transparencyHint === "boolean"
                     ? transparencyHint
-                    : TRANSPARENT_HEXES.has(col.hex.toLowerCase());
+                    : TRANSPARENT_HEXES.has(col.hex.toLowerCase()));
 
                 if (typeof transparencyHint === "boolean") {
                     col.key = col.hex + (isTransparent ? "_t" : "_s");
@@ -493,6 +493,17 @@
             console.error("[Zoho] Bootstrap failed:", err);
         } finally {
             setZohoLoading(false);
+
+            // Auto-select a part on first load to show options in the palette
+            if (!selectedPartId) {
+                if (availablePartsSet.has("shell")) {
+                    selectPart("shell");
+                } else if (availablePartsSet.size > 0) {
+                    // Filter out hidden parts if any, or just pick the first available
+                    const firstId = Array.from(availablePartsSet)[0];
+                    selectPart(firstId);
+                }
+            }
         }
     }
 
@@ -672,6 +683,7 @@
 
         // Helper to check if a part is currently transparent
         const isPartTransparent = (pid) => {
+            if (pid === "allButtons") return false;
             const key = configState[pid];
             if (!key) return false;
             if (key.toLowerCase().endsWith("_t")) return true;
@@ -980,42 +992,54 @@
 
         const palette = getPaletteForPart(partId);
         const options = getOptionsForPart(partId);
-
         const isBackRamp = (partId === "backShellMain" && optionState["backShellMain"] === "rampkit");
 
+        // Always show the panel for both mobile and desktop
+        colorEmptyState.style.display = "none";
+
         const mobile = isMobileLayout();
-        if (!mobile) {
-            colorEmptyState.style.display = "none";
+        if (mobile) {
+            // Mobile: Show both grids in one scrollable panel
+            optionsPanelGrid.style.display = options.length > 0 ? "grid" : "none";
+            colorPanelGrid.style.display = isBackRamp ? "none" : "grid";
+            colorPanelHeaderBottom.style.display = "none"; // Hide redundant "Aesthetics" header
+
+            buildPaletteCells(optionsPanelGrid, options, true);
+            buildPaletteCells(colorPanelGrid, isBackRamp ? [] : palette, false);
+
+            // Hide the tab switch buttons on mobile if they exist
+            document.querySelectorAll(".panel-switch-btn").forEach(btn => btn.style.display = "none");
+
+            updateMobileOptionsBar();
+        } else {
+            // Desktop: build both
             colorPanelHeaderBottom.style.display = "flex";
             colorPanelGrid.style.display = isBackRamp ? "none" : "grid";
-
+            optionsPanelGrid.style.display = options.length > 0 ? "grid" : "none";
             buildPaletteCells(colorPanelGrid, isBackRamp ? [] : palette, false);
             buildPaletteCells(optionsPanelGrid, options, true);
-        } else {
-            updateMobileOptionsBar();
         }
     }
 
     function updateMobileOptionsBar() {
         if (!mobileOptionsGrid) return;
-        const partId = selectedPartId;
-        const palette = partId ? getPaletteForPart(partId) : [];
-        const options = partId ? getOptionsForPart(partId) : [];
+        mobileOptionsGrid.innerHTML = "";
+        ALL_PARTS.forEach(part => {
+            if (part.hiddenUI || !isPartActive(part)) return;
+            const cell = document.createElement("div");
+            cell.className = "mobile-part-item";
 
-        if (mobileOptionsGrid) mobileOptionsGrid.innerHTML = "";
+            const btn = document.createElement("button");
+            btn.className = "mobile-part-btn";
+            if (selectedPartId === part.id) btn.classList.add("selected");
+            const img = document.createElement("img");
+            img.src = part.icon;
+            btn.appendChild(img);
 
-        if (options.length > 0) {
-            renderMobileSection(mobileOptionsGrid, options.map(o => ({ ...o, isOption: true })), null);
-        }
-
-        const isBackRamp = (partId === "backShellMain" && optionState["backShellMain"] === "rampkit");
-        if (!isBackRamp && palette.length > 0) {
-            const solid = palette.filter(e => !e.isTransparent && !TRANSPARENT_HEXES.has(e.hex.toLowerCase()));
-            const trans = palette.filter(e => e.isTransparent || TRANSPARENT_HEXES.has(e.hex.toLowerCase()));
-
-            if (solid.length > 0) renderMobileSection(mobileOptionsGrid, solid.map(c => ({ ...c, isOption: false })), t("solidColors"));
-            if (trans.length > 0) renderMobileSection(mobileOptionsGrid, trans.map(c => ({ ...c, isOption: false })), t("transparentColors"));
-        }
+            btn.addEventListener("click", () => selectPart(part.id));
+            cell.appendChild(btn);
+            mobileOptionsGrid.appendChild(cell);
+        });
 
         if (mobileOptionsGrid.children.length === 0) {
             mobileOptionsGrid.classList.remove("has-content");
@@ -1024,59 +1048,7 @@
         }
     }
 
-    function renderMobileSection(target, entries, title) {
-        if (title) {
-            const header = document.createElement("div");
-            header.className = "mobile-group-title";
-            header.textContent = title;
-            target.appendChild(header);
-        }
 
-        const partId = selectedPartId;
-        entries.forEach(entry => {
-            const cell = document.createElement("div");
-            cell.className = entry.isOption ? "cd-cell-op" : "cd-cell";
-
-            const swatch = document.createElement("div");
-            swatch.className = entry.isOption ? "cd-swatch-op" : "cd-swatch";
-            if (entry.icon) {
-                swatch.style.backgroundImage = `url('${entry.icon}')`;
-                swatch.style.backgroundSize = "cover";
-                swatch.style.backgroundColor = "transparent";
-            } else {
-                swatch.style.backgroundColor = entry.hex;
-            }
-
-            const shouldShowPriceInside = entry.price != null && entry.price > 0 && entry.key !== "rampkit";
-            if (shouldShowPriceInside) {
-                const priceLabel = document.createElement("span");
-                priceLabel.className = "swatch-price";
-                priceLabel.textContent = i18n[currentLang].currencyPrefix + entry.price;
-                swatch.appendChild(priceLabel);
-            }
-
-            cell.appendChild(swatch);
-
-            const isSelected = entry.isOption ? (optionState[partId] === entry.key) : (configState[partId] === entry.key);
-            cell.classList.toggle("active", isSelected);
-
-            if (entry.isOption) {
-                const label = document.createElement("div");
-                label.className = "cd-color-name";
-                const labelText = entry.isGamemode && entry.price != null
-                    ? (i18n[currentLang].currencyPrefix + entry.price.toFixed(2))
-                    : t("option_" + entry.key);
-                label.textContent = labelText;
-                cell.appendChild(label);
-            }
-
-            cell.addEventListener("click", () => {
-                if (entry.isOption) applyOption(partId, entry.key);
-                else applyColor(partId, entry.key);
-            });
-            target.appendChild(cell);
-        });
-    }
 
     function buildPaletteCells(target, entries, isOption) {
         if (target) target.innerHTML = "";
@@ -1084,10 +1056,13 @@
         if (!partId) return;
 
         if (isOption) {
-            renderSection(target, entries, null, true);
+            if (entries.length > 0) {
+                renderSection(target, entries, t("availableOptions"), true);
+            }
         } else {
-            const solid = entries.filter(e => !e.isTransparent && !TRANSPARENT_HEXES.has(e.hex.toLowerCase()));
-            const trans = entries.filter(e => e.isTransparent || TRANSPARENT_HEXES.has(e.hex.toLowerCase()));
+            const isAllButtons = (partId === "allButtons");
+            const solid = entries.filter(e => isAllButtons || (!e.isTransparent && !TRANSPARENT_HEXES.has(e.hex.toLowerCase())));
+            const trans = isAllButtons ? [] : entries.filter(e => e.isTransparent || TRANSPARENT_HEXES.has(e.hex.toLowerCase()));
 
             if (solid.length > 0) renderSection(target, solid, t("solidColors"), false);
             if (trans.length > 0) renderSection(target, trans, t("transparentColors"), false);
@@ -1097,7 +1072,7 @@
     function renderSection(target, entries, title, isOption) {
         if (title) {
             const header = document.createElement("div");
-            header.className = "color-group-title";
+            header.className = isMobileLayout() ? "mobile-group-title" : "color-group-title";
             header.textContent = title;
             target.appendChild(header);
         }
@@ -1161,10 +1136,21 @@
             const targetLayers = layers[partId] || [];
             targetLayers.forEach(layer => {
                 layer.style.setProperty("--tint", colObj.hex);
-                if (colObj.isTransparent || TRANSPARENT_HEXES.has(colObj.hex.toLowerCase())) {
+                const isActuallyTransparent = (colObj.isTransparent || TRANSPARENT_HEXES.has(colObj.hex.toLowerCase())) && partId !== "allButtons";
+                if (isActuallyTransparent) {
                     layer.style.setProperty("--tint-opacity", String(TRANSPARENT_TINT_OPACITY));
+                    layer.style.mixBlendMode = "multiply";
+                    layer.style.backgroundImage = "none";
                 } else {
                     layer.style.setProperty("--tint-opacity", "1");
+                    // Face buttons should be opaque as requested
+                    if (partId === "allButtons") {
+                        layer.style.mixBlendMode = "normal";
+                        layer.style.backgroundImage = "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.2) 0%, transparent 60%)";
+                    } else {
+                        layer.style.mixBlendMode = "multiply";
+                        layer.style.backgroundImage = "none";
+                    }
                 }
                 layer.style.display = "block";
             });
@@ -1193,6 +1179,13 @@
             targetLayers.forEach(layer => {
                 layer.style.setProperty("--tint", optObj.hex);
                 layer.style.setProperty("--tint-opacity", "1");
+                if (partId === "allButtons") {
+                    layer.style.mixBlendMode = "normal";
+                    layer.style.backgroundImage = "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.2) 0%, transparent 60%)";
+                } else {
+                    layer.style.mixBlendMode = "multiply";
+                    layer.style.backgroundImage = "none";
+                }
                 layer.style.display = "block";
             });
         }
@@ -1286,108 +1279,211 @@
         const snapshot = {
             parts: {},
             total: 0,
-            basePrice: baseControllerPrice
+            basePrice: parseFloat(baseControllerPrice) || 0
         };
+        const ID_MAPPING = {
+            allButtons: ["faceButtons", "psButton", "share", "options"],
+            sticks: ["stickL", "stickR"],
+            bumpersTriggers: ["bumpers", "triggers", "backTriggers", "ls", "rs", "l2r2"]
+        };
+
         ALL_PARTS.forEach(part => {
-            const colorKey = configState[part.id];
-            const optionKey = optionState[part.id];
-            const palette = getPaletteForPart(part.id);
-            const options = getOptionsForPart(part.id);
+            const pid = part.id;
+            const colorKey = configState[pid];
+            const optionKey = optionState[pid];
+            const palette = getPaletteForPart(pid);
+            const options = getOptionsForPart(pid);
 
-            const colorObj = palette.find(c => c.key === colorKey) || palette.find(c => c.hex === colorKey);
-            const optionObj = options.find(o => o.key === optionKey);
+            // Robust color finding: Key match, Hex match, or key match (ignoring suffix)
+            let colorObj = palette.find(c => c.key === colorKey) ||
+                palette.find(c => c.hex === colorKey) ||
+                palette.find(c => (c.key || "").split("_")[0] === (colorKey || "").split("_")[0]);
 
-            // Robust transparency check for snapshot
-            const isTrans = colorKey && (colorKey.toLowerCase().endsWith("_t") || (colorObj && colorObj.isTransparent));
+            // If still not found, try mapping
+            if (!colorObj && ID_MAPPING[pid]) {
+                for (const oldId of ID_MAPPING[pid]) {
+                    const oldKey = configState[oldId];
+                    if (oldKey) {
+                        colorObj = palette.find(c => c.key === oldKey) ||
+                            palette.find(c => c.hex === oldKey) ||
+                            palette.find(c => (c.key || "").split("_")[0] === (oldKey || "").split("_")[0]);
+                        if (colorObj) break;
+                    }
+                }
+            }
 
-            snapshot.parts[part.id] = {
-                color: colorObj ? { ...colorObj } : null,
-                option: optionObj ? { ...optionObj } : null,
+            let optionObj = options.find(o => o.key === optionKey);
+            if (!optionObj && ID_MAPPING[pid]) {
+                for (const oldId of ID_MAPPING[pid]) {
+                    const oldKey = optionState[oldId];
+                    if (oldKey) {
+                        optionObj = options.find(o => o.key === oldKey);
+                        if (optionObj) break;
+                    }
+                }
+            }
+
+            const isTrans = (pid !== "allButtons") && colorKey && (
+                String(colorKey).toLowerCase().includes("_t") ||
+                (colorObj && (colorObj.isTransparent || TRANSPARENT_HEXES.has((colorObj.hex || "").toLowerCase())))
+            );
+
+            snapshot.parts[pid] = {
+                color: colorObj ? JSON.parse(JSON.stringify(colorObj)) : null,
+                option: optionObj ? JSON.parse(JSON.stringify(optionObj)) : null,
                 transparency: !!isTrans
             };
         });
 
-        let sum = baseControllerPrice || 0;
+        let sum = snapshot.basePrice;
         Object.keys(selectedPriceByPart).forEach(k => {
-            const val = selectedPriceByPart[k];
-            if (typeof val === "number" && !Number.isNaN(val)) sum += val;
+            const val = parseFloat(selectedPriceByPart[k]);
+            if (!Number.isNaN(val)) sum += val;
         });
         Object.keys(selectedOptionPriceByPart).forEach(k => {
-            const val = selectedOptionPriceByPart[k];
-            if (typeof val === "number" && !Number.isNaN(val)) sum += val;
+            const val = parseFloat(selectedOptionPriceByPart[k]);
+            if (!Number.isNaN(val)) sum += val;
         });
         snapshot.total = sum;
 
         return snapshot;
     }
 
-    function buildPreviewSvg(snapshot, side) {
-        const width = BASE_WIDTH;
-        const height = BASE_HEIGHT;
-        const parts = side === "front" ? FRONT_PARTS : BACK_PARTS;
-        const defs = [];
-        const overlays = [];
-        const origin = window.location.origin;
+    async function buildPreviewImage(snapshot, side) {
+        // Use a smaller dimension for previews to save localStorage space (Quota limit is ~5MB)
+        const scale = 0.5;
+        const width = Math.round(BASE_WIDTH * scale);
+        const height = Math.round(BASE_HEIGHT * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
 
-        const anyTransFront = (side === "front") && (
-            snapshot.parts["shell"].transparency ||
-            snapshot.parts["trimpiece"].transparency ||
-            snapshot.parts["touchpad"].transparency
-        );
-
-        let ctrlSrc = "";
-        if (side === "front") {
-            ctrlSrc = anyTransFront ? "/assets/controller_t.png" : "/assets/controller.png";
-        } else {
-            const isRampkit = snapshot.parts["backShellMain"].option && snapshot.parts["backShellMain"].option.key === "rampkit";
-            if (isRampkit) ctrlSrc = "/assets/controller_back_ramp.png";
-            else ctrlSrc = snapshot.parts["backShellMain"].transparency ? "/assets/controller_back_t.png" : "/assets/controller_back.png";
-        }
-
-        parts.forEach((part, pIdx) => {
-            const state = snapshot.parts[part.id];
-            if (!state || !state.color) return;
-
-            const isRampkit = side === "back" && part.id === "backShellMain" && state.option && state.option.key === "rampkit";
-            if (isRampkit) return;
-
-            const hex = state.color.hex;
-            const isTrans = state.transparency;
-            const blendMode = isTrans ? "multiply" : "normal";
-            const partOpacity = isTrans ? TRANSPARENT_TINT_OPACITY : 1;
-            const filters = "";
-
-            const maskUrls = Array.isArray(part.mask) ? part.mask : [part.mask];
-            maskUrls.forEach((mUrl, mIdx) => {
-                const maskId = "mask_" + Math.random().toString(36).substr(2, 9) + "_" + side + "_" + part.id + "_" + pIdx + "_" + mIdx;
-                const fullMaskUrl = mUrl.startsWith("http") ? mUrl : (origin + "/" + mUrl.replace(new RegExp("^/+"), ""));
-
-                defs.push(
-                    '<mask id="' + maskId + '">' +
-                    '<image href="' + fullMaskUrl + '" x="0" y="0" width="' + width + '" height="' + height + '" />' +
-                    '</mask>'
-                );
-
-                overlays.push(
-                    '<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="' + hex + '" mask="url(#' + maskId + ')" style="mix-blend-mode: ' + blendMode + '; ' + filters + ' opacity: ' + partOpacity + ';" />'
-                );
-            });
+        const loadImg = (src) => new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+                console.warn("Failed to load preview asset:", src);
+                resolve(null);
+            };
+            img.src = src;
         });
 
-        const fullCtrlSrc = ctrlSrc.startsWith("http") ? ctrlSrc : (origin + "/" + ctrlSrc.replace(new RegExp("^/+"), ""));
+        const getPartTrans = (pid) => {
+            const s = snapshot.parts && snapshot.parts[pid];
+            return s ? !!s.transparency : false;
+        };
 
-        const svg =
-            '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" style="background:#141829; shape-rendering: geometricPrecision; display: block; width: 100%; height: auto;">' +
-            '<defs>' + defs.join("") + '</defs>' +
-            '<image href="' + fullCtrlSrc + '" x="0" y="0" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid meet" opacity="0.98" />' +
-            overlays.join("") +
-            '</svg>';
+        const transStatus = {
+            shell: getPartTrans("shell"),
+            trimpiece: getPartTrans("trimpiece"),
+            touchpad: getPartTrans("touchpad")
+        };
 
-        return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+        const anyTransFront = (side === "front") && (transStatus.shell || transStatus.trimpiece || transStatus.touchpad);
+
+        let ctrlSrc = "";
+        const baseOverlays = [];
+        if (side === "front") {
+            if (anyTransFront) {
+                ctrlSrc = "/assets/controller_t.png";
+                if (!transStatus.shell) baseOverlays.push("/assets/controller_t_shell.png");
+                if (!transStatus.trimpiece) baseOverlays.push("/assets/controller_t_trim.png");
+                if (!transStatus.touchpad) baseOverlays.push("/assets/controller_t_touchpad.png");
+            } else {
+                ctrlSrc = "/assets/controller.png";
+            }
+        } else {
+            const bsm = (snapshot.parts && snapshot.parts["backShellMain"]) || {};
+            const isRampkit = bsm.option && bsm.option.key === "rampkit";
+            if (isRampkit) ctrlSrc = "/assets/controller_back_ramp.png";
+            else ctrlSrc = bsm.transparency ? "/assets/controller_back_t.png" : "/assets/controller_back.png";
+        }
+
+        // 1. Draw Background
+        ctx.fillStyle = "#141829";
+        ctx.fillRect(0, 0, width, height);
+
+        // 2. Base Image
+        const baseImg = await loadImg(ctrlSrc);
+        if (baseImg) ctx.drawImage(baseImg, 0, 0, width, height);
+
+        // 3. Mixed Transparency Overlays
+        for (const ovSrc of baseOverlays) {
+            const ovImg = await loadImg(ovSrc);
+            if (ovImg) ctx.drawImage(ovImg, 0, 0, width, height);
+        }
+
+        // 4. Custom Parts
+        const parts = side === "front" ? FRONT_PARTS : BACK_PARTS;
+        for (const part of parts) {
+            const state = snapshot.parts[part.id];
+            if (!state || !state.color) continue;
+
+            const isRampkit = side === "back" && part.id === "backShellMain" && state.option && state.option.key === "rampkit";
+            if (isRampkit) continue;
+
+            const hexRaw = (state.color && state.color.hex) || "";
+            const hex = hexRaw.includes("_") ? hexRaw.split("_")[0] : hexRaw;
+            const isTrans = state.transparency;
+
+            let blendMode = "multiply";
+            if (part.id === "allButtons") {
+                // Face buttons should be opaque
+                blendMode = isTrans ? "multiply" : "normal";
+            } else if (part.id === "trimpiece" || part.id === "sticks" || part.id === "psButton") {
+                blendMode = "soft-light";
+            } else if (isTrans || side === "back") {
+                blendMode = "multiply";
+            }
+
+            const partOpacity = isTrans ? TRANSPARENT_TINT_OPACITY : 1;
+            const maskUrls = Array.isArray(part.mask) ? part.mask : [part.mask];
+
+            for (const mUrl of maskUrls) {
+                const mImg = await loadImg(mUrl);
+                if (!mImg) continue;
+
+                const tempCanvas = document.createElement("canvas");
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext("2d");
+
+                tempCtx.drawImage(mImg, 0, 0, width, height);
+                tempCtx.globalCompositeOperation = "source-in";
+
+                if (part.id === "allButtons" && blendMode === "normal") {
+                    // Create a radial gradient for 3D effect on buttons
+                    const grad = tempCtx.createRadialGradient(
+                        width * 0.35, height * 0.35, 0,
+                        width * 0.5, height * 0.5, width * 0.4
+                    );
+                    grad.addColorStop(0, "rgba(255,255,255,0.2)");
+                    grad.addColorStop(1, "transparent");
+
+                    tempCtx.fillStyle = hex;
+                    tempCtx.fillRect(0, 0, width, height);
+                    tempCtx.fillStyle = grad;
+                    tempCtx.fillRect(0, 0, width, height);
+                } else {
+                    tempCtx.fillStyle = hex;
+                    tempCtx.fillRect(0, 0, width, height);
+                }
+
+                ctx.save();
+                ctx.globalAlpha = partOpacity;
+                ctx.globalCompositeOperation = blendMode;
+                ctx.drawImage(tempCanvas, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        return canvas.toDataURL("image/jpeg", 0.7);
     }
 
     if (addToCartBtn) {
-        addToCartBtn.addEventListener("click", () => {
+        addToCartBtn.addEventListener("click", async () => {
             const snapshot = getSnapshot();
             const hasCustom = Object.values(snapshot.parts).some(p => p.color || (p.option && p.option.key !== "standard"));
             if (!hasCustom) {
@@ -1395,22 +1491,41 @@
                 return;
             }
 
-            const previewFront = buildPreviewSvg(snapshot, "front");
-            const previewBack = buildPreviewSvg(snapshot, "back");
+            // Show loading state
+            const origText = addToCartBtn.innerHTML;
+            addToCartBtn.innerHTML = t("loadingPreview") || '<div class="zoho-loading-spinner" style="width:20px;height:20px;"></div>';
+            addToCartBtn.disabled = true;
 
-            const cartItem = {
-                id: Date.now(),
-                name: t("productName"),
-                total: snapshot.total,
-                parts: snapshot.parts,
-                previewFront: previewFront,
-                previewBack: previewBack
-            };
+            try {
+                const previewFront = await buildPreviewImage(snapshot, "front");
+                const previewBack = await buildPreviewImage(snapshot, "back");
 
-            const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
-            cart.push(cartItem);
-            localStorage.setItem("ezCart", JSON.stringify(cart));
-            window.location.href = "/cart";
+                const cartItem = {
+                    id: Date.now(),
+                    name: t("productName"),
+                    total: snapshot.total,
+                    parts: snapshot.parts,
+                    previewFront: previewFront,
+                    previewBack: previewBack
+                };
+
+                const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
+                cart.push(cartItem);
+                localStorage.setItem("ezCart", JSON.stringify(cart));
+                window.location.href = "/cart";
+            } catch (err) {
+                console.error("Cart Preview Generation Error:", err);
+                // Fallback if canvas fails
+                const cartItem = {
+                    id: Date.now(),
+                    total: snapshot.total,
+                    parts: snapshot.parts
+                };
+                const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
+                cart.push(cartItem);
+                localStorage.setItem("ezCart", JSON.stringify(cart));
+                window.location.href = "/cart";
+            }
         });
     }
 
