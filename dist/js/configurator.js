@@ -1217,7 +1217,6 @@
         const width = BASE_WIDTH;
         const height = BASE_HEIGHT;
         const parts = side === "front" ? FRONT_PARTS : BACK_PARTS;
-        const defs = [];
         const overlays = [];
         const origin = window.location.origin;
 
@@ -1236,41 +1235,28 @@
             else ctrlSrc = snapshot.parts["backShellMain"].transparency ? "/assets/controller_back_t.png" : "/assets/controller_back.png";
         }
 
-        parts.forEach((part, pIdx) => {
+        parts.forEach((part) => {
             const state = snapshot.parts[part.id];
-            if (!state || !state.color) return;
+            if (!state) return;
 
             const isRampkit = side === "back" && part.id === "backShellMain" && state.option && state.option.key === "rampkit";
             if (isRampkit) return;
 
-            const hex = state.color.hex;
-            const isTrans = state.color && (state.color.key.toLowerCase().endsWith("_t") || state.color.isTransparent || state.transparency);
-            const blendMode = isTrans ? "multiply" : "normal";
-            const partOpacity = isTrans ? TRANSPARENT_TINT_OPACITY : 1;
-            const filters = "";
+            const optionImage = state.option && state.option.image ? state.option.image : null;
+            const colorImage = state.color && state.color.image ? state.color.image : null;
+            const overlayImage = optionImage || colorImage;
+            if (!overlayImage) return;
 
-            const maskUrls = Array.isArray(part.mask) ? part.mask : [part.mask];
-            maskUrls.forEach((mUrl, mIdx) => {
-                const maskId = "mask_" + Date.now() + "_" + side + "_" + part.id + "_" + pIdx + "_" + mIdx;
-                const fullMaskUrl = mUrl.startsWith("http") ? mUrl : (origin + "/" + mUrl.replace(new RegExp("^/+"), ""));
-
-                defs.push(
-                    '<mask id="' + maskId + '">' +
-                    '<image href="' + fullMaskUrl + '" x="0" y="0" width="' + width + '" height="' + height + '" />' +
-                    '</mask>'
-                );
-
-                overlays.push(
-                    '<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="' + hex + '" mask="url(#' + maskId + ')" style="mix-blend-mode: ' + blendMode + '; ' + filters + ' opacity: ' + partOpacity + ';" />'
-                );
-            });
+            const fullOverlayUrl = overlayImage.startsWith("http") ? overlayImage : (origin + "/" + overlayImage.replace(new RegExp("^/+"), ""));
+            overlays.push(
+                '<image href="' + fullOverlayUrl + '" x="0" y="0" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid meet" />'
+            );
         });
 
         const fullCtrlSrc = ctrlSrc.startsWith("http") ? ctrlSrc : (origin + "/" + ctrlSrc.replace(new RegExp("^/+"), ""));
 
         const svg =
             '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" style="background:#141829; shape-rendering: geometricPrecision; display: block; width: 100%; height: auto;">' +
-            '<defs>' + defs.join("") + '</defs>' +
             '<image href="' + fullCtrlSrc + '" x="0" y="0" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid meet" opacity="0.98" />' +
             overlays.join("") +
             '</svg>';

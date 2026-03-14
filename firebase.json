@@ -20,6 +20,10 @@
         "function": "tapPaymentHandler"
       },
       {
+        "source": "/api/orderPreview",
+        "function": "orderPreview"
+      },
+      {
         "source": "/api/**",
         "function": "orderHandler"
       },

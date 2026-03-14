@@ -1,5 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { i18n } from '../i18n';
+import LoadingState, { LoadingInline } from '../components/LoadingState.jsx';
+
+async function parseJsonSafe(response) {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+function getLineItemTotal(item) {
+  const qty = item.quantity || 1;
+  const unit = item.unitPrice ?? item.total ?? 0;
+  return Number(unit) * qty;
+}
+
+function getDerivedSubtotal(draft) {
+  const cart = Array.isArray(draft?.cart) ? draft.cart : [];
+  return cart.reduce((sum, item) => sum + getLineItemTotal(item), 0);
+}
+
+function getOrderTotals(draft) {
+  const subtotal = Number(draft?.subtotal) > 0 ? Number(draft.subtotal) : getDerivedSubtotal(draft);
+  const shippingCost = Number(draft?.shippingCost);
+  const total = Number(draft?.total) > 0 ? Number(draft.total) : subtotal + (Number.isFinite(shippingCost) && shippingCost > 0 ? shippingCost : 0);
+  return { subtotal, total };
+}
+
+function normalizeOrderDraft(draft) {
+  if (!draft || typeof draft !== "object") return draft;
+  const { subtotal, total } = getOrderTotals(draft);
+  return {
+    ...draft,
+    subtotal,
+    total
+  };
+}
 
 function PaymentPage() {
   const [loading, setLoading] = useState(true);
@@ -20,7 +59,9 @@ function PaymentPage() {
       window.location.href = "/cart";
       return;
     }
-    setOrderDraft(JSON.parse(draftRaw));
+    const normalizedDraft = normalizeOrderDraft(JSON.parse(draftRaw));
+    setOrderDraft(normalizedDraft);
+    localStorage.setItem("ezOrderDraft", JSON.stringify(normalizedDraft));
     setLoading(false);
   }, []);
 
@@ -31,23 +72,28 @@ function PaymentPage() {
   }, [currentLang]);
 
 
-  const toggleLang = () => {
-    const newLang = currentLang === "ar" ? "en" : "ar";
-    localStorage.setItem("ez_lang", newLang);
-    setCurrentLang(newLang);
-  };
-
   const handlePay = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
     setPaymentStatus("");
 
-    const cart = orderDraft.cart || [];
-    const totalAmount = cart.reduce((s, it) => s + (it.unitPrice * it.quantity), 0);
+    const normalizedDraft = normalizeOrderDraft(orderDraft);
+    const totalAmount = normalizedDraft.total;
     const customerName = orderDraft.fullName || "Guest";
-    const [firstName, lastName] = customerName.split(" ");
+    const [firstName, ...restName] = customerName.split(" ");
+    const lastName = restName.join(" ") || firstName || ".";
     const email = orderDraft.email || "test@example.com";
     const phone = orderDraft.phone || "00000000";
+    const countryCode = orderDraft.phonePrefix || "973";
+
+    if (!(totalAmount > 0)) {
+      setPaymentStatus(t("paymentStartFailed") + ": Invalid order total");
+      setIsProcessing(false);
+      return;
+    }
+
+    setOrderDraft(normalizedDraft);
+    localStorage.setItem("ezOrderDraft", JSON.stringify(normalizedDraft));
 
     try {
       const response = await fetch('/api/tap', {
@@ -63,7 +109,7 @@ function PaymentPage() {
             last_name: lastName,
             email: email,
             phone: {
-              country_code: "965", // You might want to parse this better based on user input
+              country_code: countryCode,
               number: phone
             }
           },
@@ -74,13 +120,16 @@ function PaymentPage() {
         })
       });
 
-      const result = await response.json();
+      const result = await parseJsonSafe(response);
 
       if (!response.ok) {
-        throw new Error(result.error || "Payment initiation failed");
+        const detail =
+          (result && (result.error || result.detail || result.message)) ||
+          `HTTP ${response.status}`;
+        throw new Error(detail);
       }
 
-      if (result.transaction && result.transaction.url) {
+      if (result && result.transaction && result.transaction.url) {
         window.location.href = result.transaction.url;
       } else {
         throw new Error("No payment URL received");
@@ -93,52 +142,13 @@ function PaymentPage() {
     }
   };
 
-  if (loading) return <div style={{ padding: 50, textAlign: "center" }}>Loading...</div>;
+  if (loading) return <LoadingState message="Loading payment..." fullScreen />;
 
   return (
     <div className={`page-content ${mobileNavOpen ? 'mobile-nav-open' : ''}`} style={{ paddingTop: 80, display: "flex", justifyContent: "center" }}>
       <canvas id="bgCanvas" style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: -1 }}></canvas>
 
-      {/* Top Nav */}
-      <div className="top-nav">
-        <div className="nav-logo">
-          <a className="nav-left" href="/">
-            <div className="nav-logo-mark"></div>
-            <div className="nav-page-title">{t("paymentTitle")}</div>
-          </a>
-        </div>
-        <button
-          className="nav-menu-btn"
-          type="button"
-          aria-label="Open menu"
-          aria-expanded={mobileNavOpen}
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-        <div className="nav-right">
-          <a className="nav-link" href="/#premadeSection">{t("navPremade")}</a>
-          <a className="nav-cta" href="/configurator">{t("navBuildCta")}</a>
-          <button className="nav-link nav-lang" onClick={toggleLang}>
-            {currentLang === "ar" ? "EN" : "AR"}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Nav Overlay & Drawer */}
-      <div
-        className={`mobile-nav-overlay ${mobileNavOpen ? 'open' : ''}`}
-        onClick={() => setMobileNavOpen(false)}
-      ></div>
-      <aside className={`mobile-nav-drawer ${mobileNavOpen ? 'open' : ''}`} aria-hidden={!mobileNavOpen}>
-        <a className="mobile-nav-link" href="/#premadeSection">{t("navPremade")}</a>
-        <a className="mobile-nav-link mobile-nav-cta" href="/configurator">{t("navBuildCta")}</a>
-        <button className="mobile-nav-link mobile-nav-lang" onClick={toggleLang}>
-          {currentLang === "ar" ? "EN" : "AR"}
-        </button>
-      </aside>
+      {/* Navbars Removed */}
 
       {/* Payment Card */}
       <div className="card" style={{ maxWidth: 540, width: "100%", textAlign: "center", position: "relative", zIndex: 1 }}>
@@ -148,7 +158,7 @@ function PaymentPage() {
           {orderDraft && (
             <>
               {t("totalLabel") || "Total"}: {orderDraft.currencyPrefix || "BHD"} {
-                (orderDraft.cart || []).reduce((s, i) => s + (i.unitPrice * i.quantity), 0).toFixed(2)
+                getOrderTotals(orderDraft).total.toFixed(2)
               }
             </>
           )}
@@ -160,18 +170,10 @@ function PaymentPage() {
           onClick={handlePay}
           disabled={isProcessing}
         >
-          {isProcessing ? (t("paymentProcessing") || "Processing...") : (t("paymentPayNow") || "Pay Now")}
+          {isProcessing
+            ? <LoadingInline label={t("paymentProcessing") || "Processing..."} />
+            : (t("paymentPayNow") || "Pay Now")}
         </button>
-
-        {isProcessing && (
-          <div style={{ marginTop: 20 }}>
-            <img
-              src="/assets/loading.gif"
-              alt="Loading"
-              style={{ width: 80, height: "auto", display: "inline-block" }}
-            />
-          </div>
-        )}
 
         {paymentStatus && (
           <div style={{ marginTop: 15, color: "#ff4444", fontSize: "0.9rem" }}>

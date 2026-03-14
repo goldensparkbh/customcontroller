@@ -39,36 +39,7 @@ const TermsConditions = () => {
 
     return (
         <div className="policy-page">
-            <header className="top-nav">
-                <div className="nav-left">
-                    <button type="button" className="nav-left" onClick={() => navigate('/')}>
-                        <span className="nav-logo-mark" role="img" aria-label="Custom Controller"></span>
-                    </button>
-                </div>
-                <button
-                    className="nav-menu-btn"
-                    type="button"
-                    aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                    aria-expanded={isMobileMenuOpen ? 'true' : 'false'}
-                    onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-                >
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <div className="nav-right">
-                    <button className="nav-link" type="button" onClick={() => navigate('/')}>{t('navPremade')}</button>
-                    <button className="nav-cta" type="button" onClick={() => navigate('/configurator')}>{t('navBuildCta')}</button>
-                    <button className="nav-link nav-lang" type="button" onClick={toggleLang}>{currentLang === 'ar' ? 'EN' : 'AR'}</button>
-                </div>
-            </header>
-
-            <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
-            <aside className={`mobile-nav-drawer ${isMobileMenuOpen ? 'open' : ''}`} id="mobileNavDrawer" aria-hidden={!isMobileMenuOpen}>
-                <button className="mobile-nav-link" type="button" onClick={() => { navigate('/'); closeMobileMenu(); }}>{t('navPremade')}</button>
-                <button className="mobile-nav-link mobile-nav-cta" type="button" onClick={() => { navigate('/configurator'); closeMobileMenu(); }}>{t('navBuildCta')}</button>
-                <button className="mobile-nav-link mobile-nav-lang" type="button" onClick={() => { toggleLang(); closeMobileMenu(); }}>{currentLang === 'ar' ? 'EN' : 'AR'}</button>
-            </aside>
+            {/* Navbars Removed */}
 
             <section className="section" style={{ marginTop: '80px', minHeight: '60vh' }}>
                 <div className="section-header">

@@ -2,25 +2,7 @@ import React, { useEffect } from 'react';
 
 const orderSuccessMarkup = `
 <canvas id="bgCanvas"></canvas>
-<div class="top-nav">
-  <div class="nav-logo">
-    <a class="nav-left" href="/">
-      <div class="nav-logo-mark"></div>
-      <div class="nav-page-title" data-i18n="orderSuccessTitle">تم استلام الطلب</div>
-    </a>
-  </div>
-  <button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-  <div class="nav-right">
-    <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
-    <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
-    <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
-  </div>
-</div>
+<div class="top-nav" style="display:none;"></div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
   <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>

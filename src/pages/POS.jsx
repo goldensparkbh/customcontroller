@@ -2,28 +2,7 @@ import React, { useEffect } from 'react';
 
 const posMarkup = `
 <canvas id="bgCanvas"></canvas>
-<div class="top-nav">
-  <div class="nav-logo">
-    <a class="nav-left" href="/">
-      <span class="nav-logo-mark" role="img" aria-label="Custom Controller"></span>
-      <div class="nav-page-title" data-i18n="posTitle">نقطة البيع</div>
-    </a>
-  </div>
-  <button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-  <div class="nav-right">
-    <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
-    <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
-    <button class="nav-cart-toggle" id="cartToggle" type="button" aria-label="Open cart">
-      <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0 0 20 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.89-2-2-2z"/></svg>
-      <span class="cart-count-badge" id="cartBadge">0</span>
-    </button>
-  </div>
-</div>
+<div class="top-nav" style="display:none;"></div>
 
 <div class="pos-container">
   <!-- Dynamic Sidebar -->

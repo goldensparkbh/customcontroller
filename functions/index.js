@@ -1,9 +1,13 @@
 const functions = require("firebase-functions/v1");
+const admin = require("firebase-admin");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+admin.initializeApp();
 const dotenv = require("dotenv");
 const PDFDocument = require("pdfkit");
 const SVGtoPDF = require("svg-to-pdfkit");
 const fs = require("fs");
 const path = require("path");
+const nodemailer = require("nodemailer");
 const { FormData: UndiciFormData, Blob: UndiciBlob } = require("undici");
 const FormDataCtor = typeof FormData !== "undefined" ? FormData : UndiciFormData;
 const BlobCtor = typeof Blob !== "undefined" ? Blob : UndiciBlob;
@@ -26,6 +30,8 @@ let cachedExpiry = 0;
 let cachedBaseControllerUri = null;
 let cachedBaseControllerBuf = null;
 let cachedSmallControllerBuf = null;
+let cachedSmtpTransporter = null;
+let cachedSmtpTransporterKey = "";
 const maskCache = {};
 
 function getBaseControllerDataUri() {
@@ -81,31 +87,52 @@ function getMaskDataUri(partId) {
   }
 }
 
+function sendImageValueResponse(res, data) {
+  if (!data || typeof data !== "string") {
+    return res.status(400).send("Missing image data");
+  }
+  if (data.startsWith("data:image/svg+xml")) {
+    const base64 = data.split(",")[1] || "";
+    const buf = Buffer.from(base64, "base64");
+    res.setHeader("Content-Type", "image/svg+xml");
+    return res.send(buf);
+  }
+  if (data.startsWith("data:image/")) {
+    const meta = data.slice(5, data.indexOf(";"));
+    const base64 = data.split(",")[1] || "";
+    const buf = Buffer.from(base64, "base64");
+    res.setHeader("Content-Type", meta);
+    return res.send(buf);
+  }
+  if (/^https?:\/\//i.test(data)) {
+    return res.redirect(data);
+  }
+  return res.status(400).send("Unsupported image format");
+}
+
+function getInitialOrderStatus(paymentStatus) {
+  return paymentStatus === "Paid" ? "Paid" : "On Going";
+}
+
 function buildControllerSvg(config) {
   const entries = Object.entries(config || {}).filter(([, val]) => val);
   if (!entries.length) return null;
   const width = 1166;
   const height = 768;
   const baseHref = getBaseControllerDataUri();
-  const defs = [];
   const overlays = [];
-  entries.forEach(([part, color], idx) => {
-    const maskUri = getMaskDataUri(part);
-    if (!maskUri) return;
-    const maskId = `mask_${part}_${idx}`;
-    defs.push(
-      `<mask id="${maskId}"><image href="${maskUri}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" /></mask>`
-    );
-    const fill = typeof color === "string" ? color : (color && color.hex) || "#4ade80";
+  entries.forEach(([, value]) => {
+    const imageHref =
+      (value && typeof value === "object" && (value.image || value.preview || value.url)) ||
+      (typeof value === "string" && value.startsWith("data:image/") ? value : null);
+    if (!imageHref) return;
     overlays.push(
-      `<rect x="0" y="0" width="${width}" height="${height}" fill="${fill}" mask="url(#${maskId})" opacity="0.95" />`
+      `<image href="${imageHref}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" />`
     );
   });
+  if (!overlays.length) return null;
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#0b0b0f">
-  <defs>
-    ${defs.join("\n")}
-  </defs>
   ${baseHref ? `<image href="${baseHref}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" opacity="0.98" />` : ""}
   ${overlays.join("\n")}
 </svg>`;
@@ -314,6 +341,7 @@ function inlineSvgImages(svgStr) {
 function getItemImage(item) {
   // Try common fields for a rendered controller preview
   return (
+    item.previewFront ||
     item.image ||
     item.preview || // new svg preview from cart
     item.thumbnail ||
@@ -426,8 +454,652 @@ async function buildCustomizationPdf(cart) {
   });
 }
 
+function getOrderLineTotal(item) {
+  const qty = Number(item && item.quantity) > 0 ? Number(item.quantity) : 1;
+  const unit = item && item.unitPrice != null ?
+    Number(item.unitPrice) :
+    (item && item.total != null ? Number(item.total) : 0);
+  return (Number.isFinite(unit) ? unit : 0) * qty;
+}
+
+function getNormalizedOrderAmounts(body) {
+  const items = Array.isArray(body && body.cart) ? body.cart : [];
+  const subtotal = Number(body && body.subtotal) > 0 ?
+    Number(body.subtotal) :
+    items.reduce((sum, item) => sum + getOrderLineTotal(item), 0);
+  const shippingCost = Number(body && body.shippingCost);
+  const total = Number(body && body.total) > 0 ?
+    Number(body.total) :
+    subtotal + (Number.isFinite(shippingCost) && shippingCost > 0 ? shippingCost : 0);
+
+  return {
+    items,
+    subtotal,
+    shippingCost: Number.isFinite(shippingCost) ? shippingCost : 0,
+    total
+  };
+}
+
+function toFiniteNumber(value, fallback = 0) {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : fallback;
+}
+
+function normalizeInventoryRows(rawRows, fallbackRecord = {}) {
+  const sourceRows = Array.isArray(rawRows) && rawRows.length ? rawRows : [{
+    id: "legacy_active",
+    purchasePrice: fallbackRecord.purchasePrice || 0,
+    sellPrice: fallbackRecord.sellPrice != null ? fallbackRecord.sellPrice : (fallbackRecord.price || 0),
+    quantity: fallbackRecord.quantity || 0,
+    isActive: true
+  }];
+
+  const rows = sourceRows.map((row, index) => ({
+    id: row.id || `inventory_${index + 1}`,
+    purchasePrice: toFiniteNumber(row.purchasePrice, 0),
+    sellPrice: toFiniteNumber(row.sellPrice != null ? row.sellPrice : row.price, 0),
+    quantity: toFiniteNumber(row.quantity, 0),
+    isActive: Boolean(row.isActive)
+  }));
+
+  const activeIndex = rows.findIndex((row) => row.isActive);
+  const normalizedActiveIndex = activeIndex >= 0 ? activeIndex : 0;
+
+  return rows.map((row, index) => ({
+    ...row,
+    isActive: index === normalizedActiveIndex
+  }));
+}
+
+function applyInventoryDeduction(record, deductionQty) {
+  const inventoryDetails = normalizeInventoryRows(record.inventoryDetails, record);
+  const activeIndex = Math.max(0, inventoryDetails.findIndex((row) => row.isActive));
+  const activeRow = inventoryDetails[activeIndex] || inventoryDetails[0];
+  const currentQty = toFiniteNumber(activeRow.quantity, 0);
+  const nextQty = Math.max(0, currentQty - toFiniteNumber(deductionQty, 0));
+
+  inventoryDetails[activeIndex] = {
+    ...activeRow,
+    quantity: nextQty,
+    isActive: true
+  };
+
+  return {
+    inventoryDetails,
+    purchasePrice: toFiniteNumber(activeRow.purchasePrice, 0),
+    sellPrice: toFiniteNumber(activeRow.sellPrice, 0),
+    price: toFiniteNumber(activeRow.sellPrice, 0),
+    quantity: nextQty
+  };
+}
+
+function collectConfiguratorInventoryAdjustments(items) {
+  const adjustments = new Map();
+
+  const addAdjustment = (pathKey, quantity) => {
+    if (!pathKey || !(quantity > 0)) return;
+    adjustments.set(pathKey, (adjustments.get(pathKey) || 0) + quantity);
+  };
+
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const qty = toFiniteNumber(item && item.quantity, 1) > 0 ? toFiniteNumber(item.quantity, 1) : 1;
+    const parts = item && item.parts;
+    if (!parts || typeof parts !== "object") return;
+
+    Object.entries(parts).forEach(([partId, partState]) => {
+      if (partState && partState.color && partState.color.key) {
+        addAdjustment(`configurator_parts/${partId}/options/${partState.color.key}`, qty);
+      }
+
+      if (partState && partState.option && partState.option.key && partState.option.key !== "standard") {
+        addAdjustment(`configurator_parts/${partId}/options/${partState.option.key}`, qty);
+      }
+    });
+  });
+
+  return adjustments;
+}
+
+async function applyConfiguratorInventoryAdjustments(items) {
+  const db = getFirestore();
+  const adjustments = collectConfiguratorInventoryAdjustments(items);
+  const applied = [];
+
+  if (!adjustments.size) return applied;
+
+  await db.runTransaction(async (transaction) => {
+    for (const [docPath, quantity] of adjustments.entries()) {
+      const recordRef = db.doc(docPath);
+      const snapshot = await transaction.get(recordRef);
+      if (!snapshot.exists) continue;
+
+      const currentData = snapshot.data() || {};
+      const nextInventory = applyInventoryDeduction(currentData, quantity);
+
+      transaction.update(recordRef, {
+        inventoryDetails: nextInventory.inventoryDetails,
+        purchasePrice: nextInventory.purchasePrice,
+        sellPrice: nextInventory.sellPrice,
+        price: nextInventory.price,
+        quantity: nextInventory.quantity,
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
+      applied.push({
+        path: docPath,
+        quantity,
+        remaining: nextInventory.quantity
+      });
+    }
+  });
+
+  return applied;
+}
+
+async function allocateCounterValue(counterKey, startAt) {
+  const db = getFirestore();
+  const counterRef = db.collection("system_counters").doc(counterKey);
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(counterRef);
+    const currentValue = snapshot.exists ? Number(snapshot.data()?.current || startAt - 1) : startAt - 1;
+    const safeCurrent = Number.isFinite(currentValue) ? currentValue : startAt - 1;
+    const nextValue = safeCurrent + 1;
+    transaction.set(counterRef, { current: nextValue }, { merge: true });
+    return nextValue;
+  });
+}
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function humanizeKey(value) {
+  return String(value || "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getEmailOrderLabel(orderNumber) {
+  const normalized = String(orderNumber == null ? "" : orderNumber).replace(/\D/g, "");
+  return `#${(normalized || "0").padStart(6, "0")}`;
+}
+
+function formatMoney(value, currency) {
+  return `${currency || "BHD"} ${toFiniteNumber(value, 0).toFixed(2)}`;
+}
+
+function getStoreSettingsSnapshot(snapshot) {
+  return snapshot.exists ? (snapshot.data() || {}) : {};
+}
+
+async function getGeneralAdminSettings() {
+  try {
+    const snapshot = await getFirestore().collection("admin_settings").doc("general").get();
+    return getStoreSettingsSnapshot(snapshot);
+  } catch (error) {
+    console.error("[orderHandler] settings load error", error);
+    return {};
+  }
+}
+
+function getSmtpConfig(settings = {}) {
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = String(process.env.SMTP_SECURE || "").trim().toLowerCase() === "true" || port === 465;
+  const host = String(process.env.SMTP_HOST || "").trim();
+  const user = String(process.env.SMTP_USER || "").trim();
+  const pass = String(process.env.SMTP_PASS || "").trim();
+  const fromEmail = String(process.env.SMTP_FROM_EMAIL || user || "").trim();
+  const fromName = String(process.env.SMTP_FROM_NAME || settings.storeName || "PS5 Controller").trim();
+  const replyTo = String(settings.supportEmail || settings.adminEmail || fromEmail).trim();
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    fromEmail,
+    fromName,
+    replyTo
+  };
+}
+
+function getSmtpTransporter(settings = {}) {
+  const config = getSmtpConfig(settings);
+  if (!config.host || !config.user || !config.pass || !config.fromEmail) {
+    return {
+      transporter: null,
+      config,
+      error: "Missing SMTP config. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and optionally SMTP_FROM_EMAIL in functions/.env"
+    };
+  }
+
+  const configKey = JSON.stringify({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.user,
+    fromEmail: config.fromEmail
+  });
+
+  if (!cachedSmtpTransporter || cachedSmtpTransporterKey !== configKey) {
+    cachedSmtpTransporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.user,
+        pass: config.pass
+      }
+    });
+    cachedSmtpTransporterKey = configKey;
+  }
+
+  return { transporter: cachedSmtpTransporter, config, error: "" };
+}
+
+function getCustomerFullName(customer = {}) {
+  return [
+    customer.firstName || customer.first_name || "",
+    customer.lastName || customer.last_name || ""
+  ].filter(Boolean).join(" ").trim() || "Customer";
+}
+
+function getPartEmailLabel(partId) {
+  const labels = {
+    shell: "Shell",
+    trimpiece: "Trim Piece",
+    touchpad: "Touchpad",
+    allButtons: "Buttons",
+    sticks: "Sticks",
+    bumpersTriggers: "Bumpers & Triggers",
+    psButton: "PS Button",
+    backShellMain: "Back Shell"
+  };
+  return labels[partId] || humanizeKey(partId) || "Part";
+}
+
+function getVariantEmailLabel(variant) {
+  return (
+    variant?.valName ||
+    variant?.name ||
+    variant?.label ||
+    variant?.title ||
+    (variant?.hex ? String(variant.hex).toUpperCase() : "") ||
+    humanizeKey(variant?.key) ||
+    "Selected"
+  );
+}
+
+function getItemCustomizationLines(item) {
+  const lines = [];
+
+  if (item?.parts && typeof item.parts === "object") {
+    Object.entries(item.parts).forEach(([partId, partState]) => {
+      if (partState?.color) {
+        lines.push(`${getPartEmailLabel(partId)} color: ${getVariantEmailLabel(partState.color)}`);
+      }
+
+      if (partState?.option?.key && partState.option.key !== "standard") {
+        lines.push(`${getPartEmailLabel(partId)} option: ${getVariantEmailLabel(partState.option)}`);
+      }
+    });
+  }
+
+  if (!lines.length && item?.config && typeof item.config === "object") {
+    Object.entries(item.config)
+      .filter(([, val]) => val)
+      .forEach(([key, value]) => {
+        lines.push(`${humanizeKey(key)}: ${String(value)}`);
+      });
+  }
+
+  return lines;
+}
+
+function getSiteBaseUrl(req, settings = {}) {
+  const candidates = [
+    process.env.PUBLIC_SITE_URL,
+    process.env.APP_BASE_URL,
+    process.env.SITE_URL,
+    settings.websiteBaseUrl,
+    settings.storeUrl,
+    req?.get ? req.get("origin") : "",
+    req?.headers?.origin
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = String(candidate || "").trim().replace(/\/$/, "");
+    if (/^https?:\/\//i.test(normalized)) {
+      return normalized;
+    }
+  }
+
+  return "";
+}
+
+function buildTrackingUrl(settings, orderId, orderNumber, trackingNumber) {
+  let baseUrl = String(settings?.trackingBaseUrl || "").trim();
+  if (!baseUrl) return "";
+
+  const replacements = {
+    orderId: String(orderId || ""),
+    orderNumber: String(orderNumber || ""),
+    trackingNumber: String(trackingNumber || "")
+  };
+
+  let usedTemplate = false;
+  Object.entries(replacements).forEach(([key, value]) => {
+    if (baseUrl.includes(`{${key}}`)) {
+      baseUrl = baseUrl.split(`{${key}}`).join(encodeURIComponent(value));
+      usedTemplate = true;
+    }
+  });
+
+  if (!usedTemplate) {
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    baseUrl = `${baseUrl}${separator}order=${encodeURIComponent(orderId)}`;
+  }
+
+  return baseUrl;
+}
+
+function buildOrderPreviewUrls(orderId, items, siteBaseUrl) {
+  if (!siteBaseUrl) return [];
+
+  return (Array.isArray(items) ? items : []).map((item, itemIndex) => ({
+    front: item?.previewFront ?
+      `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=front` :
+      "",
+    back: item?.previewBack ?
+      `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=back` :
+      ""
+  }));
+}
+
+function renderOrderItemsText(items, currency, previewUrls) {
+  return (Array.isArray(items) ? items : []).map((item, index) => {
+    const quantity = toFiniteNumber(item?.quantity, 1) > 0 ? toFiniteNumber(item?.quantity, 1) : 1;
+    const lineTotal = getOrderLineTotal(item);
+    const customizationLines = getItemCustomizationLines(item);
+    const preview = previewUrls[index] || {};
+
+    return [
+      `${index + 1}. ${item?.name || "Custom Controller"} x${quantity} - ${formatMoney(lineTotal, currency)}`,
+      ...customizationLines.map((line) => `   - ${line}`),
+      preview.front ? `   - Front preview: ${preview.front}` : "",
+      preview.back ? `   - Back preview: ${preview.back}` : ""
+    ].filter(Boolean).join("\n");
+  }).join("\n\n");
+}
+
+function renderOrderItemsHtml(items, currency, previewUrls) {
+  return (Array.isArray(items) ? items : []).map((item, index) => {
+    const quantity = toFiniteNumber(item?.quantity, 1) > 0 ? toFiniteNumber(item?.quantity, 1) : 1;
+    const lineTotal = getOrderLineTotal(item);
+    const customizationLines = getItemCustomizationLines(item);
+    const preview = previewUrls[index] || {};
+
+    return `
+      <div style="padding:16px 0;border-top:${index === 0 ? "none" : "1px solid #e5e7eb"};">
+        <div style="font-size:15px;font-weight:700;color:#111827;">${escapeHtml(item?.name || "Custom Controller")}</div>
+        <div style="margin-top:4px;font-size:13px;color:#4b5563;">Qty ${quantity} · ${escapeHtml(formatMoney(lineTotal, currency))}</div>
+        ${customizationLines.length ? `
+          <ul style="margin:10px 0 0;padding-inline-start:18px;color:#374151;font-size:13px;">
+            ${customizationLines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+          </ul>
+        ` : ""}
+        ${(preview.front || preview.back) ? `
+          <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px;">
+            ${preview.front ? `<a href="${escapeHtml(preview.front)}" style="color:#0f766e;text-decoration:none;">Front preview</a>` : ""}
+            ${preview.back ? `<a href="${escapeHtml(preview.back)}" style="color:#0f766e;text-decoration:none;">Back preview</a>` : ""}
+          </div>
+        ` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function buildOrderEmailContext({ req, settings, orderId, orderDoc }) {
+  const storeName = settings.storeName || "PS5 Controller";
+  const orderLabel = getEmailOrderLabel(orderDoc.orderNumber);
+  const customerName = getCustomerFullName(orderDoc.customer || {});
+  const customerEmail = String(orderDoc?.customer?.email || "").trim();
+  const customerPhone = String(orderDoc?.customer?.phone || "").trim();
+  const currency = orderDoc.currency || settings.defaultCurrency || "BHD";
+  const trackingUrl = buildTrackingUrl(settings, orderId, orderDoc.orderNumber, orderDoc?.shipping?.trackingNumber || "");
+  const siteBaseUrl = getSiteBaseUrl(req, settings);
+  const previewUrls = buildOrderPreviewUrls(orderId, orderDoc.items, siteBaseUrl);
+  const itemsText = renderOrderItemsText(orderDoc.items, currency, previewUrls);
+  const itemsHtml = renderOrderItemsHtml(orderDoc.items, currency, previewUrls);
+  const addressText = formatAddress(orderDoc.shipping);
+  const paymentReference = orderDoc.paymentReference || "N/A";
+
+  return {
+    storeName,
+    orderLabel,
+    customerName,
+    customerEmail,
+    customerPhone,
+    currency,
+    itemsText,
+    itemsHtml,
+    addressText,
+    paymentReference,
+    paymentMethod: orderDoc.paymentMethod || "tap",
+    totalText: formatMoney(orderDoc.total, currency),
+    subtotalText: formatMoney(orderDoc.subtotal, currency),
+    trackingUrl,
+    urgency: orderDoc.urgency || "Normal",
+    createdAtText: new Date().toLocaleString()
+  };
+}
+
+function buildAdminOrderEmail(context) {
+  const subject = `${context.storeName} | New paid order ${context.orderLabel}`;
+  const text = [
+    `A new paid order has been created in ${context.storeName}.`,
+    "",
+    `Order: ${context.orderLabel}`,
+    `Customer: ${context.customerName}`,
+    `Email: ${context.customerEmail || "N/A"}`,
+    `Phone: ${context.customerPhone || "N/A"}`,
+    `Payment method: ${context.paymentMethod}`,
+    `Payment reference: ${context.paymentReference}`,
+    `Urgency: ${context.urgency}`,
+    `Subtotal: ${context.subtotalText}`,
+    `Total: ${context.totalText}`,
+    `Shipping address: ${context.addressText}`,
+    context.trackingUrl ? `Tracking link: ${context.trackingUrl}` : "",
+    "",
+    "Items:",
+    context.itemsText || "No items"
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;color:#0f172a;">
+      <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px;border:1px solid #e2e8f0;">
+        <div style="font-size:24px;font-weight:700;margin-bottom:8px;">New paid order ${escapeHtml(context.orderLabel)}</div>
+        <div style="color:#475569;margin-bottom:20px;">A paid order was created in ${escapeHtml(context.storeName)}.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
+          <div><strong>Customer</strong><div>${escapeHtml(context.customerName)}</div></div>
+          <div><strong>Email</strong><div>${escapeHtml(context.customerEmail || "N/A")}</div></div>
+          <div><strong>Phone</strong><div>${escapeHtml(context.customerPhone || "N/A")}</div></div>
+          <div><strong>Urgency</strong><div>${escapeHtml(context.urgency)}</div></div>
+          <div><strong>Payment</strong><div>${escapeHtml(context.paymentMethod)}</div></div>
+          <div><strong>Reference</strong><div>${escapeHtml(context.paymentReference)}</div></div>
+          <div><strong>Subtotal</strong><div>${escapeHtml(context.subtotalText)}</div></div>
+          <div><strong>Total</strong><div>${escapeHtml(context.totalText)}</div></div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-weight:700;margin-bottom:4px;">Shipping address</div>
+          <div style="color:#475569;">${escapeHtml(context.addressText)}</div>
+        </div>
+        ${context.trackingUrl ? `
+          <div style="margin-bottom:20px;">
+            <a href="${escapeHtml(context.trackingUrl)}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:999px;">Tracking link</a>
+          </div>
+        ` : ""}
+        <div style="font-weight:700;margin-bottom:10px;">Items</div>
+        <div>${context.itemsHtml || "<div>No items</div>"}</div>
+      </div>
+    </div>
+  `;
+
+  return { subject, text, html };
+}
+
+function buildCustomerOrderEmail(context) {
+  const subject = `${context.storeName} | Your order ${context.orderLabel} is confirmed`;
+  const text = [
+    `Hello ${context.customerName},`,
+    "",
+    `Your paid order ${context.orderLabel} has been received successfully.`,
+    `Payment reference: ${context.paymentReference}`,
+    `Total: ${context.totalText}`,
+    context.trackingUrl ? `Tracking link: ${context.trackingUrl}` : "",
+    "",
+    "Order details:",
+    context.itemsText || "No items",
+    "",
+    `Shipping address: ${context.addressText}`,
+    "",
+    `Thank you,`,
+    context.storeName
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;color:#0f172a;">
+      <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px;border:1px solid #e2e8f0;">
+        <div style="font-size:24px;font-weight:700;margin-bottom:8px;">Your order ${escapeHtml(context.orderLabel)} is confirmed</div>
+        <div style="color:#475569;margin-bottom:20px;">Hello ${escapeHtml(context.customerName)}, your paid order has been received successfully.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
+          <div><strong>Payment reference</strong><div>${escapeHtml(context.paymentReference)}</div></div>
+          <div><strong>Total</strong><div>${escapeHtml(context.totalText)}</div></div>
+          <div><strong>Email</strong><div>${escapeHtml(context.customerEmail || "N/A")}</div></div>
+          <div><strong>Phone</strong><div>${escapeHtml(context.customerPhone || "N/A")}</div></div>
+        </div>
+        ${context.trackingUrl ? `
+          <div style="margin-bottom:20px;">
+            <a href="${escapeHtml(context.trackingUrl)}" style="display:inline-block;background:#0f766e;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;">Track your order</a>
+          </div>
+        ` : ""}
+        <div style="margin-bottom:20px;">
+          <div style="font-weight:700;margin-bottom:4px;">Shipping address</div>
+          <div style="color:#475569;">${escapeHtml(context.addressText)}</div>
+        </div>
+        <div style="font-weight:700;margin-bottom:10px;">Order details</div>
+        <div>${context.itemsHtml || "<div>No items</div>"}</div>
+      </div>
+    </div>
+  `;
+
+  return { subject, text, html };
+}
+
+async function sendOrderNotificationEmails({ req, orderId, orderDoc, settings }) {
+  const adminRecipient = String(settings?.adminEmail || "").trim();
+  const customerRecipient = String(orderDoc?.customer?.email || "").trim();
+  const emailNotifications = {
+    admin: {
+      to: adminRecipient,
+      status: adminRecipient ? "pending" : "missing_recipient",
+      sentAt: "",
+      messageId: "",
+      error: ""
+    },
+    customer: {
+      to: customerRecipient,
+      status: customerRecipient ? "pending" : "missing_recipient",
+      sentAt: "",
+      messageId: "",
+      error: ""
+    }
+  };
+
+  if (String(orderDoc?.paymentStatus || "") !== "Paid") {
+    if (adminRecipient) emailNotifications.admin.status = "skipped_unpaid";
+    if (customerRecipient) emailNotifications.customer.status = "skipped_unpaid";
+    return emailNotifications;
+  }
+
+  const { transporter, config, error } = getSmtpTransporter(settings);
+  if (!transporter) {
+    if (adminRecipient) {
+      emailNotifications.admin.status = "not_configured";
+      emailNotifications.admin.error = error;
+    }
+    if (customerRecipient) {
+      emailNotifications.customer.status = "not_configured";
+      emailNotifications.customer.error = error;
+    }
+    return emailNotifications;
+  }
+
+  const from = {
+    name: config.fromName,
+    address: config.fromEmail
+  };
+  const context = buildOrderEmailContext({ req, settings, orderId, orderDoc });
+  const adminMail = buildAdminOrderEmail(context);
+  const customerMail = buildCustomerOrderEmail(context);
+
+  const deliveries = [];
+
+  if (adminRecipient) {
+    deliveries.push(
+      transporter.sendMail({
+        from,
+        to: adminRecipient,
+        replyTo: config.replyTo || undefined,
+        subject: adminMail.subject,
+        text: adminMail.text,
+        html: adminMail.html
+      }).then((info) => {
+        emailNotifications.admin.status = "sent";
+        emailNotifications.admin.sentAt = new Date().toISOString();
+        emailNotifications.admin.messageId = info && info.messageId ? String(info.messageId) : "";
+      }).catch((sendError) => {
+        emailNotifications.admin.status = "failed";
+        emailNotifications.admin.error = sendError.message || "Admin email failed";
+      })
+    );
+  }
+
+  if (customerRecipient) {
+    deliveries.push(
+      transporter.sendMail({
+        from,
+        to: customerRecipient,
+        replyTo: config.replyTo || undefined,
+        subject: customerMail.subject,
+        text: customerMail.text,
+        html: customerMail.html
+      }).then((info) => {
+        emailNotifications.customer.status = "sent";
+        emailNotifications.customer.sentAt = new Date().toISOString();
+        emailNotifications.customer.messageId = info && info.messageId ? String(info.messageId) : "";
+      }).catch((sendError) => {
+        emailNotifications.customer.status = "failed";
+        emailNotifications.customer.error = sendError.message || "Customer email failed";
+      })
+    );
+  }
+
+  await Promise.all(deliveries);
+  return emailNotifications;
+}
+
 exports.orderHandler = functions
-  .runWith({ memory: "512MB", timeoutSeconds: 120 })
+  .runWith({ memory: "512MB", timeoutSeconds: 60 })
   .https.onRequest(async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -435,236 +1107,138 @@ exports.orderHandler = functions
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
 
-    let zohoEnabled = true;
-    try {
-      ensureConfig();
-    } catch {
-      zohoEnabled = false;
-    }
-
     try {
       const body = req.body || {};
-      const customer = body.customer || body || {};
-      const cart = Array.isArray(body.items || body.cart) ? (body.items || body.cart) : [];
-      const total = cart.reduce((s, it) => s + (Number(it.unitPrice) || 0) * (Number(it.quantity) || 0), 0);
+      const amounts = getNormalizedOrderAmounts(body);
+      const orderNumber = await allocateCounterValue("orders", 500000);
+      const paymentState = String(body.paymentStatus || body.paymentDetails?.status || "").toUpperCase();
+      const paymentStatus = body.paymentStatus ||
+        (paymentState === "CAPTURED" || paymentState === "AUTHORIZED" ? "Paid" :
+          (paymentState ? "Failed" : "Pending"));
+      const paymentReference = body.paymentReference ||
+        body.paymentDetails?.reference?.payment ||
+        body.paymentDetails?.reference?.transaction ||
+        body.paymentDetails?.id ||
+        "";
+      const initialOrderStatus = getInitialOrderStatus(paymentStatus);
+      const adminSettings = await getGeneralAdminSettings();
 
-      let contact_id = null;
-      let salesorder = null;
-      let so_confirm = null;
-      let invoice = null;
-      let payment = null;
+      // The body directly comes from Checkour form -> /api/createOrder
+      const orderDoc = {
+        customer: {
+          firstName: body.firstName || "",
+          lastName: body.lastName || "",
+          first_name: body.firstName || "",
+          last_name: body.lastName || "",
+          email: body.email || "",
+          phone: body.phoneFull || body.phone || ""
+        },
+        shipping: {
+          method: body.shippingMethod || "delivery",
+          country: body.country || "BH",
+          city: body.city || "",
+          state: body.state || "",
+          saudiUnifiedAddress: body.saudiUnifiedAddress || "",
+          addressLine: body.address || "",
+          address: body.addressLine1 || "",
+          blockNumber: body.blockNumber || "",
+          roadNumber: body.roadNumber || "",
+          houseBuildingNumber: body.houseBuildingNumber || "",
+          flat: body.flat || "",
+          cost: amounts.shippingCost
+        },
+        items: amounts.items,
+        orderNumber,
+        subtotal: amounts.subtotal,
+        total: amounts.total,
+        currency: body.currency || "BHD",
+        status: initialOrderStatus,
+        urgency: body.urgency || "Normal",
+        paymentStatus,
+        paymentReference,
+        paymentDetails: body.paymentDetails || {},
+        paymentMethod: body.paymentMethod || "tap",
+        payment_method: body.paymentMethod || "tap",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      };
 
-      if (zohoEnabled) {
-        try {
-          const token = await getAccessToken();
-          const itemsJson = await fetchZohoJson(`${ZOHO_BASE}/inventory/v1/items?organization_id=${ZOHO_ORG_ID}&per_page=200`, {
-            headers: { Authorization: `Zoho-oauthtoken ${token}` }
-          }, "items");
-          const itemMap = {};
-          (itemsJson.items || []).forEach(it => {
-            const nameKey = (it.name || it.item_name || "").toLowerCase();
-            itemMap[nameKey] = it;
-          });
-          const baseItem = itemMap["ps5_original_controller"];
+      const docRef = await getFirestore().collection("orders").add(orderDoc);
+      let inventorySyncStatus = "not_required";
+      let inventoryAdjustments = [];
+      let inventorySyncError = "";
+      let emailNotifications = {
+        admin: { to: adminSettings.adminEmail || "", status: "pending", sentAt: "", messageId: "", error: "" },
+        customer: { to: body.email || "", status: "pending", sentAt: "", messageId: "", error: "" }
+      };
 
-          const line_items = cart.map(it => {
-            const nameKey = (it.name || "").toLowerCase();
-            const mapped = itemMap[nameKey];
-            const descParts = [];
-            const desc = formatCustomizations(it.config);
-            if (desc) descParts.push(desc);
-            const composedDesc = descParts.join("\n");
-            return {
-              item_id: mapped ? mapped.item_id : (baseItem ? baseItem.item_id : undefined),
-              name: it.name || "PS5 Controller",
-              description: composedDesc,
-              quantity: it.quantity || 1,
-              rate: it.unitPrice || 0
-            };
-          });
-
-          const contact_name = customer.name || customer.fullName || "PS5 Customer";
-          const { first: first_name, last: last_name } = splitName(contact_name);
-          const shorten = (v, max = 60) => (v || "").toString().slice(0, max);
-          const contactPayload = {
-            contact_name: contact_name.slice(0, 50),
-            display_name: contact_name.slice(0, 50),
-            company_name: customer.company || "",
-            customer_sub_type: "individual",
-            email: customer.email || "",
-            phone: customer.phone || customer.mobile || "",
-            billing_address: buildAddress(customer),
-            shipping_address: buildAddress(customer),
-            contact_persons: [
-              {
-                salutation: customer.salutation || "",
-                first_name,
-                last_name,
-                email: customer.email || "",
-                phone: customer.phone || "",
-                mobile: customer.mobile || customer.phone || ""
-              }
-            ]
-          };
-
-          const shippingAddress = buildAddress(customer);
-          const billingAddress = buildAddress(customer);
-
-          try {
-            const contactJson = await fetchZohoJson(`${ZOHO_BASE}/inventory/v1/contacts?organization_id=${ZOHO_ORG_ID}`, {
-              method: "POST",
-              headers: {
-                Authorization: `Zoho-oauthtoken ${token}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(contactPayload)
-            }, "contacts");
-            contact_id = contactJson.contact ? contactJson.contact.contact_id : null;
-          } catch (e) {
-            // ignore
-          }
-
-          try {
-            const soPayload = {
-              customer_id: contact_id || undefined,
-              contact_name,
-              customer_name: contact_name,
-              billing_address: billingAddress,
-              shipping_address: shippingAddress,
-              line_items,
-              payment_options: { payment_mode: "cash" }
-            };
-            salesorder = await fetchZohoJson(`${ZOHO_BASE}/inventory/v1/salesorders?organization_id=${ZOHO_ORG_ID}`, {
-              method: "POST",
-              headers: {
-                Authorization: `Zoho-oauthtoken ${token}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(soPayload)
-            }, "salesorders");
-          } catch (e) {
-            // ignore
-          }
-
-          // Confirm the sales order if created
-          if (salesorder && salesorder.salesorder && salesorder.salesorder.salesorder_id) {
-            try {
-              const soId = salesorder.salesorder.salesorder_id;
-              so_confirm = await fetchZohoJson(`${ZOHO_BASE}/inventory/v1/salesorders/${soId}/status/confirmed?organization_id=${ZOHO_ORG_ID}`, {
-                method: "POST",
-                headers: { Authorization: `Zoho-oauthtoken ${token}` }
-              }, "salesorders_confirm");
-            } catch (e) {
-              // ignore
-            }
-          }
-
-          // Create invoice regardless (attach salesorder_id when available)
-          try {
-            const invPayload = {
-              customer_id: contact_id || undefined,
-              salesorder_id: salesorder && salesorder.salesorder && salesorder.salesorder.salesorder_id ? salesorder.salesorder.salesorder_id : undefined,
-              contact_name,
-              customer_name: contact_name,
-              billing_address: billingAddress,
-              shipping_address: shippingAddress,
-              line_items,
-              payment_options: { payment_mode: "cash" }
-            };
-            invoice = await fetchZohoJson(`${ZOHO_BASE}/inventory/v1/invoices?organization_id=${ZOHO_ORG_ID}`, {
-              method: "POST",
-              headers: {
-                Authorization: `Zoho-oauthtoken ${token}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(invPayload)
-            }, "invoices");
-          } catch (e) {
-            // ignore
-          }
-
-          // Record payment against the invoice (cash, paid)
-          if (invoice && invoice.invoice && invoice.invoice.invoice_id) {
-            try {
-              const payPayload = {
-                customer_id: contact_id || undefined,
-                payment_mode: "cash",
-                amount: total,
-                invoices: [
-                  {
-                    invoice_id: invoice.invoice.invoice_id,
-                    amount_applied: total
-                  }
-                ]
-              };
-              payment = await fetchZohoJson(`${ZOHO_BASE}/inventory/v1/customerpayments?organization_id=${ZOHO_ORG_ID}`, {
-                method: "POST",
-                headers: {
-                  Authorization: `Zoho-oauthtoken ${token}`,
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payPayload)
-              }, "customerpayments");
-            } catch (e) {
-              // ignore
-            }
-          }
-
-          // Attach customization PDF to the sales order
-          if (salesorder && salesorder.salesorder && salesorder.salesorder.salesorder_id) {
-            try {
-              const pdfBuffer = await buildCustomizationPdf(cart);
-              console.log("[orderHandler] attaching customizations.pdf, bytes:", pdfBuffer.length);
-              const blob = new BlobCtor([pdfBuffer], { type: "application/pdf" });
-              const form = new FormDataCtor();
-              // some runtimes expect options object; filename string works across undici/node
-              form.append("attachment", blob, "customizations.pdf");
-              const url = `${ZOHO_BASE}/inventory/v1/salesorders/${salesorder.salesorder.salesorder_id}/attachment?organization_id=${ZOHO_ORG_ID}`;
-              const res = await fetch(url, {
-                method: "POST",
-                headers: {
-                  Authorization: `Zoho-oauthtoken ${token}`
-                },
-                body: form
-              });
-              const txt = await res.text();
-              if (!res.ok) {
-                console.error("[orderHandler] attach pdf failed", res.status, txt);
-              } else {
-                let json = null;
-                try { json = JSON.parse(txt); } catch { /* ignore */ }
-                if (json && json.code !== 0) {
-                  console.error("[orderHandler] attach pdf non-zero code", json);
-                } else {
-                  console.log("[orderHandler] attach pdf ok");
-                }
-              }
-            } catch (e) {
-              console.error("[orderHandler] attach pdf error", e);
-            }
-          }
-
-        } catch (err) {
-          console.error("[orderHandler] Zoho error", err);
+      try {
+        inventoryAdjustments = await applyConfiguratorInventoryAdjustments(amounts.items);
+        if (inventoryAdjustments.length) {
+          inventorySyncStatus = "completed";
         }
+      } catch (inventoryError) {
+        inventorySyncStatus = "failed";
+        console.error("[orderHandler] inventory sync error", inventoryError);
+        inventorySyncError = inventoryError.message || "Inventory deduction failed";
+      }
+
+      try {
+        emailNotifications = await sendOrderNotificationEmails({
+          req,
+          orderId: docRef.id,
+          orderDoc: {
+            ...orderDoc,
+            id: docRef.id
+          },
+          settings: adminSettings
+        });
+      } catch (emailError) {
+        console.error("[orderHandler] email notification error", emailError);
+        const fallbackError = emailError.message || "Email notification failed";
+        emailNotifications = {
+          admin: {
+            to: adminSettings.adminEmail || "",
+            status: adminSettings.adminEmail ? "failed" : "missing_recipient",
+            sentAt: "",
+            messageId: "",
+            error: fallbackError
+          },
+          customer: {
+            to: body.email || "",
+            status: body.email ? "failed" : "missing_recipient",
+            sentAt: "",
+            messageId: "",
+            error: fallbackError
+          }
+        };
+      }
+
+      try {
+        const orderUpdate = {
+          inventorySyncStatus,
+          emailNotifications,
+          updatedAt: FieldValue.serverTimestamp()
+        };
+        if (inventoryAdjustments.length) orderUpdate.inventoryAdjustments = inventoryAdjustments;
+        if (inventorySyncError) orderUpdate.inventorySyncError = inventorySyncError;
+        await docRef.update(orderUpdate);
+      } catch (orderUpdateError) {
+        console.error("[orderHandler] post-create update error", orderUpdateError);
       }
 
       res.json({
-        status: "paid_demo",
-        payment_method: "cash",
-        total,
-        contact_id,
-        salesorder,
-        so_confirm,
-        invoice,
-        payment
+        success: true,
+        orderId: docRef.id,
+        orderNumber,
+        inventorySyncStatus,
+        emailNotifications,
+        total: orderDoc.total,
+        status: initialOrderStatus
       });
     } catch (err) {
       console.error("[orderHandler] error", err);
-      res.json({
-        status: "paid_demo",
-        payment_method: "cash",
-        total: 0,
+      res.status(500).json({
         error: err.message
       });
     }
@@ -678,27 +1252,49 @@ exports.preview = functions.https.onRequest((req, res) => {
   if (req.method === "OPTIONS") return res.status(204).send("");
 
   const data = req.query.data;
-  if (!data || typeof data !== "string") {
-    return res.status(400).send("Missing data param");
+  return sendImageValueResponse(res, data);
+});
+
+exports.orderPreview = functions.https.onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(204).send("");
+
+  try {
+    const orderId = String(req.query.orderId || "").trim();
+    const itemIndex = Math.max(0, parseInt(req.query.itemIndex, 10) || 0);
+    const side = String(req.query.side || "front").toLowerCase() === "back" ? "back" : "front";
+
+    if (!orderId) {
+      return res.status(400).send("Missing orderId");
+    }
+
+    const snapshot = await getFirestore().collection("orders").doc(orderId).get();
+    if (!snapshot.exists) {
+      return res.status(404).send("Order not found");
+    }
+
+    const order = snapshot.data() || {};
+    const items = Array.isArray(order.items) ? order.items : [];
+    const item = items[itemIndex];
+    if (!item) {
+      return res.status(404).send("Order item not found");
+    }
+
+    const previewValue = side === "back"
+      ? (item.previewBack || null)
+      : (item.previewFront || null);
+
+    if (!previewValue) {
+      return res.status(404).send("Preview not found");
+    }
+
+    return sendImageValueResponse(res, previewValue);
+  } catch (error) {
+    console.error("[orderPreview] error", error);
+    return res.status(500).send(error.message || "Failed to load preview");
   }
-  if (data.startsWith("data:image/svg+xml")) {
-    const base64 = data.split(",")[1] || "";
-    const buf = Buffer.from(base64, "base64");
-    res.setHeader("Content-Type", "image/svg+xml");
-    return res.send(buf);
-  }
-  if (data.startsWith("data:image/")) {
-    const meta = data.slice(5, data.indexOf(";"));
-    const base64 = data.split(",")[1] || "";
-    const buf = Buffer.from(base64, "base64");
-    res.setHeader("Content-Type", meta);
-    return res.send(buf);
-  }
-  // If it's already a URL, redirect
-  if (/^https?:\/\//i.test(data)) {
-    return res.redirect(data);
-  }
-  return res.status(400).send("Unsupported data format");
 });
 
 exports.tapPaymentHandler = functions
@@ -715,6 +1311,7 @@ exports.tapPaymentHandler = functions
 
       const body = req.body || {};
       const { amount, currency, customer, redirect_url, post_url } = body;
+      const numericAmount = Number(amount);
 
       const TAP_SECRET = process.env.TAP_SECRET_KEY || "";
 
@@ -722,8 +1319,12 @@ exports.tapPaymentHandler = functions
         throw new Error("Missing TAP_SECRET_KEY in backend config");
       }
 
+      if (!(numericAmount > 0)) {
+        return res.status(400).json({ error: "Invalid amount" });
+      }
+
       const payload = {
-        amount: Number(amount).toFixed(2),
+        amount: numericAmount.toFixed(2),
         currency: currency || "BHD",
         customer: {
           first_name: customer.first_name || "Customer",

@@ -254,7 +254,14 @@ function HomePage() {
       const addBtn = document.createElement('button');
       addBtn.className = 'build-cta';
       addBtn.type = 'button';
-      addBtn.textContent = i18n[currentLang].addToCart || 'Add to Cart';
+      addBtn.setAttribute('aria-label', i18n[currentLang].addToCart || 'Add to Cart');
+      addBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+      `;
       addBtn.addEventListener('click', () => {
         const item = {
           id: Date.now(),
@@ -327,6 +334,7 @@ function HomePage() {
 
     applyLangAttributes();
     applyTranslations();
+    rebuildPremadeGrid();
 
     return () => {
       document.body.classList.remove('home-page-active');
@@ -347,30 +355,6 @@ function HomePage() {
 
   return (
     <div className="home-page">
-      <header className="top-nav">
-        <div className="nav-logo">
-          <a className="nav-left" href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
-            <span className="nav-logo-mark" role="img" aria-label="Custom Controller"></span>
-          </a>
-        </div>
-        <button
-          className="nav-menu-btn"
-          type="button"
-          aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={isMobileMenuOpen ? 'true' : 'false'}
-          aria-controls="mobileNavDrawer"
-          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-        <div className="nav-right">
-          <button className="nav-link" type="button" data-i18n="navPremade" onClick={() => scrollToSection('premadeSection')}></button>
-          <button className="nav-cta" type="button" data-i18n="navBuildCta" onClick={goToConfigurator}></button>
-          <button className="nav-link nav-lang" id="langToggle" type="button">EN</button>
-        </div>
-      </header>
       <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
       <aside className={`mobile-nav-drawer ${isMobileMenuOpen ? 'open' : ''}`} id="mobileNavDrawer" aria-hidden={!isMobileMenuOpen}>
         <button className="mobile-nav-link" type="button" data-i18n="navPremade" onClick={() => { scrollToSection('premadeSection'); closeMobileMenu(); }}></button>
@@ -394,6 +378,14 @@ function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+
+      <section className="section" id="premadeSection" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '60px' }}>
+        <div className="section-header">
+          <div className="section-title" data-i18n="premadeTitle"></div>
+        </div>
+        <div className="build-grid" id="buildGrid"></div>
       </section>
 
 

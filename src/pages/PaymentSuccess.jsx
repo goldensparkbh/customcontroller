@@ -1,6 +1,36 @@
 
 import React, { useEffect, useState } from 'react';
 
+async function parseJsonSafe(response) {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+function getLineItemTotal(item) {
+  const qty = item.quantity || 1;
+  const unit = item.unitPrice ?? item.total ?? 0;
+  return Number(unit) * qty;
+}
+
+function normalizeOrderDraft(draft) {
+  const cart = Array.isArray(draft?.cart) ? draft.cart : [];
+  const derivedSubtotal = cart.reduce((sum, item) => sum + getLineItemTotal(item), 0);
+  const subtotal = Number(draft?.subtotal) > 0 ? Number(draft.subtotal) : derivedSubtotal;
+  const shippingCost = Number(draft?.shippingCost);
+  const total = Number(draft?.total) > 0 ? Number(draft.total) : subtotal + (Number.isFinite(shippingCost) && shippingCost > 0 ? shippingCost : 0);
+
+  return {
+    ...draft,
+    subtotal,
+    total
+  };
+}
+
 function PaymentSuccessPage() {
   const [status, setStatus] = useState("verifying"); // verifying, success, failed
   const [message, setMessage] = useState("Verifying payment...");
@@ -18,11 +48,11 @@ function PaymentSuccessPage() {
         // 1. Verify Payment
         setMessage("Verifying payment with Tap...");
         const verifyRes = await fetch(`/api/tap/verify?tap_id=${tapId}`);
-        const verifyJson = await verifyRes.json();
+        const verifyJson = await parseJsonSafe(verifyRes);
 
-        if (!verifyRes.ok || (verifyJson.status !== "CAPTURED" && verifyJson.status !== "AUTHORIZED")) {
+        if (!verifyRes.ok || !verifyJson || (verifyJson.status !== "CAPTURED" && verifyJson.status !== "AUTHORIZED")) {
           console.error("Payment verification failed", verifyJson);
-          throw new Error("Payment verification failed: " + (verifyJson.status || "Unknown"));
+          throw new Error("Payment verification failed: " + ((verifyJson && (verifyJson.status || verifyJson.error || verifyJson.detail)) || `HTTP ${verifyRes.status}`));
         }
 
         // 2. Create Order
@@ -32,10 +62,17 @@ function PaymentSuccessPage() {
           throw new Error("Order draft not found");
         }
 
-        const orderData = JSON.parse(draftRaw);
+        const orderData = normalizeOrderDraft(JSON.parse(draftRaw));
         // Add payment details to order data
         orderData.paymentDetails = verifyJson;
-        orderData.paymentMethod = "online"; // Ensure backend knows it's online
+        orderData.paymentMethod = "tap";
+        orderData.paymentStatus = "Paid";
+        orderData.paymentReference =
+          verifyJson.reference?.payment ||
+          verifyJson.reference?.transaction ||
+          verifyJson.id ||
+          tapId;
+        localStorage.setItem("ezOrderDraft", JSON.stringify(orderData));
 
         const createRes = await fetch('/api/createOrder', {
           method: 'POST',
@@ -44,8 +81,8 @@ function PaymentSuccessPage() {
         });
 
         if (!createRes.ok) {
-          const result = await createRes.json();
-          throw new Error(result.error || "Order creation failed");
+          const result = await parseJsonSafe(createRes);
+          throw new Error((result && (result.error || result.detail || result.message)) || "Order creation failed");
         }
 
         // 3. Success

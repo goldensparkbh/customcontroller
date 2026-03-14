@@ -1502,41 +1502,70 @@ img {
   cursor: pointer;
 }
 
-.bottom-actions {
+.primary-action-btn {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--button-primary-shadow);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+}
+
+.primary-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 1),
+    0 0 24px rgba(0, 229, 255, 0.9);
+}
+
+.primary-action-btn:disabled {
+  background: #333;
+  color: #888;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.bottom-actions,
+.controller-action-buttons {
   display: flex;
   align-items: center;
   gap: 12px;
+  direction: ltr;
+  flex-shrink: 0;
 }
 
 .clear-selection-btn {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
   border-radius: 50%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
-  transition: all 0.2s ease;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.8);
+  background: var(--button-primary-bg);
+  border: none;
+  color: var(--button-primary-text);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.9),
+    0 0 18px rgba(0, 229, 255, 0.7);
 }
 
 .clear-selection-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .clear-selection-btn:hover {
-  background: rgba(220, 38, 38, 0.2);
-  border-color: rgba(220, 38, 38, 0.5);
-  color: #ef4444;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.9);
+  transform: translateY(-1px);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 1),
+    0 0 24px rgba(0, 229, 255, 0.9);
+  filter: brightness(1.08);
+  cursor: pointer;
 }
 
 .clear-selection-btn:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.98);
 }
 
 .add-to-cart-btn:active {
@@ -1624,12 +1653,9 @@ img {
 }
 
 .zoho-loading-spinner {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.18);
-  border-top-color: var(--accent1);
-  animation: zoho-spin 0.9s linear infinite;
+  width: 96px;
+  height: 96px;
+  background: center / contain no-repeat url('/assets/loading.gif');
 }
 
 .zoho-loading-text {
@@ -1637,12 +1663,6 @@ img {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.85;
-}
-
-@keyframes zoho-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ---------- MAIN LAYOUT ---------- */
@@ -1684,7 +1704,7 @@ img {
 .controller-column {
   position: relative;
   grid-area: controller;
-  margin-top: 50px;
+  margin-top: 0;
   padding-bottom: 0;
 }
 
@@ -1836,6 +1856,7 @@ html[dir="rtl"] .part-name {
   align-items: center;
   /* keeps controller + buttons centered */
   margin-bottom: clamp(180px, 30vh, 260px);
+  will-change: transform, opacity, filter;
 }
 
 .controller-area.has-selection::before {
@@ -1935,6 +1956,17 @@ html[dir="rtl"] .part-name {
 
 .controller-wrapper.is-back .controller-flip {
   transform: none;
+}
+
+.controller-face .part-layer-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 20;
 }
 
 .part-layer {
@@ -2096,7 +2128,7 @@ html[dir="rtl"] .part-name {
   position: absolute;
   left: 50%;
   top: calc(100% - 48px);
-  transform: translateX(-50%);
+  transform: translate(-50%, 18px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2116,10 +2148,12 @@ html[dir="rtl"] .part-name {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top,
+  background:
+    radial-gradient(circle at top,
       rgba(0, 0, 0, 0.92),
-      rgba(14, 14, 14, 1));
-  border: 2px solid rgba(0, 255, 128, 0.7);
+      rgba(14, 14, 14, 1)) padding-box,
+    var(--button-primary-bg) border-box;
+  border: 2px solid transparent;
   box-shadow: none;
   transition: transform 0.15s ease, filter 0.15s ease;
   cursor: pointer;
@@ -2138,10 +2172,12 @@ html[dir="rtl"] .part-name {
 }
 
 body.theme-light .flip-toggle {
-  background: radial-gradient(circle at top,
+  background:
+    radial-gradient(circle at top,
       rgba(255, 255, 255, 0.95),
-      rgba(235, 239, 248, 0.95));
-  border: 2px solid var(--border-subtle);
+      rgba(235, 239, 248, 0.95)) padding-box,
+    var(--button-primary-bg) border-box;
+  border: 2px solid transparent;
   box-shadow: none;
 }
 
@@ -2470,6 +2506,7 @@ body.theme-light .flip-toggle {
   text-align: center;
   position: relative;
   border: solid rgb(0, 0, 0);
+  cursor: pointer;
 }
 
 .parts-item:hover {
@@ -2540,10 +2577,23 @@ body.theme-light.configurator-page-active .parts-item.active .parts-thumb img {
   padding: 24px 16px 16px;
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  /* Unified scrolling for the whole panel */
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.color-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.color-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
 .color-panel-header {
@@ -2578,7 +2628,8 @@ body.theme-light.configurator-page-active .parts-item.active .parts-thumb img {
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 10px;
   padding-right: 2px;
-  flex: 0.2;
+  flex: 0 0 auto;
+  /* Grows naturally */
 }
 
 .color-panel-grid2 {
@@ -2588,7 +2639,8 @@ body.theme-light.configurator-page-active .parts-item.active .parts-thumb img {
   gap: 10px;
   padding-right: 2px;
   padding-top: 6px;
-  overflow-y: auto;
+  flex: 0 0 auto;
+  /* No internal scroll */
 }
 
 .color-group-title {
@@ -2688,6 +2740,35 @@ body.theme-light .color-group-title {
   margin-top: 10px;
 }
 
+.cd-gamemode-meta {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.cd-gamemode-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e6edf3;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.cd-gamemode-price {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0.24rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .cd-swatch {
   width: 74px;
   height: 74px;
@@ -2717,6 +2798,88 @@ body.theme-light .color-group-title {
   box-shadow: 0 0 0 4px #ffffff !important;
   border-color: #ffffff !important;
   transform: scale(1.05);
+}
+
+.cd-cell-op.is-gamemode-option {
+  padding: 8px 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out,
+    border-color 0.12s ease-out,
+    background 0.12s ease-out;
+}
+
+.cd-cell-op.is-gamemode-option.active {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.cd-cell-op.is-gamemode-option .cd-swatch-op {
+  isolation: isolate;
+  overflow: visible;
+  padding: 10px;
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-origin: content-box !important;
+  background-clip: content-box !important;
+}
+
+.cd-cell-op.is-gamemode-option.active .cd-swatch-op {
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.cd-cell-op.is-gamemode-option .cd-swatch-op::before,
+.cd-cell-op.is-gamemode-option .cd-swatch-op::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 0.12s ease-out,
+    transform 0.12s ease-out;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.cd-cell-op.is-gamemode-option .cd-swatch-op::before {
+  padding: 8px;
+  background: var(--button-primary-bg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), var(--button-primary-shadow);
+}
+
+.cd-cell-op.is-gamemode-option .cd-swatch-op::after {
+  padding: 5px;
+  background: #ffffff;
+}
+
+.cd-cell-op.is-gamemode-option.active .cd-swatch-op::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cd-cell-op.is-gamemode-option .cd-swatch-op:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: none;
+  filter: brightness(1.4) saturate(1.4) contrast(1.05);
+}
+
+.cd-cell-op.is-gamemode-option:not(.active) .cd-swatch-op:hover::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .cd-swatch-op {
@@ -3300,6 +3463,21 @@ a {
 .thumb-layer[data-part-id="psButton"] {
   mix-blend-mode: soft-light;
   filter: brightness(0.65) contrast(1.2) saturate(1.4);
+}
+
+/* Premade controller preview in cart (rendered via dangerouslySetInnerHTML) */
+.premade-cart-preview {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.premade-cart-preview .thumb-controller {
+  width: 100%;
+  max-width: 100%;
 }
 
 .cart-item-details {
@@ -4242,6 +4420,27 @@ textarea {
 }
 
 @media (min-width: 901px) {
+  body.configurator-page-active .parts-column,
+  body.configurator-page-active .colors-column {
+    position: relative;
+    z-index: 6;
+  }
+
+  body.configurator-page-active .controller-column {
+    position: relative;
+    z-index: 2;
+  }
+
+  body.configurator-page-active.configurator-intro-active .controller-wrapper {
+    animation: controllerIntroSweep 1.2s cubic-bezier(0.18, 0.84, 0.22, 1) both;
+    transform-origin: 56% 54%;
+    pointer-events: none;
+  }
+
+  body.configurator-page-active.configurator-intro-active .controller-buttons-stack {
+    pointer-events: none;
+  }
+
   body.configurator-page-active .page-content {
     padding-top: 0;
     padding-bottom: 0;
@@ -4271,6 +4470,7 @@ textarea {
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+    transform: translateY(-20px);
   }
 
   /* Arabic (rtl): restore original */
@@ -4280,7 +4480,7 @@ textarea {
   }
 
   html[dir="rtl"] body.configurator-page-active .controller-column {
-    padding: 60px 0 0 10px;
+    padding: 0 0 0 10px;
   }
 
   /* English (ltr): restore original */
@@ -4290,7 +4490,7 @@ textarea {
   }
 
   html[dir="ltr"] body.configurator-page-active .controller-column {
-    padding: 60px 10px 0 0;
+    padding: 0 10px 0 0;
   }
 
   body.configurator-page-active .colors-column {
@@ -4298,7 +4498,7 @@ textarea {
     margin: 0;
     height: 100vh;
     min-height: 100vh;
-    padding-top: 60px;
+    padding-top: 0;
     box-sizing: border-box;
     min-width: 0;
     min-height: 0;
@@ -4312,7 +4512,7 @@ textarea {
     margin: 0;
     height: 100vh;
     min-height: 100vh;
-    padding-top: 60px;
+    padding-top: 0;
     box-sizing: border-box;
     min-width: 0;
     min-height: 0;
@@ -4335,7 +4535,7 @@ textarea {
     top: auto;
     left: auto;
     transform: none;
-    margin-top: -20vh;
+    margin-top: -13vh;
     gap: 33px;
     margin-bottom: 2vw;
   }
@@ -4466,9 +4666,29 @@ textarea {
     text-align: left;
   }
 
-  body.configurator-page-active .controller-bottom-bar .add-to-cart-btn {
+  body.configurator-page-active .controller-bottom-bar .controller-action-buttons {
     order: 2;
     margin: 0;
+  }
+}
+
+@keyframes controllerIntroSweep {
+  0% {
+    opacity: 0.08;
+    transform: translateX(56vw) translateY(32px) rotate(-12deg) scale(0.92);
+    filter: blur(4px);
+  }
+
+  68% {
+    opacity: 1;
+    transform: translateX(-20px) translateY(4px) rotate(2.5deg) scale(1.01);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+    filter: blur(0);
   }
 }
 
@@ -4776,7 +4996,12 @@ body.configurator-page-active .cd-cell-op {
     right: 12px;
   }
 
-  .controller-bottom-bar .add-to-cart-btn {
+  .controller-bottom-bar .controller-action-buttons {
+    width: auto;
+  }
+
+  .controller-bottom-bar .add-to-cart-btn,
+  .controller-bottom-bar .clear-selection-btn {
     width: auto;
   }
 
@@ -5471,4 +5696,37 @@ body.configurator-page-active .cd-cell-op {
   opacity: var(--tint-opacity, 1);
   display: block;
   z-index: 5;
+  filter: contrast(1.1) brightness(1.05);
+  /* Enhance base shading clarity */
+}
+
+/* Secondary lighting/specular layer for realistic 3D shading */
+.part-gloss {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-mask-image: var(--mask-url);
+  mask-image: var(--mask-url);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mix-blend-mode: soft-light;
+  /* Blends highlights without washing out color */
+  opacity: 0;
+  /* Only visible when a color is applied */
+  display: block;
+  z-index: 6;
+  /* On top of the color layer */
+  background: none;
+  transition: opacity 0.3s ease;
+}
+
+body.theme-light .part-layer {
+  filter: contrast(1.05) brightness(1.02);
 }

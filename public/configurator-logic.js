@@ -36,7 +36,7 @@
     let baseControllerPrice = 0;
     const partsRowsById = {};
     let selectedPartId = null;
-    let currentPanel = "colors";
+    let currentPanel = "options";
     const configState = {};
     const optionState = {};
     const selectedTransparencyByPart = {};
@@ -47,6 +47,7 @@
     let availablePartsSet = new Set();
     const lastApplySeqByPart = {};
     const layers = {};
+    const glossLayers = {};
     const maskDataById = {};
     let masksReady = false;
 
@@ -64,24 +65,22 @@
     const BASE_WIDTH = 1166;
     const BASE_HEIGHT = 768;
 
-    const FRONT_PARTS = [
-        { id: "shell", icon: "/assets/icons/shells.png", mask: ["/assets/masks/leftShell.png", "/assets/masks/rightShell.png"], priority: 1, side: "front" },
-        { id: "trimpiece", icon: "/assets/icons/trimpiece.png", mask: ["/assets/masks/centerBody.png"], priority: 4, side: "front" },
-        { id: "sticks", icon: "/assets/icons/sticks.png", mask: ["/assets/masks/stickL.png", "/assets/masks/stickR.png"], priority: 3, side: "front" },
-        { id: "allButtons", icon: "/assets/icons/allButtons.png", mask: ["/assets/masks/faceButtons.png", "/assets/masks/share.png", "/assets/masks/options.png"], priority: 3, side: "front" },
-        { id: "touchpad", icon: "/assets/icons/touchpad.png", mask: ["/assets/masks/touchpad.png"], priority: 2, side: "front" },
-        { id: "bumpersTriggers", icon: "/assets/icons/lsrs.png", mask: ["/assets/masks/bumperL.png", "/assets/masks/bumperR.png"], priority: 2, side: "front", hiddenUI: true },
-        { id: "psButton", icon: "/assets/icons/psButton.png", mask: ["/assets/masks/psButton.png"], priority: 5, side: "front" },
-    ];
+    const TECHNICAL_PARTS_LOOKUP = {
+        shell: { mask: ["/assets/masks/leftShell.png", "/assets/masks/rightShell.png"], priority: 1, side: "front" },
+        trimpiece: { mask: ["/assets/masks/centerBody.png"], priority: 4, side: "front" },
+        sticks: { mask: ["/assets/masks/stickL.png", "/assets/masks/stickR.png"], priority: 3, side: "front" },
+        allButtons: { mask: ["/assets/masks/faceButtons.png", "/assets/masks/share.png", "/assets/masks/options.png"], priority: 3, side: "front" },
+        touchpad: { mask: ["/assets/masks/touchpad.png"], priority: 2, side: "front" },
+        bumpersTriggers: { mask: ["/assets/masks/bumperL.png", "/assets/masks/bumperR.png", "/assets/masks/backTriggers.png"], priority: 2, side: "front" },
+        psButton: { mask: ["/assets/masks/psButton.png"], priority: 5, side: "front" },
+        backShellMain: { mask: ["/assets/masks/backShellMain.png"], priority: 2, side: "back" }
+    };
 
-    const BACK_PARTS = [
-        { id: "bumpersTriggers", icon: "/assets/icons/lsrs.png", mask: ["/assets/masks/backTriggers.png"], priority: 1, side: "back" },
-        { id: "backShellMain", icon: "/assets/icons/backShellMain.png", mask: ["/assets/masks/backShellMain.png"], priority: 2, side: "back" },
-    ];
-
-    const ALL_PARTS = [...FRONT_PARTS, ...BACK_PARTS];
-    const FRONT_PART_IDS = new Set(FRONT_PARTS.map(part => part.id));
-    const BACK_PART_IDS = new Set(BACK_PARTS.map(part => part.id));
+    let FRONT_PARTS = [];
+    let BACK_PARTS = [];
+    let ALL_PARTS = [];
+    let FRONT_PART_IDS = new Set();
+    let BACK_PART_IDS = new Set();
 
     const PART_KEYS = {
         shell: "part_shell",
@@ -165,15 +164,6 @@
     // Special case for backShellMain standard icon
     const BACK_SHELL_STANDARD_ICON = "/assets/icons/backShellMain_standard.png";
 
-    const TRANSPARENT_HEXES = new Set([
-        "#ededed",
-        "#d43838",
-        "#2448b5",
-        "#68d78b",
-        "#4e2b8c",
-        "#8c3b2f",
-        "#e3e3e3"
-    ]);
     const TRANSPARENT_TINT_OPACITY = 0.7;
 
     const TRANSPARENCY_HINTS = new Set(["transparent", "trans", "t"]);
@@ -351,9 +341,7 @@
             }
 
             if (col) {
-                const isTransparent = (partId === "allButtons") ? false : (typeof transparencyHint === "boolean"
-                    ? transparencyHint
-                    : TRANSPARENT_HEXES.has(col.hex.toLowerCase()));
+                const isTransparent = (partId === "allButtons") ? false : (transparencyHint === true);
 
                 if (typeof transparencyHint === "boolean") {
                     col.key = col.hex + (isTransparent ? "_t" : "_s");
@@ -391,119 +379,93 @@
         }
     }
 
-    async function fetchZohoItems() {
-        const allItems = [];
-        const seenIds = new Set();
-        let page = 1;
-        let perPage = 200;
-        let hasMore = true;
-
-        while (hasMore && page < 60) {
-            const params = new URLSearchParams();
-            params.set("page", String(page));
-            params.set("per_page", String(perPage));
-            if (ZOHO_ORG_ID) {
-                params.set("organization_id", ZOHO_ORG_ID);
-            }
-            const url = ZOHO_ITEMS_ENDPOINT + "?" + params.toString();
-            try {
-                const headers = {};
-                if (ZOHO_ACCESS_TOKEN) {
-                    headers.Authorization = "Zoho-oauthtoken " + ZOHO_ACCESS_TOKEN;
-                }
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-                const res = await fetch(url, {
-                    headers: Object.keys(headers).length ? headers : undefined,
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (!res.ok) {
-                    zohoFetchError.hasError = true;
-                    zohoFetchError.message = "HTTP " + res.status;
-                    break;
-                }
-                const data = await res.json();
-                const rawItems = (data && Array.isArray(data.items)) ? data.items : [];
-                if (rawItems.length === 0) break;
-
-                const items = rawItems.filter(it => {
-                    const status = (it.status || it.item_status || "").toLowerCase();
-                    return status === "" || status === "active";
-                });
-
-                let hasNew = false;
-                items.forEach(it => {
-                    const id = it.item_id || it.id;
-                    if (id && !seenIds.has(id)) {
-                        seenIds.add(id);
-                        allItems.push(it);
-                        hasNew = true;
-                    }
-                });
-
-                if (!hasNew && rawItems.length > 0 && page > 1) {
-                    hasMore = false;
-                    break;
-                }
-
-                if (rawItems.length < perPage) {
-                    hasMore = false;
-                } else {
-                    page++;
-                }
-            } catch (err) {
-                console.error("[Zoho] Fetch failed:", err);
-                break;
-            }
-        }
-        return allItems;
-    }
-
-    async function bootstrapZohoInventory() {
+    function bootstrapConfigurator() {
         setZohoLoading(true);
         try {
-            const items = await fetchZohoItems();
-            items.forEach(parseZohoItem);
+            const firebaseParts = window.__CONFIG_FIREBASE_DATA__ || [];
 
-            Object.keys(configState).forEach(pid => {
-                const val = configState[pid];
-                if (!val) return;
-                const hasOptionMatch = (dynamicOptionsByPart[pid] || []).some(entry => (entry.hex || "").toLowerCase() === (val || "").toLowerCase());
-                setPartPrice(pid, val, hasOptionMatch);
+            // Re-initialize ALL_PARTS from Firebase
+            ALL_PARTS = firebaseParts.map(fbPart => {
+                const tech = TECHNICAL_PARTS_LOOKUP[fbPart.id] || {};
+                return {
+                    id: fbPart.id,
+                    title: fbPart.title,
+                    icon: fbPart.icon || tech.icon, // Prefer FB icon
+                    mask: tech.mask || [],
+                    priority: fbPart.priority || tech.priority || 1,
+                    side: fbPart.side || tech.side || 'front',
+                    hiddenUI: fbPart.hiddenUI || false
+                };
             });
 
+            // Re-derive subset lists
+            FRONT_PARTS = ALL_PARTS.filter(p => p.side === 'front');
+            BACK_PARTS = ALL_PARTS.filter(p => p.side === 'back');
+            FRONT_PART_IDS = new Set(FRONT_PARTS.map(p => p.id));
+            BACK_PART_IDS = new Set(BACK_PARTS.map(p => p.id));
+
+            // Re-build mask data
+            rebuildMasks();
+            // Re-build UI layers
+            buildPartLayers();
+
+            firebaseParts.forEach(fbPart => {
+                const partId = fbPart.id;
+                const options = fbPart.options || [];
+
+                options.forEach(opt => {
+                    const price = Number(opt.price) || 0;
+                    const qty = Number(opt.quantity) || 100;
+
+                    addPriceFallback(partId, price);
+
+                    // Use accurate type field if available, fallback to substring matching
+                    const isGamemode = opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers");
+                    const nName = (opt.name || "").toLowerCase();
+                    const isTransparent = (nName.includes("transparent") || nName.includes("trans"));
+
+                    const entry = {
+                        key: opt.id,
+                        valName: opt.name, // Used for rendering labels directly
+                        hex: opt.hex || opt.name, // Use actual Hex if provided, else fallback
+                        price: price,
+                        qty: qty,
+                        isGamemode: isGamemode,
+                        image: opt.image || null, // The overlay stack image!
+                        icon: opt.icon || (isGamemode && opt.image ? opt.image : null), // Display in palette
+                        isTransparent: isTransparent
+                    };
+
+                    if (isGamemode) {
+                        addVariantToMap(dynamicOptionsByPart, partId, entry);
+                    } else {
+                        addVariantToMap(dynamicColorsByPart, partId, entry);
+                    }
+                });
+            });
+
+            ensurePartStateDefaults();
             recomputeAvailableParts();
+            restorePersistedSelections();
             buildPartsList();
 
-            if (selectedPartId) {
-                const selPartObj = ALL_PARTS.find(p => p.id === selectedPartId);
-                if (!selPartObj || !isPartActive(selPartObj)) {
-                    clearSelection();
-                    resetColorPanel();
-                    resetOptionsPanel();
-                }
+            const restoredPartId = selectedPartId && availablePartsSet.has(selectedPartId)
+                ? selectedPartId
+                : null;
+            selectedPartId = null;
+
+            const initialPartId = restoredPartId || getFirstShownPartId();
+            if (initialPartId) {
+                selectPart(initialPartId, { silent: true });
+            } else {
+                clearSelection();
+                resetColorPanel();
+                resetOptionsPanel();
             }
-            if (selectedPartId) {
-                openColorPanelForPart(selectedPartId);
-            }
-            updateSummary();
         } catch (err) {
-            console.error("[Zoho] Bootstrap failed:", err);
+            console.error("[Firebase Config] Bootstrap failed:", err);
         } finally {
             setZohoLoading(false);
-
-            // Auto-select a part on first load to show options in the palette
-            if (!selectedPartId) {
-                if (availablePartsSet.has("shell")) {
-                    selectPart("shell");
-                } else if (availablePartsSet.size > 0) {
-                    // Filter out hidden parts if any, or just pick the first available
-                    const firstId = Array.from(availablePartsSet)[0];
-                    selectPart(firstId);
-                }
-            }
         }
     }
 
@@ -551,23 +513,52 @@
     const zohoLoadingOverlay = document.getElementById("zohoLoadingOverlay");
 
     function buildPartLayers() {
+        // Clear existing layers if any
+        if (faceFrontEl) {
+            const existingFront = faceFrontEl.querySelectorAll(".part-layer-img, .part-gloss");
+            existingFront.forEach(el => el.remove());
+        }
+        if (faceBackEl) {
+            const existingBack = faceBackEl.querySelectorAll(".part-layer-img, .part-gloss");
+            existingBack.forEach(el => el.remove());
+        }
+        // Reset layer objects
+        Object.keys(layers).forEach(k => delete layers[k]);
+        Object.keys(glossLayers).forEach(k => delete glossLayers[k]);
+
         ALL_PARTS.forEach(part => {
-            const layer = document.createElement("div");
-            layer.className = "part-layer";
+            // 1. Color/Tint layer as IMG
+            const layer = document.createElement("img");
+            layer.className = "part-layer-img";
             layer.dataset.partId = part.id;
+            layer.style.display = "none";
+            layer.style.zIndex = (part.priority || 1) * 10;
 
-            const maskUrls = Array.isArray(part.mask) ? part.mask : [part.mask];
-            const maskString = maskUrls.map(u => "url('" + u + "')").join(", ");
-            layer.style.setProperty("--mask-url", maskString);
+            // 2. Gloss/Lighting layer (Legacy support)
+            const gloss = document.createElement("div");
+            gloss.className = "part-gloss";
+            gloss.dataset.partId = part.id;
 
-            if (part.side === "front") faceFrontEl.appendChild(layer);
-            else faceBackEl.appendChild(layer);
+            if (part.side === "front") {
+                if (faceFrontEl) {
+                    faceFrontEl.appendChild(layer);
+                    faceFrontEl.appendChild(gloss);
+                }
+            } else {
+                if (faceBackEl) {
+                    faceBackEl.appendChild(layer);
+                    faceBackEl.appendChild(gloss);
+                }
+            }
 
             if (!layers[part.id]) layers[part.id] = [];
             layers[part.id].push(layer);
+
+            if (!glossLayers[part.id]) glossLayers[part.id] = [];
+            glossLayers[part.id].push(gloss);
         });
     }
-    buildPartLayers();
+    // Don't call buildPartLayers() here anymore, it's called in bootstrapConfigurator
 
     function loadMask(part) {
         return new Promise(resolve => {
@@ -592,23 +583,75 @@
         });
     }
 
-    (async function () {
-        for (const part of ALL_PARTS) await loadMask(part);
+    async function rebuildMasks() {
+        masksReady = false;
+        for (const part of ALL_PARTS) {
+            if (part.mask && part.mask.length > 0) {
+                await loadMask(part);
+            }
+        }
         masksReady = true;
-    })();
+    }
 
     const mobileOptionsGrid = document.getElementById("mobileOptionsGrid");
     const mobileQuery = window.matchMedia("(max-width: 900px)");
-    ALL_PARTS.forEach(p => {
-        configState[p.id] = null;
-        optionState[p.id] = p.id === "backShellMain" ? "standard" : null;
-        selectedTransparencyByPart[p.id] = false;
-        lastApplySeqByPart[p.id] = 0;
-    });
+
+    function ensurePartStateDefaults() {
+        ALL_PARTS.forEach(p => {
+            if (!(p.id in configState)) configState[p.id] = null;
+            if (!(p.id in optionState)) optionState[p.id] = null;
+            if (!(p.id in selectedTransparencyByPart)) selectedTransparencyByPart[p.id] = false;
+            if (!(p.id in lastApplySeqByPart)) lastApplySeqByPart[p.id] = 0;
+            if (!(p.id in selectedPriceByPart)) selectedPriceByPart[p.id] = 0;
+            if (!(p.id in selectedOptionPriceByPart)) selectedOptionPriceByPart[p.id] = 0;
+        });
+    }
 
     function saveConfigToStorage() {
-        const state = { configState, optionState };
+        const state = {
+            configState,
+            optionState,
+            selectedPartId,
+            currentPanel,
+            currentSide
+        };
         localStorage.setItem("ps5Config", JSON.stringify(state));
+    }
+
+    function getRenderedLayerImage(partId) {
+        const partLayers = layers[partId] || [];
+        for (const layer of partLayers) {
+            if (!layer || typeof layer.getAttribute !== "function") continue;
+            if (layer.style && layer.style.display === "none") continue;
+            const src = layer.getAttribute("src");
+            if (src) return src;
+        }
+        return null;
+    }
+
+    function collectVisibleFaceLayers(side) {
+        const faceEl = side === "front" ? faceFrontEl : faceBackEl;
+        if (!faceEl) return [];
+        return Array.from(faceEl.querySelectorAll("img"))
+            .map((imgEl, idx) => {
+                const computed = window.getComputedStyle(imgEl);
+                const src = imgEl.currentSrc || imgEl.getAttribute("src") || "";
+                const zIndex = Number.parseFloat(computed.zIndex);
+                const opacity = Number.parseFloat(computed.opacity || "1");
+                return {
+                    idx,
+                    src,
+                    opacity: Number.isFinite(opacity) ? opacity : 1,
+                    zIndex: Number.isFinite(zIndex) ? zIndex : 0,
+                    visible: computed.display !== "none" && computed.visibility !== "hidden"
+                };
+            })
+            .filter(item => item.visible && item.opacity > 0 && item.src)
+            .sort((a, b) => {
+                if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
+                return a.idx - b.idx;
+            })
+            .map(({ src, opacity, zIndex }) => ({ src, opacity, zIndex }));
     }
 
     function loadConfigFromStorage() {
@@ -618,12 +661,99 @@
                 const parsed = JSON.parse(saved);
                 if (parsed.configState) Object.assign(configState, parsed.configState);
                 if (parsed.optionState) Object.assign(optionState, parsed.optionState);
+                if (Object.prototype.hasOwnProperty.call(parsed, "selectedPartId")) {
+                    selectedPartId = parsed.selectedPartId || null;
+                }
+                if (parsed.currentPanel === "options" || parsed.currentPanel === "colors") {
+                    currentPanel = parsed.currentPanel;
+                }
+                if (parsed.currentSide === "front" || parsed.currentSide === "back") {
+                    currentSide = parsed.currentSide;
+                }
             }
         } catch (e) {
             console.warn("Storage load failed", e);
         }
     }
     loadConfigFromStorage();
+
+    function findColorSelection(partId, key) {
+        if (!key) return null;
+        const palette = getPaletteForPart(partId);
+        return palette.find(c => c.key === key) ||
+            palette.find(c => c.hex === key) ||
+            palette.find(c => (c.key || "").split("_")[0] === (key || "").split("_")[0]) ||
+            null;
+    }
+
+    function findOptionSelection(partId, key) {
+        if (!key) return null;
+        if (key === "standard") return null;
+        const options = getOptionsForPart(partId);
+        return options.find(o => o.key === key) || null;
+    }
+
+    function syncPartVisualState(partId) {
+        const colorObj = findColorSelection(partId, configState[partId]);
+        const optionObj = findOptionSelection(partId, optionState[partId]);
+
+        if (!colorObj) configState[partId] = null;
+        if (!optionObj) optionState[partId] = null;
+
+        selectedPriceByPart[partId] = colorObj && colorObj.price != null ? Number(colorObj.price) : 0;
+        selectedOptionPriceByPart[partId] = optionObj && optionObj.price != null ? Number(optionObj.price) : 0;
+
+        const targetLayers = layers[partId] || [];
+        targetLayers.forEach((layer) => {
+            if (partId === "backShellMain" && optionObj && optionObj.key === "rampkit") {
+                layer.removeAttribute("src");
+                layer.style.display = "none";
+                return;
+            }
+
+            if (optionObj && optionObj.image) {
+                layer.src = optionObj.image;
+                layer.style.display = "block";
+                return;
+            }
+
+            if (colorObj && colorObj.image) {
+                layer.src = colorObj.image;
+                layer.style.display = "block";
+                return;
+            }
+
+            layer.removeAttribute("src");
+            layer.style.display = "none";
+        });
+
+        const targetGloss = glossLayers[partId] || [];
+        targetGloss.forEach((gloss) => {
+            gloss.style.opacity = "0";
+            gloss.style.display = "none";
+        });
+    }
+
+    function restorePersistedSelections() {
+        ensurePartStateDefaults();
+        ALL_PARTS.forEach((part) => syncPartVisualState(part.id));
+        setSide(currentSide === "back" ? "back" : "front");
+        syncBaseImages();
+        updatePartsUI();
+        updateSummary();
+        saveConfigToStorage();
+    }
+
+    function getFirstShownPartId() {
+        const firstPrimary = primaryList ? primaryList.querySelector(".parts-item:not(.disabled)") : null;
+        if (firstPrimary && firstPrimary.dataset.id) return firstPrimary.dataset.id;
+
+        const firstSecondary = secondaryList ? secondaryList.querySelector(".parts-item:not(.disabled)") : null;
+        if (firstSecondary && firstSecondary.dataset.id) return firstSecondary.dataset.id;
+
+        const fallback = ALL_PARTS.find((part) => !part.hiddenUI && availablePartsSet.has(part.id));
+        return fallback ? fallback.id : null;
+    }
 
     function setZohoLoading(isLoading) {
         if (!zohoLoadingOverlay) return;
@@ -672,6 +802,8 @@
         if (mobile) {
             updateMobileOptionsBar();
         }
+
+        saveConfigToStorage();
     }
 
     function syncBaseImages() {
@@ -686,12 +818,11 @@
             if (pid === "allButtons") return false;
             const key = configState[pid];
             if (!key) return false;
+            // Key ending in _t is the most reliable hint set during parse
             if (key.toLowerCase().endsWith("_t")) return true;
             const palette = getPaletteForPart(pid);
             const col = palette.find(c => c.key === key);
             if (col && col.isTransparent) return true;
-            const hex = col ? col.hex : (key.startsWith("#") ? key : null);
-            if (hex && TRANSPARENT_HEXES.has(hex.toLowerCase())) return true;
             return false;
         };
 
@@ -825,13 +956,28 @@
         }
     }
 
-    function toggleLanguage() {
-        currentLang = currentLang === "ar" ? "en" : "ar";
-        applyLanguage();
+    function applyTranslations() {
+        const dict = i18n[currentLang];
+        document.querySelectorAll("[data-i18n]").forEach(el => {
+            const key = el.getAttribute("data-i18n");
+            if (dict[key] && !el.hasAttribute("data-no-translate")) {
+                if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") el.placeholder = dict[key];
+                else el.textContent = dict[key];
+            }
+        });
+        document.querySelectorAll("[data-i18n-html]").forEach(el => {
+            const key = el.getAttribute("data-i18n-html");
+            if (dict[key] && !el.hasAttribute("data-no-translate")) el.innerHTML = dict[key];
+        });
+        document.querySelectorAll("[data-i18n-title]").forEach(el => {
+            const key = el.getAttribute("data-i18n-title");
+            if (dict[key]) el.title = dict[key];
+        });
+        document.querySelectorAll("[data-i18n-label]").forEach(el => {
+            const key = el.getAttribute("data-i18n-label");
+            if (dict[key]) el.setAttribute("aria-label", dict[key]);
+        });
     }
-
-    if (navLangToggle) navLangToggle.addEventListener("click", toggleLanguage);
-    if (mobileLangToggle) mobileLangToggle.addEventListener("click", toggleLanguage);
 
     function setMobileNavOpen(isOpen) {
         if (!mobileNavOverlay || !mobileNavDrawer) return;
@@ -867,8 +1013,10 @@
 
         if (summaryAmountEl) updateSummary();
         buildPartsList();
+        updatePartsUI();
         if (selectedPartId) openColorPanelForPart(selectedPartId);
     }
+
 
     function refreshAccordionHeights() {
         if (!accordionItems) return;
@@ -888,11 +1036,17 @@
         if (primaryList) primaryList.innerHTML = "";
         if (secondaryList) secondaryList.innerHTML = "";
 
+        const secondaryIds = new Set(["shell", "trimpiece", "touchpad", "psButton", "allButtons"]);
+
         ALL_PARTS.forEach(part => {
             if (part.hiddenUI) return;
             const row = createPartRow(part);
             partsRowsById[part.id] = row;
-            if (primaryList) primaryList.appendChild(row);
+            if (secondaryIds.has(part.id)) {
+                if (secondaryList) secondaryList.appendChild(row);
+            } else {
+                if (primaryList) primaryList.appendChild(row);
+            }
         });
         refreshAccordionHeights();
     }
@@ -905,13 +1059,14 @@
         const row = document.createElement("div");
         row.className = "parts-item";
         row.dataset.id = part.id;
+        row.title = part.title || ""; // Desktop tooltip
         if (!isPartActive(part)) row.classList.add("disabled");
 
         const thumb = document.createElement("div");
         thumb.className = "parts-thumb";
         const icon = document.createElement("img");
         icon.src = part.icon;
-        icon.alt = "";
+        icon.alt = part.title || ""; // Accessibility
         thumb.appendChild(icon);
 
         row.appendChild(thumb);
@@ -924,12 +1079,9 @@
         return row;
     }
 
-    function selectPart(partId) {
-        if (selectedPartId === partId) {
-            clearSelection();
-            return;
-        }
-        playClick();
+    function selectPart(partId, opts = {}) {
+        if (selectedPartId === partId) return;
+        if (!opts.silent) playClick();
         selectedPartId = partId;
         // Prefer the non-hidden side for the UI selection
         const part = ALL_PARTS.find(p => p.id === partId && !p.hiddenUI) || ALL_PARTS.find(p => p.id === partId);
@@ -938,6 +1090,7 @@
         }
         updatePartsUI();
         openColorPanelForPart(partId);
+        saveConfigToStorage();
     }
 
     function updatePartsUI() {
@@ -975,6 +1128,7 @@
         });
 
         if (isMobileLayout()) updateMobileOptionsBar();
+        saveConfigToStorage();
     }
 
     function resetColorPanel() {
@@ -994,30 +1148,47 @@
         const options = getOptionsForPart(partId);
         const isBackRamp = (partId === "backShellMain" && optionState["backShellMain"] === "rampkit");
 
-        // Always show the panel for both mobile and desktop
+        const hasOptions = options.length > 0;
+        const hasColors = !isBackRamp && palette.length > 0;
+
+        if (!hasOptions && !hasColors) {
+            colorEmptyState.style.display = "flex";
+            if (colorPanelHeaderTop) colorPanelHeaderTop.style.display = "none";
+            if (colorPanelHeaderBottom) colorPanelHeaderBottom.style.display = "none";
+            if (optionsPanelGrid) optionsPanelGrid.style.display = "none";
+            if (colorPanelGrid) colorPanelGrid.style.display = "none";
+            if (isMobileLayout()) updateMobileOptionsBar();
+            return;
+        }
+
         colorEmptyState.style.display = "none";
-
         const mobile = isMobileLayout();
+
         if (mobile) {
-            // Mobile: Show both grids in one scrollable panel
-            optionsPanelGrid.style.display = options.length > 0 ? "grid" : "none";
-            colorPanelGrid.style.display = isBackRamp ? "none" : "grid";
-            colorPanelHeaderBottom.style.display = "none"; // Hide redundant "Aesthetics" header
-
-            buildPaletteCells(optionsPanelGrid, options, true);
-            buildPaletteCells(colorPanelGrid, isBackRamp ? [] : palette, false);
-
-            // Hide the tab switch buttons on mobile if they exist
-            document.querySelectorAll(".panel-switch-btn").forEach(btn => btn.style.display = "none");
+            // Mobile: Show grids based on content
+            if (optionsPanelGrid) {
+                optionsPanelGrid.style.display = hasOptions ? "grid" : "none";
+                buildPaletteCells(optionsPanelGrid, options, true);
+            }
+            if (colorPanelGrid) {
+                colorPanelGrid.style.display = hasColors ? "grid" : "none";
+                buildPaletteCells(colorPanelGrid, hasColors ? palette : [], false);
+            }
 
             updateMobileOptionsBar();
         } else {
-            // Desktop: build both
-            colorPanelHeaderBottom.style.display = "flex";
-            colorPanelGrid.style.display = isBackRamp ? "none" : "grid";
-            optionsPanelGrid.style.display = options.length > 0 ? "grid" : "none";
-            buildPaletteCells(colorPanelGrid, isBackRamp ? [] : palette, false);
-            buildPaletteCells(optionsPanelGrid, options, true);
+            // Desktop: Show headers and grids only if they have content
+
+            if (optionsPanelGrid) {
+                optionsPanelGrid.style.display = hasOptions ? "grid" : "none";
+                buildPaletteCells(optionsPanelGrid, options, true);
+            }
+            
+
+            if (colorPanelGrid) {
+                colorPanelGrid.style.display = hasColors ? "grid" : "none";
+                buildPaletteCells(colorPanelGrid, hasColors ? palette : [], false);
+            }
         }
     }
 
@@ -1061,8 +1232,8 @@
             }
         } else {
             const isAllButtons = (partId === "allButtons");
-            const solid = entries.filter(e => isAllButtons || (!e.isTransparent && !TRANSPARENT_HEXES.has(e.hex.toLowerCase())));
-            const trans = isAllButtons ? [] : entries.filter(e => e.isTransparent || TRANSPARENT_HEXES.has(e.hex.toLowerCase()));
+            const solid = entries.filter(e => isAllButtons || !e.isTransparent);
+            const trans = isAllButtons ? [] : entries.filter(e => e.isTransparent);
 
             if (solid.length > 0) renderSection(target, solid, t("solidColors"), false);
             if (trans.length > 0) renderSection(target, trans, t("transparentColors"), false);
@@ -1081,6 +1252,9 @@
         entries.forEach(entry => {
             const cell = document.createElement("div");
             cell.className = isOption ? "cd-cell-op" : "cd-cell";
+            if (isOption && entry.isGamemode) {
+                cell.classList.add("is-gamemode-option");
+            }
             const isSelected = isOption ? (optionState[partId] === entry.key) : (configState[partId] === entry.key);
             cell.classList.toggle("active", isSelected);
 
@@ -1094,7 +1268,7 @@
                 swatch.style.backgroundColor = entry.hex;
             }
 
-            const shouldShowPriceInside = entry.price != null && entry.price > 0 && entry.key !== "rampkit";
+            const shouldShowPriceInside = entry.price != null && entry.price > 0 && entry.key !== "rampkit" && !entry.isGamemode;
             if (shouldShowPriceInside) {
                 const priceLabel = document.createElement("span");
                 priceLabel.className = "swatch-price";
@@ -1106,11 +1280,24 @@
 
             if (isOption) {
                 const label = document.createElement("div");
-                label.className = "cd-color-name";
-                const labelText = entry.isGamemode && entry.price != null
-                    ? (i18n[currentLang].currencyPrefix + entry.price.toFixed(2))
-                    : t("option_" + entry.key);
-                label.textContent = labelText;
+                if (entry.isGamemode) {
+                    label.className = "cd-color-name cd-gamemode-meta";
+
+                    const title = document.createElement("div");
+                    title.className = "cd-gamemode-title";
+                    title.textContent = entry.valName || t("option_" + entry.key);
+                    label.appendChild(title);
+
+                    if (entry.price != null) {
+                        const price = document.createElement("div");
+                        price.className = "cd-gamemode-price";
+                        price.textContent = i18n[currentLang].currencyPrefix + Number(entry.price).toFixed(2);
+                        label.appendChild(price);
+                    }
+                } else {
+                    label.className = "cd-color-name";
+                    label.textContent = entry.valName || t("option_" + entry.key);
+                }
                 cell.appendChild(label);
             }
 
@@ -1124,37 +1311,46 @@
 
     function applyColor(partId, colorKey) {
         playClick2();
-        configState[partId] = colorKey;
+
+        // Toggle Logic: If clicking the same key, deselect it
+        if (configState[partId] === colorKey) {
+            configState[partId] = null;
+            selectedPriceByPart[partId] = 0;
+        } else {
+            configState[partId] = colorKey;
+            setPartPrice(partId, colorKey, false);
+        }
+
+        saveConfigToStorage();
 
         const palette = getPaletteForPart(partId);
-        const colObj = palette.find(c => c.key === colorKey);
+        const colObj = palette.find(c => c.key === configState[partId]);
 
+        // If an option is active and has an image, DO NOT override its layer visually here
+        const currentOptionKey = optionState[partId];
+        const options = getOptionsForPart(partId);
+        const activeOption = options.find(o => o.key === currentOptionKey);
+        const optionHasOverrides = activeOption && activeOption.image;
 
-        if (colObj) {
-            setPartPrice(partId, colorKey, false);
-            saveConfigToStorage();
+        if (!optionHasOverrides) {
             const targetLayers = layers[partId] || [];
             targetLayers.forEach(layer => {
-                layer.style.setProperty("--tint", colObj.hex);
-                const isActuallyTransparent = (colObj.isTransparent || TRANSPARENT_HEXES.has(colObj.hex.toLowerCase())) && partId !== "allButtons";
-                if (isActuallyTransparent) {
-                    layer.style.setProperty("--tint-opacity", String(TRANSPARENT_TINT_OPACITY));
-                    layer.style.mixBlendMode = "multiply";
-                    layer.style.backgroundImage = "none";
+                if (colObj && colObj.image) {
+                    layer.src = colObj.image;
+                    layer.style.display = "block";
                 } else {
-                    layer.style.setProperty("--tint-opacity", "1");
-                    // Face buttons should be opaque as requested
-                    if (partId === "allButtons") {
-                        layer.style.mixBlendMode = "normal";
-                        layer.style.backgroundImage = "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.2) 0%, transparent 60%)";
-                    } else {
-                        layer.style.mixBlendMode = "multiply";
-                        layer.style.backgroundImage = "none";
-                    }
+                    layer.removeAttribute("src");
+                    layer.style.display = "none";
                 }
-                layer.style.display = "block";
             });
         }
+
+        // 2. Hide gloss layer entirely, as pre-rendered images have their own shading
+        const targetGloss = glossLayers[partId] || [];
+        targetGloss.forEach(gloss => {
+            gloss.style.opacity = "0";
+            gloss.style.display = "none";
+        });
 
         updatePartsUI();
         syncBaseImages();
@@ -1164,34 +1360,59 @@
 
     function applyOption(partId, optionKey) {
         playClick2();
-        optionState[partId] = optionKey;
 
-        const options = getOptionsForPart(partId);
-        const optObj = options.find(o => o.key === optionKey);
+        // Toggle Logic
+        const defaultKey = null;
 
-        setPartPrice(partId, optionKey, true);
-        saveConfigToStorage();
-
-        const isStickTech = partId === "sticks" && (optionKey === "standard" || optionKey === "halleffect" || optionKey === "tmr");
-
-        if (optObj && optObj.hex && !isStickTech) {
-            const targetLayers = layers[partId] || [];
-            targetLayers.forEach(layer => {
-                layer.style.setProperty("--tint", optObj.hex);
-                layer.style.setProperty("--tint-opacity", "1");
-                if (partId === "allButtons") {
-                    layer.style.mixBlendMode = "normal";
-                    layer.style.backgroundImage = "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.2) 0%, transparent 60%)";
-                } else {
-                    layer.style.mixBlendMode = "multiply";
-                    layer.style.backgroundImage = "none";
-                }
-                layer.style.display = "block";
-            });
+        if (optionKey === "standard") {
+            optionState[partId] = defaultKey;
+            selectedOptionPriceByPart[partId] = 0;
+        } else if (optionState[partId] === optionKey) {
+            optionState[partId] = defaultKey;
+            selectedOptionPriceByPart[partId] = 0;
+        } else {
+            optionState[partId] = optionKey;
+            setPartPrice(partId, optionKey, true);
         }
 
-        if (partId === "backShellMain" && optionKey === "rampkit") {
+        saveConfigToStorage();
+
+        const options = getOptionsForPart(partId);
+        const optObj = options.find(o => o.key === optionState[partId]);
+
+        const targetLayers = layers[partId] || [];
+        targetLayers.forEach(layer => {
+            if (optObj && optObj.image) {
+                layer.src = optObj.image;
+                layer.style.display = "block";
+            } else {
+                // Fallback to currently selected color immediately
+                const currentColorKey = configState[partId];
+                const palette = getPaletteForPart(partId);
+                const colObj = palette.find(c => c.key === currentColorKey);
+                if (colObj && colObj.image) {
+                    layer.src = colObj.image;
+                    layer.style.display = "block";
+                } else {
+                    layer.removeAttribute("src");
+                    layer.style.display = "none";
+                }
+            }
+        });
+
+        const targetGloss = glossLayers[partId] || [];
+        targetGloss.forEach(gloss => {
+            gloss.style.opacity = "0";
+            gloss.style.display = "none";
+        });
+
+        if (partId === "backShellMain" && optionState[partId] === "rampkit") {
             (layers["backShellMain"] || []).forEach(l => l.style.display = "none");
+        } else if (partId === "backShellMain") {
+            // Ensure back layers are visible if not rampkit
+            (layers["backShellMain"] || []).forEach(l => {
+                if (l.getAttribute("src")) l.style.display = "block";
+            });
         }
 
         updatePartsUI();
@@ -1226,6 +1447,7 @@
         if (controllerFlipBtn) {
             controllerFlipBtn.classList.toggle("flipped", side === "back");
         }
+        saveConfigToStorage();
     }
 
     if (controllerFlipBtn) {
@@ -1252,7 +1474,7 @@
         if (!confirm(t("alertConfirmClear") || "Clear all selections?")) return;
         ALL_PARTS.forEach(p => {
             configState[p.id] = null;
-            optionState[p.id] = (p.id === "backShellMain") ? "standard" : null;
+            optionState[p.id] = null;
             selectedPriceByPart[p.id] = 0;
             selectedOptionPriceByPart[p.id] = 0;
         });
@@ -1261,6 +1483,11 @@
         Object.keys(layers).forEach(pid => {
             (layers[pid] || []).forEach(layer => {
                 layer.style.display = "none";
+            });
+        });
+        Object.keys(glossLayers).forEach(pid => {
+            (glossLayers[pid] || []).forEach(gloss => {
+                gloss.style.opacity = "0";
             });
         });
 
@@ -1323,14 +1550,12 @@
                 }
             }
 
-            const isTrans = (pid !== "allButtons") && colorKey && (
-                String(colorKey).toLowerCase().includes("_t") ||
-                (colorObj && (colorObj.isTransparent || TRANSPARENT_HEXES.has((colorObj.hex || "").toLowerCase())))
-            );
+            const isTrans = (pid !== "allButtons") && (colorObj && colorObj.isTransparent);
 
             snapshot.parts[pid] = {
                 color: colorObj ? JSON.parse(JSON.stringify(colorObj)) : null,
                 option: optionObj ? JSON.parse(JSON.stringify(optionObj)) : null,
+                renderImage: getRenderedLayerImage(pid),
                 transparency: !!isTrans
             };
         });
@@ -1350,7 +1575,7 @@
     }
 
     async function buildPreviewImage(snapshot, side) {
-        // Use a smaller dimension for previews to save localStorage space (Quota limit is ~5MB)
+        // Render the exact visible controller stack from the configurator DOM.
         const scale = 0.5;
         const width = Math.round(BASE_WIDTH * scale);
         const height = Math.round(BASE_HEIGHT * scale);
@@ -1370,113 +1595,22 @@
             img.src = src;
         });
 
-        const getPartTrans = (pid) => {
-            const s = snapshot.parts && snapshot.parts[pid];
-            return s ? !!s.transparency : false;
-        };
+        const stack = collectVisibleFaceLayers(side);
 
-        const transStatus = {
-            shell: getPartTrans("shell"),
-            trimpiece: getPartTrans("trimpiece"),
-            touchpad: getPartTrans("touchpad")
-        };
-
-        const anyTransFront = (side === "front") && (transStatus.shell || transStatus.trimpiece || transStatus.touchpad);
-
-        let ctrlSrc = "";
-        const baseOverlays = [];
-        if (side === "front") {
-            if (anyTransFront) {
-                ctrlSrc = "/assets/controller_t.png";
-                if (!transStatus.shell) baseOverlays.push("/assets/controller_t_shell.png");
-                if (!transStatus.trimpiece) baseOverlays.push("/assets/controller_t_trim.png");
-                if (!transStatus.touchpad) baseOverlays.push("/assets/controller_t_touchpad.png");
-            } else {
-                ctrlSrc = "/assets/controller.png";
-            }
-        } else {
-            const bsm = (snapshot.parts && snapshot.parts["backShellMain"]) || {};
-            const isRampkit = bsm.option && bsm.option.key === "rampkit";
-            if (isRampkit) ctrlSrc = "/assets/controller_back_ramp.png";
-            else ctrlSrc = bsm.transparency ? "/assets/controller_back_t.png" : "/assets/controller_back.png";
-        }
-
-        // 1. Draw Background
+        // 1. Draw background
         ctx.fillStyle = "#141829";
         ctx.fillRect(0, 0, width, height);
 
-        // 2. Base Image
-        const baseImg = await loadImg(ctrlSrc);
-        if (baseImg) ctx.drawImage(baseImg, 0, 0, width, height);
-
-        // 3. Mixed Transparency Overlays
-        for (const ovSrc of baseOverlays) {
-            const ovImg = await loadImg(ovSrc);
-            if (ovImg) ctx.drawImage(ovImg, 0, 0, width, height);
-        }
-
-        // 4. Custom Parts
-        const parts = side === "front" ? FRONT_PARTS : BACK_PARTS;
-        for (const part of parts) {
-            const state = snapshot.parts[part.id];
-            if (!state || !state.color) continue;
-
-            const isRampkit = side === "back" && part.id === "backShellMain" && state.option && state.option.key === "rampkit";
-            if (isRampkit) continue;
-
-            const hexRaw = (state.color && state.color.hex) || "";
-            const hex = hexRaw.includes("_") ? hexRaw.split("_")[0] : hexRaw;
-            const isTrans = state.transparency;
-
-            let blendMode = "multiply";
-            if (part.id === "allButtons") {
-                // Face buttons should be opaque
-                blendMode = isTrans ? "multiply" : "normal";
-            } else if (part.id === "trimpiece" || part.id === "sticks" || part.id === "psButton") {
-                blendMode = "soft-light";
-            } else if (isTrans || side === "back") {
-                blendMode = "multiply";
-            }
-
-            const partOpacity = isTrans ? TRANSPARENT_TINT_OPACITY : 1;
-            const maskUrls = Array.isArray(part.mask) ? part.mask : [part.mask];
-
-            for (const mUrl of maskUrls) {
-                const mImg = await loadImg(mUrl);
-                if (!mImg) continue;
-
-                const tempCanvas = document.createElement("canvas");
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-                const tempCtx = tempCanvas.getContext("2d");
-
-                tempCtx.drawImage(mImg, 0, 0, width, height);
-                tempCtx.globalCompositeOperation = "source-in";
-
-                if (part.id === "allButtons" && blendMode === "normal") {
-                    // Create a radial gradient for 3D effect on buttons
-                    const grad = tempCtx.createRadialGradient(
-                        width * 0.35, height * 0.35, 0,
-                        width * 0.5, height * 0.5, width * 0.4
-                    );
-                    grad.addColorStop(0, "rgba(255,255,255,0.2)");
-                    grad.addColorStop(1, "transparent");
-
-                    tempCtx.fillStyle = hex;
-                    tempCtx.fillRect(0, 0, width, height);
-                    tempCtx.fillStyle = grad;
-                    tempCtx.fillRect(0, 0, width, height);
-                } else {
-                    tempCtx.fillStyle = hex;
-                    tempCtx.fillRect(0, 0, width, height);
-                }
-
-                ctx.save();
-                ctx.globalAlpha = partOpacity;
-                ctx.globalCompositeOperation = blendMode;
-                ctx.drawImage(tempCanvas, 0, 0);
-                ctx.restore();
-            }
+        // 2. Draw exactly what is visible in the controller face stack.
+        for (const layer of stack) {
+            const img = await loadImg(layer.src);
+            if (!img) continue;
+            ctx.save();
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = layer.opacity;
+            if (ctx.filter !== undefined) ctx.filter = "none";
+            ctx.drawImage(img, 0, 0, width, height);
+            ctx.restore();
         }
 
         return canvas.toDataURL("image/jpeg", 0.7);
@@ -1494,9 +1628,11 @@
             // Show loading state
             const origText = addToCartBtn.innerHTML;
             addToCartBtn.innerHTML = t("loadingPreview") || '<div class="zoho-loading-spinner" style="width:20px;height:20px;"></div>';
-            addToCartBtn.disabled = true;
+        addToCartBtn.disabled = true;
 
-            try {
+        try {
+                const previewFrontLayers = collectVisibleFaceLayers("front");
+                const previewBackLayers = collectVisibleFaceLayers("back");
                 const previewFront = await buildPreviewImage(snapshot, "front");
                 const previewBack = await buildPreviewImage(snapshot, "back");
 
@@ -1505,6 +1641,8 @@
                     name: t("productName"),
                     total: snapshot.total,
                     parts: snapshot.parts,
+                    previewFrontLayers: previewFrontLayers,
+                    previewBackLayers: previewBackLayers,
                     previewFront: previewFront,
                     previewBack: previewBack
                 };
@@ -1518,8 +1656,11 @@
                 // Fallback if canvas fails
                 const cartItem = {
                     id: Date.now(),
+                    name: t("productName"),
                     total: snapshot.total,
-                    parts: snapshot.parts
+                    parts: snapshot.parts,
+                    previewFrontLayers: collectVisibleFaceLayers("front"),
+                    previewBackLayers: collectVisibleFaceLayers("back")
                 };
                 const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
                 cart.push(cartItem);
@@ -1529,7 +1670,7 @@
         });
     }
 
-    bootstrapZohoInventory();
+    bootstrapConfigurator();
     applyLanguage();
     syncBaseImages();
     setPanel(currentPanel);
