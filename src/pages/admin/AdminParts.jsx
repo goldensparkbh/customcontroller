@@ -30,6 +30,15 @@ const normalizeOptionRecord = (id, raw = {}) => ({
     })
 });
 
+const fieldStyle = {
+    width: '100%',
+    padding: '0.7rem 0.8rem',
+    borderRadius: '8px',
+    border: '1px solid #30363d',
+    background: '#0d1117',
+    color: '#e6edf3'
+};
+
 const AdminParts = () => {
     const [parts, setParts] = useState([]);
     const [loading, setLoading] = useState(true);
