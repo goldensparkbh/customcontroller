@@ -6,8 +6,9 @@ import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import {
     buildInventoryPayload,
-    createInventoryEntry,
+    formatInventoryDate,
     formatInventoryMoney,
+    getInventoryReasonLabel,
     hydrateInventoryFormEntries
 } from './inventoryPricing';
 import {
@@ -28,7 +29,9 @@ const createEmptyFormData = () => ({
     images: [],
     itemNumber: '',
     barcode: '',
-    inventoryDetails: [createInventoryEntry({ purchasePrice: 0, sellPrice: 0, quantity: 0, isActive: true })]
+    purchasePrice: '0',
+    sellPrice: '0',
+    inventoryDetails: []
 });
 
 const modalOverlayStyle = {
@@ -77,7 +80,8 @@ const normalizeItemRecord = (id, raw = {}) => ({
     barcode: getBarcodeValue({ id, ...raw }),
     ...buildInventoryPayload(raw.inventoryDetails, {
         purchasePrice: raw.purchasePrice ?? 0,
-        sellPrice: raw.sellPrice ?? raw.price ?? 0,
+        sellPrice: raw.sellPrice ?? raw.price ?? 0
+    }, {
         quantity: raw.quantity ?? 0
     })
 });
@@ -160,6 +164,8 @@ const AdminItems = () => {
             images: item.images || [],
             itemNumber: getInventoryItemNumber(item),
             barcode: getBarcodeValue(item),
+            purchasePrice: String(item.purchasePrice ?? 0),
+            sellPrice: String(item.sellPrice ?? item.price ?? 0),
             inventoryDetails: hydrateInventoryFormEntries(item)
         });
         setImageFiles(null);
@@ -198,11 +204,17 @@ const AdminItems = () => {
         try {
             const uploadedImages = await uploadSelectedImages();
             const itemNumber = normalizeNumericString(formData.itemNumber);
-            const inventoryPayload = buildInventoryPayload(formData.inventoryDetails, {
-                purchasePrice: 0,
-                sellPrice: 0,
-                quantity: 0
-            });
+            const inventoryPayload = buildInventoryPayload(
+                formData.inventoryDetails,
+                {
+                    purchasePrice: formData.purchasePrice,
+                    sellPrice: formData.sellPrice
+                },
+                {
+                    quantity: 0,
+                    createdAt: editingId ? undefined : new Date()
+                }
+            );
             const nextItemNumber = itemNumber || await allocateSequentialNumber(db, 'inventory_master');
             const barcode = normalizeNumericString(formData.barcode) || nextItemNumber;
             const itemData = {
@@ -454,12 +466,12 @@ const AdminItems = () => {
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField label="Updated" value={formatDate(selectedItem.updatedAt)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Inventory Rows" value={String(selectedItem.inventoryDetails?.length || 0)} />
+                                    <DetailField label="Inventory Entries" value={String(selectedItem.inventoryDetails?.length || 0)} />
                                 </div>
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Active Inventory on Platform</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Platform Pricing & Stock</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
                                     <DetailField label="Purchase Price" value={formatInventoryMoney(selectedItem.purchasePrice)} />
                                     <DetailField label="Sell Price" value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
@@ -468,7 +480,7 @@ const AdminItems = () => {
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Inventory Rows</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Inventory History</div>
                                 <div style={{ display: 'grid', gap: '0.75rem' }}>
                                     {(selectedItem.inventoryDetails || []).map((row, index) => (
                                         <div
@@ -479,15 +491,14 @@ const AdminItems = () => {
                                                 gap: '0.75rem',
                                                 padding: '0.85rem',
                                                 borderRadius: '8px',
-                                                border: row.isActive ? '1px solid #1f6feb' : '1px solid #30363d',
-                                                background: row.isActive ? 'rgba(31, 111, 235, 0.08)' : '#111827'
+                                                border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid #30363d',
+                                                background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : '#111827'
                                             }}
                                         >
-                                            <DetailField label="Row" value={`Inventory Row ${index + 1}`} />
-                                            <DetailField label="Purchase Price" value={formatInventoryMoney(row.purchasePrice)} />
-                                            <DetailField label="Sell Price" value={formatInventoryMoney(row.sellPrice)} />
-                                            <DetailField label="Quantity" value={String(row.quantity ?? 0)} />
-                                            <DetailField label="Platform Status" value={row.isActive ? 'Active' : 'Inactive'} />
+                                            <DetailField label="Entry" value={`Inventory Entry ${index + 1}`} />
+                                            <DetailField label="Reason" value={getInventoryReasonLabel(row.reason)} />
+                                            <DetailField label="Date" value={formatInventoryDate(row.date)} />
+                                            <DetailField label="Quantity" value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
                                         </div>
                                     ))}
                                 </div>
@@ -535,7 +546,7 @@ const AdminItems = () => {
                                         {editingId ? 'Edit Item' : 'Add New Item'}
                                     </div>
                                     <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
-                                        {editingId ? 'Update inventory rows, pricing, and storefront stock from one place.' : 'Create a new normal item for the shop.'}
+                                        {editingId ? 'Update pricing and stock movements for this item.' : 'Create a new normal item for the shop.'}
                                     </div>
                                 </div>
 
@@ -583,6 +594,34 @@ const AdminItems = () => {
                                 </label>
                             </div>
 
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                                    <span>Purchase Price</span>
+                                    <input
+                                        name="purchasePrice"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.purchasePrice}
+                                        onChange={handleFormChange}
+                                        style={fieldStyle}
+                                    />
+                                </label>
+
+                                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                                    <span>Sell Price</span>
+                                    <input
+                                        name="sellPrice"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.sellPrice}
+                                        onChange={handleFormChange}
+                                        style={fieldStyle}
+                                    />
+                                </label>
+                            </div>
+
                             <label style={{ display: 'grid', gap: '0.45rem' }}>
                                 <span>Description</span>
                                 <textarea name="description" value={formData.description} onChange={handleFormChange} style={{ ...fieldStyle, minHeight: '120px', resize: 'vertical' }} />
@@ -591,8 +630,8 @@ const AdminItems = () => {
                             <InventoryPricingEditor
                                 rows={formData.inventoryDetails}
                                 onChange={(inventoryDetails) => setFormData((current) => ({ ...current, inventoryDetails }))}
-                                title="Inventory, Purchase Price, and Sell Price"
-                                description="Create multiple quantity-price rows. The active row drives the live sell price and stock shown on the platform."
+                                title="Inventory"
+                                description="Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."
                             />
 
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3' }}>

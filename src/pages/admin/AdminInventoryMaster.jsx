@@ -3,12 +3,16 @@ import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
-import { buildInventoryPayload, formatInventoryMoney, hydrateInventoryFormEntries } from './inventoryPricing';
 import {
-    allocateSequentialNumber,
+    buildInventoryPayload,
+    formatInventoryDate,
+    formatInventoryMoney,
+    getInventoryReasonLabel,
+    hydrateInventoryFormEntries
+} from './inventoryPricing';
+import {
     getBarcodeValue,
     getInventoryItemNumber,
-    normalizeNumericString,
     padNumericString
 } from './recordNumbers';
 
@@ -57,7 +61,8 @@ const normalizeMasterRecord = ({ id, raw, sourceType, sourceLabel, partId = '', 
     ...raw,
     ...buildInventoryPayload(raw.inventoryDetails, {
         purchasePrice: raw.purchasePrice ?? 0,
-        sellPrice: raw.sellPrice ?? raw.price ?? 0,
+        sellPrice: raw.sellPrice ?? raw.price ?? 0
+    }, {
         quantity: raw.quantity ?? 0
     })
 });
@@ -81,8 +86,6 @@ const AdminInventoryMaster = () => {
     const [detailOpen, setDetailOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [formState, setFormState] = useState({
-        itemNumber: '',
-        barcode: '',
         inventoryDetails: [],
         showOnline: true
     });
@@ -170,8 +173,6 @@ const AdminInventoryMaster = () => {
     const openDetail = (record) => {
         setSelectedRecordId(record.id);
         setFormState({
-            itemNumber: record.itemNumber,
-            barcode: record.barcode,
             inventoryDetails: hydrateInventoryFormEntries(record),
             showOnline: record.showOnline ?? true
         });
@@ -182,21 +183,15 @@ const AdminInventoryMaster = () => {
         if (!selectedRecord || saving) return;
         setSaving(true);
         try {
-            const itemNumber = normalizeNumericString(formState.itemNumber) || await allocateSequentialNumber(db, 'inventory_master');
-            const barcode = normalizeNumericString(formState.barcode) || itemNumber;
             const inventoryPayload = buildInventoryPayload(formState.inventoryDetails, {
                 purchasePrice: selectedRecord.purchasePrice ?? 0,
-                sellPrice: selectedRecord.sellPrice ?? selectedRecord.price ?? 0,
+                sellPrice: selectedRecord.sellPrice ?? selectedRecord.price ?? 0
+            }, {
                 quantity: selectedRecord.quantity ?? 0
             });
 
             const payload = {
-                itemNumber,
-                barcode,
                 inventoryDetails: inventoryPayload.inventoryDetails,
-                purchasePrice: inventoryPayload.purchasePrice,
-                sellPrice: inventoryPayload.sellPrice,
-                price: inventoryPayload.price,
                 quantity: inventoryPayload.quantity,
                 updatedAt: new Date()
             };
@@ -401,11 +396,11 @@ const AdminInventoryMaster = () => {
                                 </div>
 
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Active Sell Price" value={formatInventoryMoney(selectedRecord.sellPrice ?? selectedRecord.price)} />
+                                    <DetailField label="Sell Price" value={formatInventoryMoney(selectedRecord.sellPrice ?? selectedRecord.price)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Active Purchase Price" value={formatInventoryMoney(selectedRecord.purchasePrice)} />
+                                    <DetailField label="Purchase Price" value={formatInventoryMoney(selectedRecord.purchasePrice)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Active Quantity" value={String(selectedRecord.quantity ?? 0)} />
+                                    <DetailField label="Current Quantity" value={String(selectedRecord.quantity ?? 0)} />
                                 </div>
                             </div>
 
@@ -423,9 +418,37 @@ const AdminInventoryMaster = () => {
                             <InventoryPricingEditor
                                 rows={formState.inventoryDetails}
                                 onChange={(inventoryDetails) => setFormState((current) => ({ ...current, inventoryDetails }))}
-                                title="Inventory, Purchase Price, and Sell Price"
-                                description="Only the active inventory row is used live on the platform."
+                                title="Inventory"
+                                description="Add stock movements with quantity, date, and reason. Pricing is managed on the original item or configurator option."
                             />
+
+                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Inventory History</div>
+                                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                    {(formState.inventoryDetails || []).map((row, index) => (
+                                        <div
+                                            key={row.id || `inventory-entry-${index}`}
+                                            style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                                gap: '0.75rem',
+                                                padding: '0.85rem',
+                                                borderRadius: '8px',
+                                                border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid #30363d',
+                                                background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : '#111827'
+                                            }}
+                                        >
+                                            <DetailField label="Reason" value={getInventoryReasonLabel(row.reason)} />
+                                            <DetailField label="Date" value={formatInventoryDate(row.date)} />
+                                            <DetailField label="Quantity" value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
+                                            <DetailField label="Source" value={row.source || 'manual'} />
+                                        </div>
+                                    ))}
+                                    {(!formState.inventoryDetails || formState.inventoryDetails.length === 0) && (
+                                        <div style={{ color: '#8b949e' }}>No inventory movements recorded.</div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -485,51 +485,94 @@ function toFiniteNumber(value, fallback = 0) {
   return Number.isFinite(normalized) ? normalized : fallback;
 }
 
-function normalizeInventoryRows(rawRows, fallbackRecord = {}) {
-  const sourceRows = Array.isArray(rawRows) && rawRows.length ? rawRows : [{
-    id: "legacy_active",
-    purchasePrice: fallbackRecord.purchasePrice || 0,
-    sellPrice: fallbackRecord.sellPrice != null ? fallbackRecord.sellPrice : (fallbackRecord.price || 0),
-    quantity: fallbackRecord.quantity || 0,
-    isActive: true
-  }];
-
-  const rows = sourceRows.map((row, index) => ({
-    id: row.id || `inventory_${index + 1}`,
-    purchasePrice: toFiniteNumber(row.purchasePrice, 0),
-    sellPrice: toFiniteNumber(row.sellPrice != null ? row.sellPrice : row.price, 0),
-    quantity: toFiniteNumber(row.quantity, 0),
-    isActive: Boolean(row.isActive)
-  }));
-
-  const activeIndex = rows.findIndex((row) => row.isActive);
-  const normalizedActiveIndex = activeIndex >= 0 ? activeIndex : 0;
-
-  return rows.map((row, index) => ({
-    ...row,
-    isActive: index === normalizedActiveIndex
-  }));
+function createInventoryEntryId() {
+  return `inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function applyInventoryDeduction(record, deductionQty) {
-  const inventoryDetails = normalizeInventoryRows(record.inventoryDetails, record);
-  const activeIndex = Math.max(0, inventoryDetails.findIndex((row) => row.isActive));
-  const activeRow = inventoryDetails[activeIndex] || inventoryDetails[0];
-  const currentQty = toFiniteNumber(activeRow.quantity, 0);
-  const nextQty = Math.max(0, currentQty - toFiniteNumber(deductionQty, 0));
+function normalizeInventoryDate(value) {
+  const raw = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const date = raw ? new Date(raw) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
 
-  inventoryDetails[activeIndex] = {
-    ...activeRow,
-    quantity: nextQty,
-    isActive: true
-  };
+function isLegacyInventoryRow(row = {}) {
+  return Object.prototype.hasOwnProperty.call(row, "sellPrice") ||
+    Object.prototype.hasOwnProperty.call(row, "purchasePrice") ||
+    Object.prototype.hasOwnProperty.call(row, "isActive") ||
+    Object.prototype.hasOwnProperty.call(row, "price");
+}
+
+function createOpeningBalanceEntries(fallbackRecord = {}) {
+  const quantity = toFiniteNumber(fallbackRecord.quantity, 0);
+  if (!quantity) return [];
+  return [{
+    id: createInventoryEntryId(),
+    quantity,
+    date: normalizeInventoryDate(
+      fallbackRecord.updatedAt && typeof fallbackRecord.updatedAt.toDate === "function" ?
+        fallbackRecord.updatedAt.toDate() :
+        (fallbackRecord.createdAt && typeof fallbackRecord.createdAt.toDate === "function" ?
+          fallbackRecord.createdAt.toDate() :
+          (fallbackRecord.updatedAt || fallbackRecord.createdAt || new Date()))
+    ),
+    reason: "opening_balance",
+    source: "migration",
+    note: "Migrated from legacy inventory",
+    createdAt: ""
+  }];
+}
+
+function normalizeInventoryEntries(rawRows, fallbackRecord = {}) {
+  if (Array.isArray(rawRows) && rawRows.length > 0) {
+    if (rawRows.some((row) => isLegacyInventoryRow(row))) {
+      return createOpeningBalanceEntries(fallbackRecord);
+    }
+
+    return rawRows.map((row) => ({
+      id: row.id || createInventoryEntryId(),
+      quantity: toFiniteNumber(row.quantity, 0),
+      date: normalizeInventoryDate(row.date),
+      reason: String(row.reason || "new_stock"),
+      source: row.source || "manual",
+      note: String(row.note || "").trim(),
+      createdAt: row.createdAt || ""
+    }));
+  }
+
+  return createOpeningBalanceEntries(fallbackRecord);
+}
+
+function applyInventoryDeduction(record, deductionQty, metadata = {}) {
+  const inventoryDetails = normalizeInventoryEntries(record.inventoryDetails, record);
+  const currentQty = inventoryDetails.reduce((sum, row) => sum + toFiniteNumber(row.quantity, 0), 0);
+  const requestedQty = Math.max(0, toFiniteNumber(deductionQty, 0));
+  const appliedQty = Math.min(currentQty, requestedQty);
+  const nextInventoryDetails = appliedQty > 0 ? [
+    ...inventoryDetails,
+    {
+      id: createInventoryEntryId(),
+      quantity: -appliedQty,
+      date: normalizeInventoryDate(metadata.date || new Date()),
+      reason: "order_allocation",
+      source: metadata.source || "system",
+      note: metadata.note || "",
+      createdAt: ""
+    }
+  ] : inventoryDetails;
+  const nextQty = Math.max(0, currentQty - appliedQty);
+  const purchasePrice = toFiniteNumber(record.purchasePrice, 0);
+  const sellPrice = toFiniteNumber(record.sellPrice != null ? record.sellPrice : record.price, 0);
 
   return {
-    inventoryDetails,
-    purchasePrice: toFiniteNumber(activeRow.purchasePrice, 0),
-    sellPrice: toFiniteNumber(activeRow.sellPrice, 0),
-    price: toFiniteNumber(activeRow.sellPrice, 0),
-    quantity: nextQty
+    inventoryDetails: nextInventoryDetails,
+    purchasePrice,
+    sellPrice,
+    price: sellPrice,
+    quantity: nextQty,
+    deducted: appliedQty,
+    requested: requestedQty
   };
 }
 
@@ -560,7 +603,7 @@ function collectConfiguratorInventoryAdjustments(items) {
   return adjustments;
 }
 
-async function applyConfiguratorInventoryAdjustments(items) {
+async function applyConfiguratorInventoryAdjustments(items, metadata = {}) {
   const db = getFirestore();
   const adjustments = collectConfiguratorInventoryAdjustments(items);
   const applied = [];
@@ -574,7 +617,13 @@ async function applyConfiguratorInventoryAdjustments(items) {
       if (!snapshot.exists) continue;
 
       const currentData = snapshot.data() || {};
-      const nextInventory = applyInventoryDeduction(currentData, quantity);
+      const nextInventory = applyInventoryDeduction(currentData, quantity, {
+        source: "system",
+        date: new Date(),
+        note: metadata.orderNumber ?
+          `Allocated to order #${metadata.orderNumber}` :
+          (metadata.orderId ? `Allocated to order ${metadata.orderId}` : "Allocated to order")
+      });
 
       transaction.update(recordRef, {
         inventoryDetails: nextInventory.inventoryDetails,
@@ -588,6 +637,7 @@ async function applyConfiguratorInventoryAdjustments(items) {
       applied.push({
         path: docPath,
         quantity,
+        deducted: nextInventory.deducted,
         remaining: nextInventory.quantity
       });
     }
@@ -1173,7 +1223,10 @@ exports.orderHandler = functions
       };
 
       try {
-        inventoryAdjustments = await applyConfiguratorInventoryAdjustments(amounts.items);
+        inventoryAdjustments = await applyConfiguratorInventoryAdjustments(amounts.items, {
+          orderId: docRef.id,
+          orderNumber
+        });
         if (inventoryAdjustments.length) {
           inventorySyncStatus = "completed";
         }

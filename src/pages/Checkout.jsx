@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
 import { LoadingInline } from '../components/LoadingState.jsx';
+import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
 
 const arabCountries = ["BH", "SA", "AE", "KW", "OM", "QA", "EG", "JO"];
 
@@ -388,6 +389,7 @@ const CheckoutPage = () => {
                       <span>{item.name} x {item.quantity || 1}</span>
                       <span>{((item.unitPrice || item.total || 0) * (item.quantity || 1)).toFixed(2)} BHD</span>
                     </div>
+                    <ItemCustomizationSummary item={item} lang={lang} compact />
                   </div>
                 ))}
               </div>

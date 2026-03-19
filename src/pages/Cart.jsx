@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
+import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
 
 const PreviewStack = ({ layers, fallbackSrc, alt }) => (
   <div style={{ position: 'relative', aspectRatio: '1.5', background: '#11141b', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -203,11 +204,7 @@ const CartPage = () => {
                   {(item.unitPrice || item.total || 0).toFixed(2)} BHD
                 </div>
 
-                <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  {item.config && Object.entries(item.config).map(([k, v]) => (
-                    <div key={k}><strong>{k}:</strong> {v}</div>
-                  ))}
-                </div>
+                <ItemCustomizationSummary item={item} lang={lang} />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: 'auto' }}>
                   <div style={{ display: 'flex', alignItems: 'center', background: '#333', borderRadius: '4px' }}>

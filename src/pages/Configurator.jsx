@@ -194,8 +194,9 @@ const ConfiguratorPage = () => {
               ...raw,
               ...buildInventoryPayload(raw.inventoryDetails, {
                 purchasePrice: raw.purchasePrice ?? 0,
-                sellPrice: raw.sellPrice ?? raw.price ?? 0,
-                quantity: raw.quantity ?? 999
+                sellPrice: raw.sellPrice ?? raw.price ?? 0
+              }, {
+                quantity: raw.quantity ?? 0
               })
             };
           });

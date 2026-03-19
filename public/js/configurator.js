@@ -1056,17 +1056,11 @@
                 faceFrontImg.src = anyTransFront ? "/assets/controller_t.png" : "/assets/controller.png";
             }
         } else {
-            const isRampkit = oBackShell === "rampkit";
             if (faceBackImg) {
-                if (isRampkit) faceBackImg.src = "/assets/controller_back_ramp.png";
-                else faceBackImg.src = backShellTrans ? "/assets/controller_back_t.png" : "/assets/controller_back.png";
+                faceBackImg.src = "/assets/controller_back.png";
             }
 
-            if (isRampkit) {
-                updateLayer("backShellMain", null, false, nonce);
-            } else {
-                updateLayer("backShellMain", backShellHex, backShellTrans, nonce);
-            }
+            updateLayer("backShellMain", backShellHex, backShellTrans, nonce);
             updateLayer("bumpersTriggers", backTriggersHex, false, nonce);
         }
     }
@@ -1230,17 +1224,12 @@
         if (side === "front") {
             ctrlSrc = anyTransFront ? "/assets/controller_t.png" : "/assets/controller.png";
         } else {
-            const isRampkit = snapshot.parts["backShellMain"].option && snapshot.parts["backShellMain"].option.key === "rampkit";
-            if (isRampkit) ctrlSrc = "/assets/controller_back_ramp.png";
-            else ctrlSrc = snapshot.parts["backShellMain"].transparency ? "/assets/controller_back_t.png" : "/assets/controller_back.png";
+            ctrlSrc = "/assets/controller_back.png";
         }
 
         parts.forEach((part) => {
             const state = snapshot.parts[part.id];
             if (!state) return;
-
-            const isRampkit = side === "back" && part.id === "backShellMain" && state.option && state.option.key === "rampkit";
-            if (isRampkit) return;
 
             const optionImage = state.option && state.option.image ? state.option.image : null;
             const colorImage = state.color && state.color.image ? state.color.image : null;

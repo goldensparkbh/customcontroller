@@ -414,8 +414,10 @@
                 const options = fbPart.options || [];
 
                 options.forEach(opt => {
-                    const price = Number(opt.price) || 0;
-                    const qty = Number(opt.quantity) || 100;
+                    const rawPrice = Number(opt.sellPrice != null ? opt.sellPrice : opt.price);
+                    const rawQty = Number(opt.quantity);
+                    const price = Number.isFinite(rawPrice) ? rawPrice : 0;
+                    const qty = Number.isFinite(rawQty) ? rawQty : 0;
 
                     addPriceFallback(partId, price);
 
@@ -705,12 +707,6 @@
 
         const targetLayers = layers[partId] || [];
         targetLayers.forEach((layer) => {
-            if (partId === "backShellMain" && optionObj && optionObj.key === "rampkit") {
-                layer.removeAttribute("src");
-                layer.style.display = "none";
-                return;
-            }
-
             if (optionObj && optionObj.image) {
                 layer.src = optionObj.image;
                 layer.style.display = "block";
@@ -865,20 +861,11 @@
         }
 
         // --- BACK SIDE LOGIC ---
-        const isBackRamp = optionState["backShellMain"] === "rampkit";
-        const isBackTrans = isPartTransparent("backShellMain");
-
         let backSrc = "/assets/controller_back.png";
-        if (isBackRamp) {
-            backSrc = "/assets/controller_back_ramp.png";
-            (layers["backShellMain"] || []).forEach(l => l.style.display = "none");
-        } else {
-            if (isBackTrans) {
-                backSrc = "/assets/controller_back_t.png";
-            }
-            if (configState["backShellMain"]) {
-                (layers["backShellMain"] || []).forEach(l => l.style.display = "block");
-            }
+        if (configState["backShellMain"] || optionState["backShellMain"]) {
+            (layers["backShellMain"] || []).forEach(l => {
+                if (l.getAttribute("src")) l.style.display = "block";
+            });
         }
 
         if (faceBackImg.getAttribute("src") !== backSrc) {
@@ -1146,10 +1133,8 @@
 
         const palette = getPaletteForPart(partId);
         const options = getOptionsForPart(partId);
-        const isBackRamp = (partId === "backShellMain" && optionState["backShellMain"] === "rampkit");
-
         const hasOptions = options.length > 0;
-        const hasColors = !isBackRamp && palette.length > 0;
+        const hasColors = palette.length > 0;
 
         if (!hasOptions && !hasColors) {
             colorEmptyState.style.display = "flex";
@@ -1406,10 +1391,7 @@
             gloss.style.display = "none";
         });
 
-        if (partId === "backShellMain" && optionState[partId] === "rampkit") {
-            (layers["backShellMain"] || []).forEach(l => l.style.display = "none");
-        } else if (partId === "backShellMain") {
-            // Ensure back layers are visible if not rampkit
+        if (partId === "backShellMain") {
             (layers["backShellMain"] || []).forEach(l => {
                 if (l.getAttribute("src")) l.style.display = "block";
             });

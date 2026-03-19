@@ -6,8 +6,9 @@ import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import {
     buildInventoryPayload,
-    createInventoryEntry,
+    formatInventoryDate,
     formatInventoryMoney,
+    getInventoryReasonLabel,
     hydrateInventoryFormEntries
 } from './inventoryPricing';
 import {
@@ -25,8 +26,9 @@ const normalizeOptionRecord = (id, raw = {}) => ({
     barcode: getBarcodeValue({ id, ...raw }),
     ...buildInventoryPayload(raw.inventoryDetails, {
         purchasePrice: raw.purchasePrice ?? 0,
-        sellPrice: raw.sellPrice ?? raw.price ?? 0,
-        quantity: raw.quantity ?? 999
+        sellPrice: raw.sellPrice ?? raw.price ?? 0
+    }, {
+        quantity: raw.quantity ?? 0
     })
 });
 
@@ -64,9 +66,9 @@ const AdminParts = () => {
     const [subName, setSubName] = useState('');
     const [subItemNumber, setSubItemNumber] = useState('');
     const [subBarcode, setSubBarcode] = useState('');
-    const [subInventoryDetails, setSubInventoryDetails] = useState([
-        createInventoryEntry({ purchasePrice: 0, sellPrice: 0, quantity: 999, isActive: true })
-    ]);
+    const [subPurchasePrice, setSubPurchasePrice] = useState('0');
+    const [subSellPrice, setSubSellPrice] = useState('0');
+    const [subInventoryDetails, setSubInventoryDetails] = useState([]);
     const [subType, setSubType] = useState('color');
     const [subSide, setSubSide] = useState('front');
     const [subColorHex, setSubColorHex] = useState('#ffffff');
@@ -197,9 +199,9 @@ const AdminParts = () => {
         setSubName('');
         setSubItemNumber('');
         setSubBarcode('');
-        setSubInventoryDetails([
-            createInventoryEntry({ purchasePrice: 0, sellPrice: 0, quantity: 999, isActive: true })
-        ]);
+        setSubPurchasePrice('0');
+        setSubSellPrice('0');
+        setSubInventoryDetails([]);
         setSubType('color');
         setSubSide('front');
         setSubColorHex('#ffffff');
@@ -215,6 +217,8 @@ const AdminParts = () => {
         setSubName(sub.name || '');
         setSubItemNumber(getInventoryItemNumber(sub));
         setSubBarcode(getBarcodeValue(sub));
+        setSubPurchasePrice(String(sub.purchasePrice ?? 0));
+        setSubSellPrice(String(sub.sellPrice ?? sub.price ?? 0));
         setSubInventoryDetails(hydrateInventoryFormEntries(sub));
         setSubType(sub.type || 'color');
         setSubSide(sub.side || 'front');
@@ -244,11 +248,16 @@ const AdminParts = () => {
                 iconUrl = await getDownloadURL(iconRef);
             }
 
-            const inventoryPayload = buildInventoryPayload(subInventoryDetails, {
-                purchasePrice: 0,
-                sellPrice: 0,
-                quantity: 999
-            });
+            const inventoryPayload = buildInventoryPayload(
+                subInventoryDetails,
+                {
+                    purchasePrice: subPurchasePrice,
+                    sellPrice: subSellPrice
+                },
+                {
+                    quantity: 0
+                }
+            );
             const itemNumber = normalizeNumericString(subItemNumber) || await allocateSequentialNumber(db, 'inventory_master');
             const barcode = normalizeNumericString(subBarcode) || itemNumber;
 
@@ -583,21 +592,21 @@ const AdminParts = () => {
                                                         key={row.id || `${sub.id}-inventory-${index}`}
                                                         style={{
                                                             display: 'grid',
-                                                            gridTemplateColumns: 'repeat(3, minmax(0, 1fr)) auto',
+                                                            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
                                                             gap: '0.35rem',
                                                             alignItems: 'center',
                                                             padding: '0.4rem 0.5rem',
                                                             borderRadius: '6px',
-                                                            background: row.isActive ? 'rgba(31, 111, 235, 0.12)' : '#111827',
-                                                            border: row.isActive ? '1px solid #1f6feb' : '1px solid #30363d',
+                                                            background: Number(row.quantity || 0) < 0 ? 'rgba(127, 29, 29, 0.18)' : '#111827',
+                                                            border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid #30363d',
                                                             fontSize: '0.76rem',
                                                             color: '#c9d1d9'
                                                         }}
                                                     >
-                                                        <span>P {formatInventoryMoney(row.purchasePrice)}</span>
-                                                        <span>S {formatInventoryMoney(row.sellPrice)}</span>
-                                                        <span>Q {row.quantity}</span>
-                                                        <span style={{ color: row.isActive ? '#58a6ff' : '#8b949e' }}>{row.isActive ? 'Live' : 'Off'}</span>
+                                                        <span>{getInventoryReasonLabel(row.reason)}</span>
+                                                        <span>{formatInventoryDate(row.date)}</span>
+                                                        <span>Q {Number(row.quantity || 0) > 0 ? '+' : ''}{row.quantity}</span>
+                                                        <span style={{ color: '#8b949e' }}>{row.source || 'manual'}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -665,6 +674,14 @@ const AdminParts = () => {
                                         <option value="back">Back</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Purchase Price:</label>
+                                    <input type="number" step="0.01" min="0" value={subPurchasePrice} onChange={e => setSubPurchasePrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Sell Price:</label>
+                                    <input type="number" step="0.01" min="0" value={subSellPrice} onChange={e => setSubSellPrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                </div>
 
                                 {subType === 'color' ? (
                                     <div>
@@ -687,8 +704,8 @@ const AdminParts = () => {
                                 <InventoryPricingEditor
                                     rows={subInventoryDetails}
                                     onChange={setSubInventoryDetails}
-                                    title="Inventory, Purchase Price, and Sell Price"
-                                    description="Create multiple quantity-price rows per option. The active row controls the storefront sell price and available quantity."
+                                    title="Inventory"
+                                    description="Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."
                                 />
                             </div>
 

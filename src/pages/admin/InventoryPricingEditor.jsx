@@ -1,5 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { createInventoryEntry } from './inventoryPricing';
+import React, { useState } from 'react';
+import {
+    createInventoryEntry,
+    formatInventoryDate,
+    getInventoryReasonLabel,
+    INVENTORY_REASON_OPTIONS
+} from './inventoryPricing';
 
 const sectionStyle = {
     background: '#0d1117',
@@ -40,58 +45,26 @@ const modalStyle = {
     overflow: 'hidden'
 };
 
-const normalizeRowsAfterRemove = (rows) => {
-    if (!rows.length) {
-        return [createInventoryEntry({ purchasePrice: 0, sellPrice: 0, quantity: 0, isActive: true })];
-    }
-
-    if (rows.some((row) => row.isActive)) return rows;
-
-    return rows.map((row, index) => ({
-        ...row,
-        isActive: index === 0
-    }));
-};
-
 const InventoryPricingEditor = ({
     rows,
     onChange,
-    title = 'Inventory & Pricing',
-    description = 'Only the active row is used on the platform for sell price and available quantity.'
+    title = 'Inventory',
+    description = 'Inventory is managed as stock movements. Use Add Inventory to increase stock and keep a dated history.'
 }) => {
-    const safeRows = Array.isArray(rows) && rows.length > 0
-        ? rows
-        : [createInventoryEntry({ purchasePrice: 0, sellPrice: 0, quantity: 0, isActive: true })];
-    const radioGroupName = useMemo(() => `activeInventoryRow_${Math.random().toString(36).slice(2, 8)}`, []);
+    const safeRows = Array.isArray(rows) ? rows : [];
     const [showAddModal, setShowAddModal] = useState(false);
     const [draftRow, setDraftRow] = useState({
-        purchasePrice: '',
-        sellPrice: '',
-        quantity: ''
+        quantity: '',
+        date: new Date().toISOString().slice(0, 10),
+        reason: 'new_stock'
     });
 
     const resetDraft = () => {
         setDraftRow({
-            purchasePrice: '',
-            sellPrice: '',
-            quantity: ''
+            quantity: '',
+            date: new Date().toISOString().slice(0, 10),
+            reason: 'new_stock'
         });
-    };
-
-    const handleActiveChange = (rowId) => {
-        onChange(safeRows.map((row) => ({
-            ...row,
-            isActive: row.id === rowId
-        })));
-    };
-
-    const handleRemoveRow = (rowId) => {
-        onChange(normalizeRowsAfterRemove(safeRows.filter((row) => row.id !== rowId)));
-    };
-
-    const openAddModal = () => {
-        resetDraft();
-        setShowAddModal(true);
     };
 
     const closeAddModal = () => {
@@ -99,19 +72,25 @@ const InventoryPricingEditor = ({
         resetDraft();
     };
 
+    const handleRemoveRow = (rowId) => {
+        onChange(safeRows.filter((row) => row.id !== rowId));
+    };
+
     const handleAddRow = (event) => {
         event.preventDefault();
         onChange([
             ...safeRows,
             createInventoryEntry({
-                purchasePrice: draftRow.purchasePrice,
-                sellPrice: draftRow.sellPrice,
                 quantity: draftRow.quantity,
-                isActive: false
+                date: draftRow.date,
+                reason: draftRow.reason,
+                source: 'manual'
             })
         ]);
         closeAddModal();
     };
+
+    const sortedRows = [...safeRows].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
     return (
         <div style={sectionStyle}>
@@ -123,7 +102,7 @@ const InventoryPricingEditor = ({
 
                 <button
                     type="button"
-                    onClick={openAddModal}
+                    onClick={() => setShowAddModal(true)}
                     style={{
                         padding: '0.6rem 0.9rem',
                         borderRadius: '8px',
@@ -133,74 +112,63 @@ const InventoryPricingEditor = ({
                         cursor: 'pointer'
                     }}
                 >
-                    Add Inventory Row
+                    Add Inventory
                 </button>
             </div>
 
             <div style={{ display: 'grid', gap: '0.85rem' }}>
-                {safeRows.map((row, index) => (
-                    <div
-                        key={row.id}
-                        style={{
-                            display: 'grid',
-                            gap: '0.9rem',
-                            padding: '0.9rem',
-                            borderRadius: '8px',
-                            border: row.isActive ? '1px solid #1f6feb' : '1px solid #30363d',
-                            background: row.isActive ? 'rgba(31, 111, 235, 0.08)' : '#111827'
-                        }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ fontSize: '0.85rem', color: '#e6edf3', fontWeight: 600 }}>
-                                Inventory Row {index + 1}
-                            </div>
+                {sortedRows.length > 0 ? sortedRows.map((row, index) => {
+                    const quantity = Number(row.quantity || 0);
+                    const isOutgoing = quantity < 0;
+                    return (
+                        <div
+                            key={row.id || `inventory-entry-${index}`}
+                            style={{
+                                display: 'grid',
+                                gap: '0.8rem',
+                                padding: '0.9rem',
+                                borderRadius: '8px',
+                                border: isOutgoing ? '1px solid rgba(248, 113, 113, 0.35)' : '1px solid #30363d',
+                                background: isOutgoing ? 'rgba(127, 29, 29, 0.18)' : '#111827'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'grid', gap: '0.2rem' }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#e6edf3', fontWeight: 600 }}>
+                                        {getInventoryReasonLabel(row.reason)}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: '#8b949e' }}>
+                                        {formatInventoryDate(row.date)}{row.source === 'system' ? ' · System' : ''}
+                                    </div>
+                                </div>
 
-                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', color: '#e6edf3', cursor: 'pointer' }}>
-                                    <input
-                                        type="radio"
-                                        name={radioGroupName}
-                                        checked={row.isActive}
-                                        onChange={() => handleActiveChange(row.id)}
-                                    />
-                                    Use on platform
-                                </label>
-
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveRow(row.id)}
-                                    style={{
-                                        padding: '0.45rem 0.7rem',
-                                        borderRadius: '6px',
-                                        border: '1px solid #f85149',
-                                        background: 'transparent',
-                                        color: '#ff7b72',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-                            <div style={{ display: 'grid', gap: '0.25rem' }}>
-                                <span style={{ fontSize: '0.78rem', color: '#8b949e' }}>Purchase Price</span>
-                                <strong style={{ color: '#e6edf3' }}>{Number(row.purchasePrice || 0).toFixed(2)} BHD</strong>
-                            </div>
-
-                            <div style={{ display: 'grid', gap: '0.25rem' }}>
-                                <span style={{ fontSize: '0.78rem', color: '#8b949e' }}>Sell Price</span>
-                                <strong style={{ color: '#e6edf3' }}>{Number(row.sellPrice || 0).toFixed(2)} BHD</strong>
-                            </div>
-
-                            <div style={{ display: 'grid', gap: '0.25rem' }}>
-                                <span style={{ fontSize: '0.78rem', color: '#8b949e' }}>Quantity</span>
-                                <strong style={{ color: '#e6edf3' }}>{Number(row.quantity || 0)}</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                    <span style={{ color: isOutgoing ? '#fca5a5' : '#86efac', fontWeight: 700 }}>
+                                        {quantity > 0 ? '+' : ''}{quantity}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveRow(row.id)}
+                                        style={{
+                                            padding: '0.45rem 0.7rem',
+                                            borderRadius: '6px',
+                                            border: '1px solid #f85149',
+                                            background: 'transparent',
+                                            color: '#ff7b72',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    );
+                }) : (
+                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed #30363d', color: '#8b949e', background: '#111827' }}>
+                        No inventory movements recorded yet.
                     </div>
-                ))}
+                )}
             </div>
 
             {showAddModal && (
@@ -209,9 +177,9 @@ const InventoryPricingEditor = ({
                         <form onSubmit={handleAddRow} style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div>
-                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>Add Inventory Row</div>
+                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>Add Inventory</div>
                                     <div style={{ marginTop: '0.25rem', fontSize: '0.82rem', color: '#8b949e' }}>
-                                        Create a new purchase/sell/qty batch. Existing rows stay read-only.
+                                        Add a dated stock movement. Quantity is added to current stock.
                                     </div>
                                 </div>
 
@@ -233,38 +201,41 @@ const InventoryPricingEditor = ({
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Purchase Price (BHD)</span>
+                                    <span>Inventory Qty</span>
                                     <input
                                         type="number"
-                                        step="0.01"
-                                        required
-                                        value={draftRow.purchasePrice}
-                                        onChange={(event) => setDraftRow((current) => ({ ...current, purchasePrice: event.target.value }))}
-                                        style={fieldStyle}
-                                    />
-                                </label>
-
-                                <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Sell Price (BHD)</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        value={draftRow.sellPrice}
-                                        onChange={(event) => setDraftRow((current) => ({ ...current, sellPrice: event.target.value }))}
-                                        style={fieldStyle}
-                                    />
-                                </label>
-
-                                <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Quantity</span>
-                                    <input
-                                        type="number"
+                                        min="1"
                                         required
                                         value={draftRow.quantity}
                                         onChange={(event) => setDraftRow((current) => ({ ...current, quantity: event.target.value }))}
                                         style={fieldStyle}
                                     />
+                                </label>
+
+                                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                                    <span>Date</span>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={draftRow.date}
+                                        onChange={(event) => setDraftRow((current) => ({ ...current, date: event.target.value }))}
+                                        style={fieldStyle}
+                                    />
+                                </label>
+
+                                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                                    <span>Reason</span>
+                                    <select
+                                        value={draftRow.reason}
+                                        onChange={(event) => setDraftRow((current) => ({ ...current, reason: event.target.value }))}
+                                        style={fieldStyle}
+                                    >
+                                        {INVENTORY_REASON_OPTIONS
+                                            .filter((option) => option.value !== 'order_allocation' && option.value !== 'opening_balance')
+                                            .map((option) => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                    </select>
                                 </label>
                             </div>
 
@@ -295,7 +266,7 @@ const InventoryPricingEditor = ({
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Add Row
+                                    Add Inventory
                                 </button>
                             </div>
                         </form>
