@@ -11,6 +11,8 @@ import AdminParts from './admin/AdminParts';
 import AdminInventoryMaster from './admin/AdminInventoryMaster';
 import AdminSettings from './admin/AdminSettings';
 
+const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
+
 const navigationGroups = [
     {
         id: 'operations',
@@ -43,11 +45,18 @@ const navigationGroups = [
 const tabs = navigationGroups.flatMap((group) => group.items);
 
 const Admin = () => {
-    const [activeTab, setActiveTab] = useState('orders');
+    const [activeTab, setActiveTab] = useState(() => {
+        const storedTab = window.localStorage.getItem(ADMIN_ACTIVE_TAB_KEY);
+        return tabs.some((tab) => tab.id === storedTab) ? storedTab : 'orders';
+    });
     const navigate = useNavigate();
     const lang = localStorage.getItem('ez_lang') || 'ar';
     const isAr = lang === 'ar';
     const navButtonActiveBackground = 'var(--button-primary-bg)';
+
+    useEffect(() => {
+        window.localStorage.setItem(ADMIN_ACTIVE_TAB_KEY, activeTab);
+    }, [activeTab]);
 
     const handleLogout = async () => {
         try {
@@ -130,6 +139,7 @@ const Admin = () => {
                         {group.items.map((tab) => (
                             <button
                                 key={tab.id}
+                                type="button"
                                 onClick={() => setActiveTab(tab.id)}
                                 style={{
                                     display: 'flex',
@@ -172,6 +182,7 @@ const Admin = () => {
                 ))}
 
                 <button
+                    type="button"
                     onClick={handleLogout}
                     style={{
                         display: 'flex',

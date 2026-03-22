@@ -4,7 +4,7 @@ import { i18n } from '../i18n.js';
 import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
 
 const PreviewStack = ({ layers, fallbackSrc, alt }) => (
-  <div style={{ position: 'relative', aspectRatio: '1.5', background: '#11141b', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+  <div className="cart-preview-stack" style={{ position: 'relative', aspectRatio: '1.5', background: '#11141b', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
     {Array.isArray(layers) && layers.length > 0 ? (
       layers.map((layer, idx) => (
         <img
@@ -152,7 +152,7 @@ const CartPage = () => {
   }, { count: 0, sum: 0 });
 
   return (
-    <div className="cart-page" style={{ background: '#0b0b0f', minHeight: '100vh', color: '#fff', paddingBottom: '2rem' }}>
+    <div className="cart-page cart-shell" style={{ background: '#0b0b0f', minHeight: '100vh', color: '#fff', paddingBottom: '2rem' }}>
       {isPreviewLoading && (
         <div className="zoho-loading-overlay" aria-live="polite" aria-hidden="false">
           <div className="zoho-loading-card">
@@ -163,9 +163,9 @@ const CartPage = () => {
       )}
       {/* Removed Top Nav */}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="cart-layout" style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
         {/* Left: Cart Items */}
-        <div style={{ flex: '2 1 600px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="cart-items-column" style={{ flex: '2 1 600px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h2 style={{ margin: '0 0 1rem 0' }}>{t('cartTitle') || 'Your Cart'}</h2>
 
           {cartItems.length === 0 && (
@@ -175,10 +175,10 @@ const CartPage = () => {
           )}
 
           {cartItems.map((item, idx) => (
-            <div key={item.id || idx} style={{ background: '#1c1f28', padding: '1.5rem', borderRadius: '8px', display: 'flex', gap: '2rem', position: 'relative' }}>
+            <div key={item.id || idx} className="cart-item-card" style={{ background: '#1c1f28', padding: '1.5rem', borderRadius: '8px', display: 'flex', gap: '2rem', position: 'relative' }}>
 
               {/* Image Preview Container (Showing snapshots or HTML-based premade view) */}
-              <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="cart-item-preview-column" style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {item.preview ? (
                   /* Premade item from Home page */
                   <div 
@@ -198,7 +198,7 @@ const CartPage = () => {
               </div>
 
               {/* Item Details */}
-              <div style={{ flex: 1 }}>
+              <div className="cart-item-details" style={{ flex: 1 }}>
                 <h3 style={{ margin: '0 0 0.5rem 0' }}>{item.name}</h3>
                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4ade80', marginBottom: '1rem' }}>
                   {(item.unitPrice || item.total || 0).toFixed(2)} BHD
@@ -206,8 +206,8 @@ const CartPage = () => {
 
                 <ItemCustomizationSummary item={item} lang={lang} />
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: 'auto' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', background: '#333', borderRadius: '4px' }}>
+                <div className="cart-item-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: 'auto' }}>
+                  <div className="cart-qty-control" style={{ display: 'flex', alignItems: 'center', background: '#333', borderRadius: '4px' }}>
                     <button onClick={() => handleQuantityChange(idx, -1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }}>-</button>
                     <span style={{ padding: '0 1rem' }}>{item.quantity || 1}</span>
                     <button onClick={() => handleQuantityChange(idx, 1)} style={{ padding: '0.5rem 1rem', background: 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }}>+</button>
@@ -223,8 +223,8 @@ const CartPage = () => {
         </div>
 
         {/* Right: Summary Options */}
-        <div style={{ flex: '1 1 300px' }}>
-          <div style={{ background: '#1c1f28', padding: '1.5rem', borderRadius: '8px', position: 'sticky', top: '2rem' }}>
+        <div className="cart-summary-column" style={{ flex: '1 1 300px' }}>
+          <div className="cart-summary-card" style={{ background: '#1c1f28', padding: '1.5rem', borderRadius: '8px', position: 'sticky', top: '2rem' }}>
             <h3 style={{ margin: '0 0 1rem 0' }}>{t('summaryTitle') || 'Summary'}</h3>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>

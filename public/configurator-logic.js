@@ -50,6 +50,13 @@
     const glossLayers = {};
     const maskDataById = {};
     let masksReady = false;
+    const imageWarmupMeta = new Map();
+    const imageWarmupQueue = [];
+    const retainedWarmImages = new Map();
+    const IMAGE_WARMUP_CONCURRENCY = isMobile ? 2 : 4;
+    const RETAINED_WARM_IMAGE_LIMIT = isMobile ? 8 : 16;
+    let imageWarmupInFlight = 0;
+    let globalOverlayWarmupScheduled = false;
 
     function normalizeVariant(str) {
         if (!str) return "";
@@ -448,6 +455,7 @@
 
             ensurePartStateDefaults();
             recomputeAvailableParts();
+            warmSelectedOverlayImages();
             restorePersistedSelections();
             buildPartsList();
 
@@ -464,6 +472,7 @@
                 resetColorPanel();
                 resetOptionsPanel();
             }
+            scheduleGlobalOverlayWarmup(initialPartId);
         } catch (err) {
             console.error("[Firebase Config] Bootstrap failed:", err);
         } finally {
@@ -693,6 +702,153 @@
         if (key === "standard") return null;
         const options = getOptionsForPart(partId);
         return options.find(o => o.key === key) || null;
+    }
+
+    function retainWarmImage(url, img) {
+        if (!url || !img) return;
+        if (retainedWarmImages.has(url)) retainedWarmImages.delete(url);
+        retainedWarmImages.set(url, img);
+        while (retainedWarmImages.size > RETAINED_WARM_IMAGE_LIMIT) {
+            const oldestUrl = retainedWarmImages.keys().next().value;
+            if (!oldestUrl) break;
+            retainedWarmImages.delete(oldestUrl);
+        }
+    }
+
+    function warmImageAsset(task) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.decoding = "async";
+            try {
+                img.fetchPriority = task.priority === "high" ? "high" : "low";
+            } catch { }
+
+            const finalizeLoaded = () => {
+                const meta = imageWarmupMeta.get(task.url) || {};
+                meta.status = "loaded";
+                imageWarmupMeta.set(task.url, meta);
+                if (meta.retain) retainWarmImage(task.url, img);
+                resolve();
+            };
+
+            img.onload = () => {
+                const decodePromise = typeof img.decode === "function"
+                    ? img.decode().catch(() => { })
+                    : Promise.resolve();
+                Promise.resolve(decodePromise).finally(finalizeLoaded);
+            };
+            img.onerror = () => {
+                imageWarmupMeta.set(task.url, { status: "error", retain: false });
+                resolve();
+            };
+            img.src = task.url;
+        });
+    }
+
+    function flushImageWarmupQueue() {
+        while (imageWarmupInFlight < IMAGE_WARMUP_CONCURRENCY && imageWarmupQueue.length > 0) {
+            const task = imageWarmupQueue.shift();
+            if (!task || !task.url) continue;
+            const meta = imageWarmupMeta.get(task.url) || {};
+            if (meta.status === "loaded" || meta.status === "loading") continue;
+            meta.status = "loading";
+            imageWarmupMeta.set(task.url, meta);
+            imageWarmupInFlight += 1;
+            warmImageAsset(task).finally(() => {
+                imageWarmupInFlight = Math.max(0, imageWarmupInFlight - 1);
+                if (imageWarmupQueue.length > 0) flushImageWarmupQueue();
+            });
+        }
+    }
+
+    function queueImageWarmup(url, opts = {}) {
+        if (!url || typeof url !== "string") return;
+        const cleanUrl = url.trim();
+        if (!cleanUrl) return;
+
+        const meta = imageWarmupMeta.get(cleanUrl) || { status: "idle", retain: false };
+        if (opts.retain) meta.retain = true;
+
+        if (meta.status === "loaded") {
+            imageWarmupMeta.set(cleanUrl, meta);
+            if (meta.retain && !retainedWarmImages.has(cleanUrl)) {
+                meta.status = "queued";
+            } else {
+                if (retainedWarmImages.has(cleanUrl)) {
+                    retainWarmImage(cleanUrl, retainedWarmImages.get(cleanUrl));
+                }
+                return;
+            }
+        }
+
+        if (meta.status === "queued" || meta.status === "loading") {
+            imageWarmupMeta.set(cleanUrl, meta);
+            return;
+        }
+
+        meta.status = "queued";
+        imageWarmupMeta.set(cleanUrl, meta);
+
+        const task = {
+            url: cleanUrl,
+            priority: opts.priority === "high" ? "high" : "low"
+        };
+        if (task.priority === "high") imageWarmupQueue.unshift(task);
+        else imageWarmupQueue.push(task);
+        flushImageWarmupQueue();
+    }
+
+    function collectPartOverlayUrls(partId) {
+        const urls = new Set();
+        getPaletteForPart(partId).forEach(entry => {
+            if (entry && entry.image) urls.add(entry.image);
+        });
+        getOptionsForPart(partId).forEach(entry => {
+            if (entry && entry.image) urls.add(entry.image);
+        });
+        return Array.from(urls);
+    }
+
+    function warmPartOverlayImages(partId, opts = {}) {
+        collectPartOverlayUrls(partId).forEach(url => {
+            queueImageWarmup(url, opts);
+        });
+    }
+
+    function warmSelectedOverlayImages() {
+        ALL_PARTS.forEach(part => {
+            const colorObj = findColorSelection(part.id, configState[part.id]);
+            const optionObj = findOptionSelection(part.id, optionState[part.id]);
+            if (colorObj && colorObj.image) {
+                queueImageWarmup(colorObj.image, { priority: "high", retain: true });
+            }
+            if (optionObj && optionObj.image) {
+                queueImageWarmup(optionObj.image, { priority: "high", retain: true });
+            }
+        });
+    }
+
+    function scheduleGlobalOverlayWarmup(initialPartId) {
+        if (globalOverlayWarmupScheduled) return;
+        globalOverlayWarmupScheduled = true;
+
+        const runWarmup = () => {
+            if (initialPartId) warmPartOverlayImages(initialPartId, { priority: "high", retain: true });
+
+            const preferredIds = (currentSide === "back" ? BACK_PARTS : FRONT_PARTS).map(part => part.id);
+            const deferredIds = (currentSide === "back" ? FRONT_PARTS : BACK_PARTS).map(part => part.id);
+
+            preferredIds.concat(deferredIds).forEach(partId => {
+                if (!partId || partId === initialPartId) return;
+                warmPartOverlayImages(partId, { priority: "low", retain: false });
+            });
+        };
+
+        if (typeof window.requestIdleCallback === "function") {
+            window.requestIdleCallback(runWarmup, { timeout: 1200 });
+        } else {
+            window.setTimeout(runWarmup, 180);
+        }
     }
 
     function syncPartVisualState(partId) {
@@ -1070,6 +1226,7 @@
         if (selectedPartId === partId) return;
         if (!opts.silent) playClick();
         selectedPartId = partId;
+        warmPartOverlayImages(partId, { priority: "high", retain: true });
         // Prefer the non-hidden side for the UI selection
         const part = ALL_PARTS.find(p => p.id === partId && !p.hiddenUI) || ALL_PARTS.find(p => p.id === partId);
         if (part && part.side !== currentSide) {
@@ -1263,6 +1420,14 @@
 
             cell.appendChild(swatch);
 
+            if (entry.image) {
+                const warmEntryImage = () => queueImageWarmup(entry.image, { priority: "high", retain: true });
+                cell.addEventListener("mouseenter", warmEntryImage, { passive: true });
+                cell.addEventListener("focusin", warmEntryImage);
+                cell.addEventListener("touchstart", warmEntryImage, { passive: true, once: true });
+                if (isSelected) warmEntryImage();
+            }
+
             if (isOption) {
                 const label = document.createElement("div");
                 if (entry.isGamemode) {
@@ -1317,6 +1482,10 @@
         const activeOption = options.find(o => o.key === currentOptionKey);
         const optionHasOverrides = activeOption && activeOption.image;
 
+        if (colObj && colObj.image) {
+            queueImageWarmup(colObj.image, { priority: "high", retain: true });
+        }
+
         if (!optionHasOverrides) {
             const targetLayers = layers[partId] || [];
             targetLayers.forEach(layer => {
@@ -1364,6 +1533,10 @@
 
         const options = getOptionsForPart(partId);
         const optObj = options.find(o => o.key === optionState[partId]);
+
+        if (optObj && optObj.image) {
+            queueImageWarmup(optObj.image, { priority: "high", retain: true });
+        }
 
         const targetLayers = layers[partId] || [];
         targetLayers.forEach(layer => {

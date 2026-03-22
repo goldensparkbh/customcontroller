@@ -173,7 +173,11 @@ const InventoryPricingEditor = ({
 
             {showAddModal && (
                 <div onClick={closeAddModal} style={overlayStyle}>
-                    <div onClick={(event) => event.stopPropagation()} style={modalStyle}>
+                    <div
+                        onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        style={modalStyle}
+                    >
                         <form onSubmit={handleAddRow} style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div>

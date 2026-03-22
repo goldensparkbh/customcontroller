@@ -318,6 +318,7 @@ const AdminInventoryMaster = () => {
                 <div onClick={() => setDetailOpen(false)} style={modalOverlayStyle}>
                     <div
                         onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
                         style={{
                             width: 'min(900px, 100%)',
                             maxHeight: '90vh',

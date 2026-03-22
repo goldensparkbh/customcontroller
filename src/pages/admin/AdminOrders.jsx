@@ -3,94 +3,11 @@ import { db } from '../../firebase';
 import { collection, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 import LoadingState from '../../components/LoadingState.jsx';
+import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.jsx';
 
 const LIST_COLUMNS = '1.1fr 1.25fr 0.8fr 0.95fr 0.9fr 0.9fr';
 const ORDER_STATUS_OPTIONS = ['Paid', 'On Going', 'Completed', 'Shipped', 'Canceled'];
 const ORDER_URGENCY_OPTIONS = ['Normal', 'Urgent', 'Very Urgent'];
-const PART_DISPLAY_ORDER = ['shell', 'trimpiece', 'touchpad', 'allButtons', 'sticks', 'bumpersTriggers', 'psButton', 'backShellMain'];
-const PART_LABELS = {
-    shell: 'Shell',
-    trimpiece: 'Trim Piece',
-    touchpad: 'Touchpad',
-    allButtons: 'Buttons',
-    sticks: 'Sticks',
-    bumpersTriggers: 'Bumpers & Triggers',
-    psButton: 'PS Button',
-    backShellMain: 'Back Shell'
-};
-
-const humanizeKey = (value) => String(value || '')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const getPartDisplayLabel = (partId) => PART_LABELS[partId] || humanizeKey(partId) || 'Part';
-const getVariantDisplayLabel = (variant) =>
-    variant?.valName ||
-    variant?.name ||
-    variant?.label ||
-    variant?.title ||
-    (variant?.hex ? String(variant.hex).toUpperCase() : '') ||
-    humanizeKey(variant?.key) ||
-    'Selected';
-const isGamemodeVariant = (variant) => /gamemode|performance/i.test(
-    [
-        variant?.type,
-        variant?.name,
-        variant?.valName,
-        variant?.label,
-        variant?.key
-    ].filter(Boolean).join(' ')
-);
-const getPartSortIndex = (partId) => {
-    const index = PART_DISPLAY_ORDER.indexOf(partId);
-    return index >= 0 ? index : PART_DISPLAY_ORDER.length + 1;
-};
-
-const getItemCustomizationGroups = (item) => {
-    const colors = [];
-    const options = [];
-    const legacy = [];
-
-    if (item?.parts && typeof item.parts === 'object') {
-        Object.entries(item.parts)
-            .sort(([partIdA], [partIdB]) => getPartSortIndex(partIdA) - getPartSortIndex(partIdB))
-            .forEach(([partId, partState]) => {
-                if (partState?.color) {
-                    colors.push({
-                        partId,
-                        partLabel: getPartDisplayLabel(partId),
-                        value: getVariantDisplayLabel(partState.color),
-                        swatch: partState.color?.hex || ''
-                    });
-                }
-
-                if (partState?.option?.key && partState.option.key !== 'standard') {
-                    options.push({
-                        partId,
-                        partLabel: getPartDisplayLabel(partId),
-                        value: getVariantDisplayLabel(partState.option),
-                        kind: isGamemodeVariant(partState.option) ? 'Gamemode' : 'Option'
-                    });
-                }
-            });
-    }
-
-    if ((!colors.length && !options.length) && item?.config && typeof item.config === 'object') {
-        Object.entries(item.config)
-            .filter(([, value]) => value)
-            .forEach(([key, value]) => {
-                legacy.push({
-                    key: humanizeKey(key),
-                    value: String(value)
-                });
-            });
-    }
-
-    return { colors, options, legacy };
-};
 
 const getItemLineTotal = (item) => {
     const qty = item?.quantity || 1;
@@ -406,6 +323,7 @@ const AdminOrders = () => {
     const [paymentFilter, setPaymentFilter] = useState('all');
     const [urgencyFilter, setUrgencyFilter] = useState('all');
     const [saving, setSaving] = useState(false);
+    const lang = localStorage.getItem('ez_lang') || 'ar';
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -1061,9 +979,6 @@ const AdminOrders = () => {
                                 <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>Order Items</div>
 
                                 {(selectedOrder.items || []).map((item, idx) => (
-                                    (() => {
-                                        const customizationGroups = getItemCustomizationGroups(item);
-                                        return (
                                     <div
                                         key={`${selectedOrder.id}-${idx}`}
                                         style={{
@@ -1084,72 +999,9 @@ const AdminOrders = () => {
                                             </div>
                                             <DetailField label="Quantity" value={String(item.quantity || 1)} />
                                             <DetailField label="Line Total" value={`${getItemLineTotal(item).toFixed(2)} BHD`} />
-
-                                            {(customizationGroups.colors.length > 0 || customizationGroups.options.length > 0 || customizationGroups.legacy.length > 0) && (
-                                                <div style={{ display: 'grid', gap: '0.35rem' }}>
-                                                    <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                                        Customizations
-                                                    </div>
-                                                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                                                        {customizationGroups.colors.length > 0 && (
-                                                            <div style={{ display: 'grid', gap: '0.35rem' }}>
-                                                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e6edf3' }}>
-                                                                    Color Options
-                                                                </div>
-                                                                <div style={{ display: 'grid', gap: '0.3rem' }}>
-                                                                    {customizationGroups.colors.map((entry) => (
-                                                                        <div key={`color-${entry.partId}`} style={{ display: 'flex', gap: '0.55rem', alignItems: 'center', color: '#c7d2de' }}>
-                                                                            <span
-                                                                                style={{
-                                                                                    width: '12px',
-                                                                                    height: '12px',
-                                                                                    borderRadius: '50%',
-                                                                                    background: entry.swatch || '#8b949e',
-                                                                                    border: '1px solid rgba(255,255,255,0.25)',
-                                                                                    flexShrink: 0
-                                                                                }}
-                                                                            />
-                                                                            <span>
-                                                                                <strong style={{ color: '#e6edf3' }}>{entry.partLabel}:</strong> {entry.value}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {customizationGroups.options.length > 0 && (
-                                                            <div style={{ display: 'grid', gap: '0.35rem' }}>
-                                                                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e6edf3' }}>
-                                                                    Performance / Option Selections
-                                                                </div>
-                                                                <div style={{ display: 'grid', gap: '0.3rem' }}>
-                                                                    {customizationGroups.options.map((entry) => (
-                                                                        <div key={`option-${entry.partId}-${entry.value}`} style={{ color: '#c7d2de' }}>
-                                                                            <strong style={{ color: '#e6edf3' }}>{entry.partLabel}:</strong> {entry.value}
-                                                                            <span style={{ color: '#8b949e' }}> ({entry.kind})</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {customizationGroups.legacy.length > 0 && (
-                                                            <div style={{ display: 'grid', gap: '0.3rem' }}>
-                                                                {customizationGroups.legacy.map((entry) => (
-                                                                    <div key={`legacy-${entry.key}`} style={{ color: '#c7d2de' }}>
-                                                                        <strong style={{ color: '#e6edf3' }}>{entry.key}:</strong> {entry.value}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
+                                            <ItemCustomizationSummary item={item} lang={lang} compact />
                                         </div>
                                     </div>
-                                        );
-                                    })()
                                 ))}
                             </div>
                         </div>

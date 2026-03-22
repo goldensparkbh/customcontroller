@@ -7,7 +7,7 @@ import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx
 const arabCountries = ["BH", "SA", "AE", "KW", "OM", "QA", "EG", "JO"];
 
 const PreviewStack = ({ layers, fallbackSrc }) => (
-  <div style={{ position: 'relative', width: '100px', height: '65px', background: '#111', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+  <div className="checkout-preview-stack" style={{ position: 'relative', width: '100px', height: '65px', background: '#111', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
     {Array.isArray(layers) && layers.length > 0 ? (
       layers.map((layer, idx) => (
         <img
@@ -105,6 +105,10 @@ const CheckoutPage = () => {
 
   const totalDue = subtotal + shippingCost;
   const isLoading = loadingAction !== '';
+  const shippingOptions = [
+    { value: 'delivery', label: t('shippingBahrainDelivery') || 'توصيل (2 د.ب)' },
+    { value: 'pickup', label: t('shippingBahrainPickup') || 'استلام من المتجر (مجاني)' }
+  ];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -219,17 +223,17 @@ const CheckoutPage = () => {
   };
 
   return (
-    <div className="checkout-page" style={{ background: '#0b0b0f', minHeight: '100vh', color: '#fff', paddingBottom: '2rem' }}>
+    <div className="checkout-page checkout-shell" style={{ background: '#0b0b0f', minHeight: '100vh', color: '#fff', paddingBottom: '2rem' }}>
 
       {/* Removed Top Nav */}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap-reverse', gap: '2rem', padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="checkout-layout" style={{ display: 'flex', flexWrap: 'wrap-reverse', gap: '2rem', padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Left: Form */}
-        <div style={{ flex: '2 1 600px', background: '#1c1f28', padding: '2rem', borderRadius: '8px' }}>
+        <div className="checkout-form-panel" style={{ flex: '2 1 600px', background: '#1c1f28', padding: '2rem', borderRadius: '8px' }}>
           <h2 style={{ margin: '0 0 1.5rem 0' }}>{t('formTitle') || 'Customer & Payment Details'}</h2>
-          <form ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', gap: '1rem' }}>
+          <form className="checkout-form-stack" ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <label>{t('firstNameLabel') || 'First Name'} *</label>
                 <input name="firstName" value={formData.firstName} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
@@ -240,8 +244,8 @@ const CheckoutPage = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <div style={{ flex: '0 0 120px' }}>
+            <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem' }}>
+              <div className="checkout-phone-code" style={{ flex: '0 0 120px' }}>
                 <label>{t('phonePrefixLabel') || 'Code'} *</label>
                 <select name="phonePrefix" value={formData.phonePrefix} onChange={handleChange} style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}>
                   <option value="973">+973 (BH)</option>
@@ -277,21 +281,31 @@ const CheckoutPage = () => {
             </div>
 
             {isBahrain && (
-              <div style={{ background: '#222', padding: '1rem', borderRadius: '4px' }}>
+              <div className="checkout-shipping-box" style={{ background: '#222', padding: '1rem', borderRadius: '4px' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('shippingMethodLabel') || 'Shipping Method'}</label>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <label>
-                    <input type="radio" name="shippingType" value="delivery" checked={formData.shippingType === 'delivery'} onChange={handleChange} /> {t('shippingBahrainDelivery') || 'Delivery (2 BHD)'}
-                  </label>
-                  <label>
-                    <input type="radio" name="shippingType" value="pickup" checked={formData.shippingType === 'pickup'} onChange={handleChange} /> {t('shippingBahrainPickup') || 'Store Pickup (Free)'}
-                  </label>
+                <div className="checkout-shipping-toggle" role="radiogroup" aria-label={t('shippingMethodLabel') || 'Shipping Method'}>
+                  {shippingOptions.map((option) => {
+                    const isActive = formData.shippingType === option.value;
+                    return (
+                      <label key={option.value} className={`checkout-shipping-option${isActive ? ' active' : ''}`}>
+                        <input
+                          className="checkout-shipping-input"
+                          type="radio"
+                          name="shippingType"
+                          value={option.value}
+                          checked={isActive}
+                          onChange={handleChange}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {requiresAddress && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#222', padding: '1rem', borderRadius: '4px' }}>
+              <div className="checkout-address-box" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#222', padding: '1rem', borderRadius: '4px' }}>
                 {isSaudi && (
                   <div>
                     <label>{t('saudiUnifiedAddressLabel') || 'الرجاء وضع العنوان الموحد'} *</label>
@@ -299,7 +313,7 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: '220px' }}>
                     <label>{t('cityLabel') || 'City'} *</label>
                     <input name="city" value={formData.city} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
@@ -315,7 +329,7 @@ const CheckoutPage = () => {
                   <input name="address" value={formData.address} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: '220px' }}>
                     <label>{t('blockNumberLabel') || 'Block Number'} *</label>
                     <input name="blockNumber" value={formData.blockNumber} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
@@ -326,7 +340,7 @@ const CheckoutPage = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: '220px' }}>
                     <label>{t('houseBuildingNumberLabel') || 'House/Building Number'} *</label>
                     <input name="houseBuildingNumber" value={formData.houseBuildingNumber} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
@@ -374,8 +388,8 @@ const CheckoutPage = () => {
         </div>
 
         {/* Right: Order Summary */}
-        <div style={{ flex: '1 1 300px' }}>
-          <div style={{ background: '#1c1f28', padding: '1.5rem', borderRadius: '8px', position: 'sticky', top: '2rem' }}>
+        <div className="checkout-summary-column" style={{ flex: '1 1 300px' }}>
+          <div className="checkout-summary-card" style={{ background: '#1c1f28', padding: '1.5rem', borderRadius: '8px', position: 'sticky', top: '2rem' }}>
             <h3 style={{ margin: '0 0 1.5rem 0' }}>{t('summaryTitle') || 'Order Summary'}</h3>
 
             {cartItems.length === 0 ? (
@@ -383,7 +397,7 @@ const CheckoutPage = () => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                 {cartItems.map((item, idx) => (
-                  <div key={idx} style={{ paddingBottom: '1rem', borderBottom: '1px solid #333' }}>
+                  <div key={idx} className="checkout-summary-item" style={{ paddingBottom: '1rem', borderBottom: '1px solid #333' }}>
                     <PreviewStack layers={item.previewFrontLayers} fallbackSrc={item.previewFront || "/assets/controller.png"} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                       <span>{item.name} x {item.quantity || 1}</span>
