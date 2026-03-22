@@ -6,9 +6,7 @@ import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import {
     buildInventoryPayload,
-    formatInventoryDate,
     formatInventoryMoney,
-    getInventoryReasonLabel,
     hydrateInventoryFormEntries
 } from './inventoryPricing';
 import {
@@ -585,31 +583,6 @@ const AdminParts = () => {
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Sell Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.sellPrice ?? sub.price)}</strong></div>
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Purchase Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.purchasePrice)}</strong></div>
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Qty: {sub.quantity}</div>
-
-                                            <div style={{ display: 'grid', gap: '0.35rem', marginTop: '0.65rem' }}>
-                                                {(sub.inventoryDetails || []).map((row, index) => (
-                                                    <div
-                                                        key={row.id || `${sub.id}-inventory-${index}`}
-                                                        style={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                                                            gap: '0.35rem',
-                                                            alignItems: 'center',
-                                                            padding: '0.4rem 0.5rem',
-                                                            borderRadius: '6px',
-                                                            background: Number(row.quantity || 0) < 0 ? 'rgba(127, 29, 29, 0.18)' : '#111827',
-                                                            border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid #30363d',
-                                                            fontSize: '0.76rem',
-                                                            color: '#c9d1d9'
-                                                        }}
-                                                    >
-                                                        <span>{getInventoryReasonLabel(row.reason)}</span>
-                                                        <span>{formatInventoryDate(row.date)}</span>
-                                                        <span>Q {Number(row.quantity || 0) > 0 ? '+' : ''}{row.quantity}</span>
-                                                        <span style={{ color: '#8b949e' }}>{row.source || 'manual'}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
 
                                             {sub.image ? (
                                                 <div style={{ marginTop: '0.5rem', background: '#0d1117', borderRadius: '4px', padding: '4px', textAlign: 'center' }}>
