@@ -70,11 +70,15 @@ const Admin = () => {
     useEffect(() => {
         document.body.style.background = '#0e1117';
         document.body.style.color = '#fff';
+        document.documentElement.style.overflowY = 'auto';
+        document.body.style.overflowY = 'auto';
         document.documentElement.dir = isAr ? 'rtl' : 'ltr';
         document.documentElement.lang = isAr ? 'ar' : 'en';
         return () => {
             document.body.style.background = '';
             document.body.style.color = '';
+            document.documentElement.style.overflowY = '';
+            document.body.style.overflowY = '';
         };
     }, [isAr]);
 
@@ -84,6 +88,7 @@ const Admin = () => {
             style={{
                 display: 'grid',
                 gridTemplateColumns: isAr ? '1fr 300px' : '300px 1fr',
+                height: 'calc(100vh - 73px)',
                 minHeight: 'calc(100vh - 73px)',
                 background: '#0e1117',
                 color: '#fff',
@@ -101,6 +106,8 @@ const Admin = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
+                    minHeight: 0,
+                    overflowY: 'auto',
                     gridColumn: isAr ? 2 : 1,
                     gridRow: 1,
                     textAlign: isAr ? 'right' : 'left'
@@ -215,6 +222,9 @@ const Admin = () => {
                 style={{
                     padding: isAr ? '2rem 2rem 2rem 3rem' : '2rem 3rem 2rem 2rem',
                     overflowY: 'auto',
+                    minHeight: 0,
+                    maxHeight: 'calc(100vh - 73px)',
+                    WebkitOverflowScrolling: 'touch',
                     gridColumn: isAr ? 1 : 2,
                     gridRow: 1,
                     textAlign: isAr ? 'right' : 'left'
