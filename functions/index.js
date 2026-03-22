@@ -701,13 +701,16 @@ async function getGeneralAdminSettings() {
 }
 
 function getSmtpConfig(settings = {}) {
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure = String(process.env.SMTP_SECURE || "").trim().toLowerCase() === "true" || port === 465;
-  const host = String(process.env.SMTP_HOST || "").trim();
-  const user = String(process.env.SMTP_USER || "").trim();
-  const pass = String(process.env.SMTP_PASS || "").trim();
-  const fromEmail = String(process.env.SMTP_FROM_EMAIL || user || "").trim();
-  const fromName = String(process.env.SMTP_FROM_NAME || settings.storeName || "PS5 Controller").trim();
+  const port = Number(settings.smtpPort || process.env.SMTP_PORT || 587);
+  const secureSetting = settings.smtpSecure;
+  const secure = typeof secureSetting === "boolean"
+    ? secureSetting
+    : (String(secureSetting || process.env.SMTP_SECURE || "").trim().toLowerCase() === "true" || port === 465);
+  const host = String(settings.smtpHost || process.env.SMTP_HOST || "").trim();
+  const user = String(settings.smtpUser || process.env.SMTP_USER || "").trim();
+  const pass = String(settings.smtpPass || process.env.SMTP_PASS || "").trim();
+  const fromEmail = String(settings.smtpFromEmail || process.env.SMTP_FROM_EMAIL || user || "").trim();
+  const fromName = String(settings.smtpFromName || process.env.SMTP_FROM_NAME || settings.storeName || "PS5 Controller").trim();
   const replyTo = String(settings.supportEmail || settings.adminEmail || fromEmail).trim();
 
   return {
@@ -728,7 +731,7 @@ function getSmtpTransporter(settings = {}) {
     return {
       transporter: null,
       config,
-      error: "Missing SMTP config. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and optionally SMTP_FROM_EMAIL in functions/.env"
+      error: "Missing SMTP config. Set SMTP fields in Admin Settings or functions/.env."
     };
   }
 
