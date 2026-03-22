@@ -76,8 +76,11 @@ const InventoryPricingEditor = ({
         onChange(safeRows.filter((row) => row.id !== rowId));
     };
 
+    const canAddRow = Number(draftRow.quantity) > 0 && Boolean(draftRow.date);
+
     const handleAddRow = (event) => {
-        event.preventDefault();
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        if (!canAddRow) return;
         onChange([
             ...safeRows,
             createInventoryEntry({
@@ -176,9 +179,14 @@ const InventoryPricingEditor = ({
                     <div
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={(event) => event.stopPropagation()}
+                        onKeyDownCapture={(event) => {
+                            if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+                                event.preventDefault();
+                            }
+                        }}
                         style={modalStyle}
                     >
-                        <form onSubmit={handleAddRow} style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
+                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div>
                                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>Add Inventory</div>
@@ -259,7 +267,9 @@ const InventoryPricingEditor = ({
                                     Cancel
                                 </button>
                                 <button
-                                    type="submit"
+                                    type="button"
+                                    onClick={handleAddRow}
+                                    disabled={!canAddRow}
                                     style={{
                                         padding: '0.65rem 0.9rem',
                                         borderRadius: '8px',
@@ -267,13 +277,14 @@ const InventoryPricingEditor = ({
                                         background: '#238636',
                                         color: '#fff',
                                         fontWeight: 700,
-                                        cursor: 'pointer'
+                                        cursor: canAddRow ? 'pointer' : 'not-allowed',
+                                        opacity: canAddRow ? 1 : 0.6
                                     }}
                                 >
                                     Add Inventory
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}

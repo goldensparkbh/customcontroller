@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-CWQ0WDkt.js";const n=`
+import{r as t,j as a}from"./index-CC3te5k5.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav">
   <div class="nav-logo">
