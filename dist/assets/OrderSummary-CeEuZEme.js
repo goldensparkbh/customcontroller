@@ -1,39 +1,39 @@
-import{r as t,j as a}from"./index-FiMOSVbW.js";const n=`
+import{r as t,j as a}from"./index-DGFR0W_T.js";const n=`
 <canvas id="bgCanvas"></canvas>
-<div class="top-nav">
-  <div class="nav-logo">
-    <a class="nav-left" href="index.html">
-      <div class="nav-logo-mark"></div>
-      <div class="nav-page-title" data-i18n="confirmationTitle">تأكيد الدفع</div>
-    </a>
-  </div>
-  <button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-  <div class="nav-right">
-    <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
-    <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
-    <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
-  </div>
-</div>
+<div class="top-nav" style="display:none;"></div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
-  <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-  <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
+  <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">Premade Designs</a>
+  <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">Build Yours Now</a>
   <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
-  <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
+  <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">Light</button>
 </aside>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
-  <div class="card" style="max-width:480px; width:100%; text-align:center;">
-    <div class="card-title" data-i18n="confirmationTitle">تأكيد الدفع</div>
-    <div id="confirmStatus" data-i18n="confirmationStatus" style="font-size:1rem; margin:10px 0;">تم تأكيد الدفع</div>
-    <button class="place-order-btn" id="goSummaryBtn" type="button" data-i18n="confirmationCta">الانتقال إلى ملخص الطلب</button>
+  <div class="card" style="max-width:640px; width:100%;">
+    <div class="card-title" data-i18n="orderSummaryTitle">Order Summary</div>
+    <div id="orderStatus" style="margin-bottom:8px;"></div>
+    <div id="orderItems"></div>
+    <div id="orderTotals" style="margin-top:10px; font-weight:700;"></div>
   </div>
 </div>
 `,l=`
+  function getLineItemTotal(item) {
+    const qty = item.quantity || 1;
+    const unit = item.unitPrice != null ? item.unitPrice : (item.total != null ? item.total : 0);
+    return Number(unit) * qty;
+  }
+
+  function getDraftTotal(draft) {
+    const cart = Array.isArray(draft && draft.cart) ? draft.cart : [];
+    const subtotal = Number(draft && draft.subtotal) > 0
+      ? Number(draft.subtotal)
+      : cart.reduce((sum, item) => sum + getLineItemTotal(item), 0);
+    const shippingCost = Number(draft && draft.shippingCost);
+    return Number(draft && draft.total) > 0
+      ? Number(draft.total)
+      : subtotal + (Number.isFinite(shippingCost) && shippingCost > 0 ? shippingCost : 0);
+  }
+
   let navLang = localStorage.getItem("ez_lang") || "ar";
   const i18n = window.__EZ_I18N__ || {};
   const navLangToggle = document.getElementById("langToggle");
@@ -43,6 +43,7 @@ import{r as t,j as a}from"./index-FiMOSVbW.js";const n=`
   const navMenuBtn = document.querySelector(".nav-menu-btn");
   const mobileNavOverlay = document.getElementById("mobileNavOverlay");
   const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+
   function t(key) {
     return (i18n[navLang] && i18n[navLang][key]) || key;
   }
@@ -125,8 +126,33 @@ import{r as t,j as a}from"./index-FiMOSVbW.js";const n=`
     });
   }
 
-  const btn = document.getElementById("goSummaryBtn");
-  const statusEl = document.getElementById("confirmStatus");
-  btn.addEventListener("click", () => window.location.href = "/order-summary");
-  statusEl.textContent = t("confirmationStatus");
+  const resultRaw = localStorage.getItem("ezOrderResult");
+  const draftRaw = localStorage.getItem("ezOrderDraft");
+  const statusEl = document.getElementById("orderStatus");
+  const itemsEl = document.getElementById("orderItems");
+  const totalsEl = document.getElementById("orderTotals");
+
+  if (!resultRaw || !draftRaw) {
+    statusEl.textContent = t("orderStatusMissing");
+    setTimeout(() => window.location.href = "/cart", 1200);
+  } else {
+    const draft = JSON.parse(draftRaw);
+    const cart = Array.isArray(draft.cart) ? draft.cart : [];
+    const total = getDraftTotal(draft);
+    statusEl.innerHTML = t("orderStatusLabel") + " <strong>" + t("orderStatusConfirmed") + "</strong>";
+    const list = document.createElement("ul");
+    cart.forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent =
+        (item.name || t("orderItemFallback")) +
+        " x " +
+        (item.quantity || 1) +
+        " - " +
+        (draft.currencyPrefix || "BHD ") +
+        getLineItemTotal(item).toFixed(2);
+      list.appendChild(li);
+    });
+    itemsEl.appendChild(list);
+    totalsEl.textContent = t("orderTotalLabel") + " " + (draft.currencyPrefix || "BHD ") + total.toFixed(2);
+  }
 `;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>document.body.removeChild(e)},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};

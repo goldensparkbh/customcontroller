@@ -107,7 +107,28 @@ const trackMarkup = `
     min-height: 260px;
     flex: 1 1 220px;
   }
-  .step-line { display: none; }
+  .step-line {
+    position: absolute;
+    top: 63px;
+    inset-inline-start: calc(50% + 73px);
+    inset-inline-end: -14px;
+    height: 3px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(214, 221, 232, 0.38) 0 4px,
+      transparent 4px 8px
+    );
+    background-repeat: repeat-x;
+    background-size: 8px 3px;
+    pointer-events: none;
+  }
+  html[dir="rtl"] .step-line {
+    background-image: repeating-linear-gradient(
+      270deg,
+      rgba(214, 221, 232, 0.38) 0 4px,
+      transparent 4px 8px
+    );
+  }
   .step-icon-wrap {
     width: 130px;
     height: 130px;
@@ -126,16 +147,6 @@ const trackMarkup = `
     border-radius: 50%;
     border: 2px solid rgba(124,252,0,0.0);
     pointer-events: none;
-  }
-  .step-icon-wrap.has-line::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: calc(100% + 8px);
-    width: 70px;
-    height: 0;
-    border-top: 3px dotted rgba(214, 221, 232, 0.35);
-    transform: translateY(-50%);
   }
   .step-icon {
     width: 120px;
@@ -156,15 +167,38 @@ const trackMarkup = `
     border-color: rgba(214, 221, 232, 0.62);
     animation: pulseRing 1.6s ease-in-out infinite;
   }
-  .step-card.step-current .step-icon-wrap.has-line::after,
-  .step-card.step-pending .step-icon-wrap.has-line::after {
-    border-top-color: rgba(214, 221, 232, 0.35);
-  }
   .step-card.step-done .step-icon-wrap::before {
     border-color: rgba(124,252,0,0.55);
   }
-  .step-card.step-done .step-icon-wrap.has-line::after {
-    border-top-color: rgba(124,252,0,0.58);
+  .step-card.step-current .step-line,
+  .step-card.step-pending .step-line {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(214, 221, 232, 0.38) 0 4px,
+      transparent 4px 8px
+    );
+  }
+  html[dir="rtl"] .step-card.step-current .step-line,
+  html[dir="rtl"] .step-card.step-pending .step-line {
+    background-image: repeating-linear-gradient(
+      270deg,
+      rgba(214, 221, 232, 0.38) 0 4px,
+      transparent 4px 8px
+    );
+  }
+  .step-card.step-done .step-line {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(124,252,0,0.62) 0 4px,
+      transparent 4px 8px
+    );
+  }
+  html[dir="rtl"] .step-card.step-done .step-line {
+    background-image: repeating-linear-gradient(
+      270deg,
+      rgba(124,252,0,0.62) 0 4px,
+      transparent 4px 8px
+    );
   }
   .step-card.step-done .step-title,
   .step-card.step-done .step-status {
@@ -186,7 +220,7 @@ const trackMarkup = `
   }
   @media (max-width: 900px) {
     .steps-list { justify-content: center; }
-    .step-icon-wrap.has-line::after { display: none; }
+    .step-line { display: none; }
   }
   @media (max-width: 640px) {
     .steps-list { gap: 18px; }
