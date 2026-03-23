@@ -3,6 +3,10 @@ import { db } from '../../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import LoadingState from '../../components/LoadingState.jsx';
 
+const NAMECHEAP_SMTP_HOST = 'mail.privateemail.com';
+const NAMECHEAP_SMTP_PORT_SSL = '465';
+const NAMECHEAP_SMTP_PORT_STARTTLS = '587';
+
 const defaultSettings = {
   storeName: 'PS5 Controller',
   adminEmail: '',
@@ -17,9 +21,9 @@ const defaultSettings = {
   instagramUrl: 'https://www.instagram.com/fhonelstore/?hl=en',
   tiktokUrl: '',
   facebookUrl: '',
-  smtpHost: '',
-  smtpPort: '587',
-  smtpSecure: false,
+  smtpHost: NAMECHEAP_SMTP_HOST,
+  smtpPort: NAMECHEAP_SMTP_PORT_SSL,
+  smtpSecure: true,
   smtpUser: '',
   smtpPass: '',
   smtpFromEmail: '',
@@ -45,11 +49,71 @@ const sectionStyle = {
   gap: '1rem'
 };
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(value) {
+  return emailPattern.test(String(value || '').trim());
+}
+
+function normalizeSmtpPort(value) {
+  const trimmed = String(value || '').trim();
+  return trimmed === NAMECHEAP_SMTP_PORT_STARTTLS ? NAMECHEAP_SMTP_PORT_STARTTLS : NAMECHEAP_SMTP_PORT_SSL;
+}
+
+function normalizeNamecheapSmtpForm(formData) {
+  const smtpPort = normalizeSmtpPort(formData.smtpPort);
+  const smtpSecure = smtpPort === NAMECHEAP_SMTP_PORT_SSL;
+  const smtpUser = String(formData.smtpUser || '').trim().toLowerCase();
+  const smtpFromEmail = String(formData.smtpFromEmail || smtpUser).trim().toLowerCase();
+  const smtpFromName = String(formData.smtpFromName || formData.storeName || 'Custom Controller').trim();
+
+  return {
+    ...formData,
+    smtpHost: NAMECHEAP_SMTP_HOST,
+    smtpPort,
+    smtpSecure,
+    smtpUser,
+    smtpFromEmail,
+    smtpFromName
+  };
+}
+
+function validateNamecheapSmtpForm(formData, hasStoredSmtpPass) {
+  const normalized = normalizeNamecheapSmtpForm(formData);
+
+  if (!normalized.smtpUser) {
+    return 'SMTP user is required.';
+  }
+
+  if (!isValidEmail(normalized.smtpUser)) {
+    return 'SMTP user must be a valid full email address.';
+  }
+
+  if (!normalized.smtpFromEmail) {
+    return 'From email is required.';
+  }
+
+  if (!isValidEmail(normalized.smtpFromEmail)) {
+    return 'From email must be a valid email address.';
+  }
+
+  if (!String(formData.smtpPass || '').trim() && !hasStoredSmtpPass) {
+    return 'SMTP password is required.';
+  }
+
+  if (!normalized.smtpFromName) {
+    return 'From name is required.';
+  }
+
+  return '';
+}
+
 const AdminSettings = () => {
   const [formData, setFormData] = useState(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState('success');
   const [hasStoredSmtpPass, setHasStoredSmtpPass] = useState(false);
 
   useEffect(() => {
@@ -63,7 +127,9 @@ const AdminSettings = () => {
           setFormData({
             ...defaultSettings,
             ...data,
-            smtpSecure: Boolean(data.smtpSecure),
+            smtpHost: String(data.smtpHost || NAMECHEAP_SMTP_HOST).trim() || NAMECHEAP_SMTP_HOST,
+            smtpPort: normalizeSmtpPort(data.smtpPort),
+            smtpSecure: normalizeSmtpPort(data.smtpPort) === NAMECHEAP_SMTP_PORT_SSL,
             smtpPass: ''
           });
         }
@@ -81,6 +147,15 @@ const AdminSettings = () => {
       setFormData((current) => ({ ...current, [name]: checked }));
       return;
     }
+    if (name === 'smtpPort') {
+      const smtpPort = normalizeSmtpPort(value);
+      setFormData((current) => ({
+        ...current,
+        smtpPort,
+        smtpSecure: smtpPort === NAMECHEAP_SMTP_PORT_SSL
+      }));
+      return;
+    }
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
@@ -88,11 +163,19 @@ const AdminSettings = () => {
     event.preventDefault();
     setSaving(true);
     setMessage('');
+    setMessageTone('success');
     try {
+      const validationError = validateNamecheapSmtpForm(formData, hasStoredSmtpPass);
+      if (validationError) {
+        setMessage(validationError);
+        setMessageTone('error');
+        setSaving(false);
+        return;
+      }
+
+      const normalizedSmtp = normalizeNamecheapSmtpForm(formData);
       const nextPayload = {
-        ...formData,
-        smtpPort: String(formData.smtpPort || '').trim(),
-        smtpSecure: Boolean(formData.smtpSecure),
+        ...normalizedSmtp,
         updatedAt: new Date()
       };
 
@@ -108,9 +191,11 @@ const AdminSettings = () => {
       setHasStoredSmtpPass(hasStoredSmtpPass || Boolean(String(formData.smtpPass || '').trim()));
       setFormData((current) => ({ ...current, smtpPass: '' }));
       setMessage('Settings saved.');
+      setMessageTone('success');
     } catch (error) {
       console.error('Failed to save settings', error);
       setMessage('Failed to save settings.');
+      setMessageTone('error');
     } finally {
       setSaving(false);
     }
@@ -260,24 +345,53 @@ const AdminSettings = () => {
           <div>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>SMTP & Email Delivery</div>
             <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
-              Order emails to the admin and customer use these settings. Leave the password blank to keep the current saved password.
+              Namecheap Private Email is configured here using the secure official SMTP server. Leave the password blank to keep the current saved password.
             </div>
+          </div>
+
+          <div style={{
+            padding: '0.85rem 1rem',
+            borderRadius: '8px',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            background: 'rgba(59, 130, 246, 0.08)',
+            color: '#cbd5f5',
+            fontSize: '0.92rem',
+            lineHeight: 1.5
+          }}>
+            Namecheap Private Email requires `mail.privateemail.com`, full email address for SMTP user, and authenticated sending.
+            Recommended secure mode is `465` with SSL/TLS. Port `587` uses STARTTLS.
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <label style={{ display: 'grid', gap: '0.45rem' }}>
               <span>SMTP Host</span>
-              <input name="smtpHost" value={formData.smtpHost} onChange={handleChange} style={fieldStyle} />
+              <input
+                name="smtpHost"
+                value={NAMECHEAP_SMTP_HOST}
+                readOnly
+                style={{ ...fieldStyle, opacity: 0.75, cursor: 'not-allowed' }}
+              />
             </label>
 
             <label style={{ display: 'grid', gap: '0.45rem' }}>
               <span>SMTP Port</span>
-              <input name="smtpPort" value={formData.smtpPort} onChange={handleChange} style={fieldStyle} />
+              <select name="smtpPort" value={formData.smtpPort} onChange={handleChange} style={fieldStyle}>
+                <option value={NAMECHEAP_SMTP_PORT_SSL}>465 - SSL/TLS (Recommended)</option>
+                <option value={NAMECHEAP_SMTP_PORT_STARTTLS}>587 - STARTTLS</option>
+              </select>
             </label>
 
             <label style={{ display: 'grid', gap: '0.45rem' }}>
               <span>SMTP User</span>
-              <input name="smtpUser" value={formData.smtpUser} onChange={handleChange} style={fieldStyle} />
+              <input
+                type="email"
+                name="smtpUser"
+                value={formData.smtpUser}
+                onChange={handleChange}
+                placeholder="mailbox@yourdomain.com"
+                style={fieldStyle}
+                required
+              />
             </label>
 
             <label style={{ display: 'grid', gap: '0.45rem' }}>
@@ -296,12 +410,27 @@ const AdminSettings = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <label style={{ display: 'grid', gap: '0.45rem' }}>
               <span>From Email</span>
-              <input name="smtpFromEmail" value={formData.smtpFromEmail} onChange={handleChange} style={fieldStyle} />
+              <input
+                type="email"
+                name="smtpFromEmail"
+                value={formData.smtpFromEmail}
+                onChange={handleChange}
+                placeholder="mailbox@yourdomain.com"
+                style={fieldStyle}
+                required
+              />
             </label>
 
             <label style={{ display: 'grid', gap: '0.45rem' }}>
               <span>From Name</span>
-              <input name="smtpFromName" value={formData.smtpFromName} onChange={handleChange} style={fieldStyle} />
+              <input
+                name="smtpFromName"
+                value={formData.smtpFromName}
+                onChange={handleChange}
+                placeholder="Custom Controller"
+                style={fieldStyle}
+                required
+              />
             </label>
           </div>
 
@@ -310,9 +439,10 @@ const AdminSettings = () => {
               type="checkbox"
               name="smtpSecure"
               checked={Boolean(formData.smtpSecure)}
-              onChange={handleChange}
+              readOnly
+              disabled
             />
-            Use secure SMTP / SSL
+            Use secure SMTP / SSL (automatic from selected port)
           </label>
 
           {hasStoredSmtpPass && !formData.smtpPass && (
@@ -340,7 +470,7 @@ const AdminSettings = () => {
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
 
-          {message && <div style={{ color: message.includes('Failed') ? '#f87171' : '#4ade80' }}>{message}</div>}
+          {message && <div style={{ color: messageTone === 'error' ? '#f87171' : '#4ade80' }}>{message}</div>}
         </div>
       </form>
     </div>

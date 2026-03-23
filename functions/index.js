@@ -33,6 +33,10 @@ let cachedBaseControllerBuf = null;
 let cachedSmallControllerBuf = null;
 let cachedSmtpTransporter = null;
 let cachedSmtpTransporterKey = "";
+const NAMECHEAP_SMTP_HOST = "mail.privateemail.com";
+const NAMECHEAP_SMTP_PORT_SSL = 465;
+const NAMECHEAP_SMTP_PORT_STARTTLS = 587;
+const emailAddressPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const maskCache = {};
 
 function getBaseControllerDataUri() {
@@ -811,16 +815,28 @@ async function getGeneralAdminSettings() {
   }
 }
 
+function isValidEmailAddress(value) {
+  return emailAddressPattern.test(String(value || "").trim());
+}
+
+function normalizeNamecheapHost(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized || normalized === "smtp.privateemail.com" || normalized === NAMECHEAP_SMTP_HOST) {
+    return NAMECHEAP_SMTP_HOST;
+  }
+  return normalized;
+}
+
 function getSmtpConfig(settings = {}) {
-  const port = Number(settings.smtpPort || process.env.SMTP_PORT || 587);
-  const secureSetting = settings.smtpSecure;
-  const secure = typeof secureSetting === "boolean"
-    ? secureSetting
-    : (String(secureSetting || process.env.SMTP_SECURE || "").trim().toLowerCase() === "true" || port === 465);
-  const host = String(settings.smtpHost || process.env.SMTP_HOST || "").trim();
-  const user = String(settings.smtpUser || process.env.SMTP_USER || "").trim();
+  const requestedPort = Number(settings.smtpPort || process.env.SMTP_PORT || NAMECHEAP_SMTP_PORT_SSL);
+  const port = requestedPort === NAMECHEAP_SMTP_PORT_STARTTLS ?
+    NAMECHEAP_SMTP_PORT_STARTTLS :
+    NAMECHEAP_SMTP_PORT_SSL;
+  const secure = port === NAMECHEAP_SMTP_PORT_SSL;
+  const host = normalizeNamecheapHost(settings.smtpHost || process.env.SMTP_HOST);
+  const user = String(settings.smtpUser || process.env.SMTP_USER || "").trim().toLowerCase();
   const pass = String(settings.smtpPass || process.env.SMTP_PASS || "").trim();
-  const fromEmail = String(settings.smtpFromEmail || process.env.SMTP_FROM_EMAIL || user || "").trim();
+  const fromEmail = String(settings.smtpFromEmail || process.env.SMTP_FROM_EMAIL || user || "").trim().toLowerCase();
   const fromName = String(settings.smtpFromName || process.env.SMTP_FROM_NAME || settings.storeName || "PS5 Controller").trim();
   const replyTo = String(settings.supportEmail || settings.adminEmail || fromEmail).trim();
 
@@ -836,13 +852,33 @@ function getSmtpConfig(settings = {}) {
   };
 }
 
+function validateSmtpConfig(config) {
+  if (!config.user || !config.pass || !config.fromEmail) {
+    return "Missing SMTP config. Set Namecheap Private Email fields in Admin Settings or functions/.env.";
+  }
+  if (config.host !== NAMECHEAP_SMTP_HOST) {
+    return "Invalid SMTP host. Namecheap Private Email must use mail.privateemail.com.";
+  }
+  if (config.port !== NAMECHEAP_SMTP_PORT_SSL && config.port !== NAMECHEAP_SMTP_PORT_STARTTLS) {
+    return "Invalid SMTP port. Namecheap Private Email supports only 465 (SSL/TLS) or 587 (STARTTLS).";
+  }
+  if (!isValidEmailAddress(config.user)) {
+    return "Invalid SMTP user. Use the full Namecheap mailbox email address.";
+  }
+  if (!isValidEmailAddress(config.fromEmail)) {
+    return "Invalid From email address.";
+  }
+  return "";
+}
+
 function getSmtpTransporter(settings = {}) {
   const config = getSmtpConfig(settings);
-  if (!config.host || !config.user || !config.pass || !config.fromEmail) {
+  const configError = validateSmtpConfig(config);
+  if (configError) {
     return {
       transporter: null,
       config,
-      error: "Missing SMTP config. Set SMTP fields in Admin Settings or functions/.env."
+      error: configError
     };
   }
 
@@ -851,7 +887,8 @@ function getSmtpTransporter(settings = {}) {
     port: config.port,
     secure: config.secure,
     user: config.user,
-    fromEmail: config.fromEmail
+    fromEmail: config.fromEmail,
+    pass: config.pass
   });
 
   if (!cachedSmtpTransporter || cachedSmtpTransporterKey !== configKey) {
@@ -859,9 +896,14 @@ function getSmtpTransporter(settings = {}) {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      requireTLS: !config.secure,
       auth: {
         user: config.user,
         pass: config.pass
+      },
+      tls: {
+        minVersion: "TLSv1.2",
+        servername: config.host
       }
     });
     cachedSmtpTransporterKey = configKey;
