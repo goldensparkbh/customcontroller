@@ -1048,12 +1048,12 @@
             const shellOverlay = document.getElementById("overlay-shell");
             const trimOverlay = document.getElementById("overlay-trim");
             const touchOverlay = document.getElementById("overlay-touchpad");
-            if (shellOverlay) shellOverlay.style.display = shellTrans ? "block" : "none";
-            if (trimOverlay) trimOverlay.style.display = trimTrans ? "block" : "none";
-            if (touchOverlay) touchOverlay.style.display = touchTrans ? "block" : "none";
+            if (shellOverlay) shellOverlay.style.display = "none";
+            if (trimOverlay) trimOverlay.style.display = "none";
+            if (touchOverlay) touchOverlay.style.display = "none";
 
             if (faceFrontImg) {
-                faceFrontImg.src = anyTransFront ? "/assets/controller_t.png" : "/assets/controller.png";
+                faceFrontImg.src = "/assets/controller.png";
             }
         } else {
             if (faceBackImg) {
@@ -1222,7 +1222,7 @@
 
         let ctrlSrc = "";
         if (side === "front") {
-            ctrlSrc = anyTransFront ? "/assets/controller_t.png" : "/assets/controller.png";
+            ctrlSrc = "/assets/controller.png";
         } else {
             ctrlSrc = "/assets/controller_back.png";
         }

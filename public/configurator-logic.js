@@ -995,43 +995,16 @@
             return false;
         };
 
-        const transStatus = {
-            shell: isPartTransparent("shell"),
-            trimpiece: isPartTransparent("trimpiece"),
-            touchpad: isPartTransparent("touchpad")
-        };
-
-        const anyTrans = transStatus.shell || transStatus.trimpiece || transStatus.touchpad;
-        const allTrans = transStatus.shell && transStatus.trimpiece && transStatus.touchpad;
-        const anySolid = !transStatus.shell || !transStatus.trimpiece || !transStatus.touchpad;
-
-        let frontSrc = "/assets/controller.png";
-
-        // Case 1: All Solid -> controller.png (already default)
-        // Case 2: All Transparent -> controller_t.png
-        // Case 3: Mixed -> controller_t.png + specific solid overlays
-
-        if (anyTrans) {
-            frontSrc = "/assets/controller_t.png";
-        }
-
+        const frontSrc = "/assets/controller.png";
         if (faceFrontImg.getAttribute("src") !== frontSrc) {
             faceFrontImg.src = frontSrc;
         }
 
-        // Overlay Visibility (Mixed case logic)
-        // Only show overlays if we are using the transparent base (controller_t.png)
-        // AND the specific part is SOLID.
-        if (anyTrans) {
-            if (overlayShellImg) overlayShellImg.style.display = transStatus.shell ? "none" : "block";
-            if (overlayTrimImg) overlayTrimImg.style.display = transStatus.trimpiece ? "none" : "block";
-            if (overlayTouchpadImg) overlayTouchpadImg.style.display = transStatus.touchpad ? "none" : "block";
-        } else {
-            // All solid -> Hide all overlays because controller.png already has them
-            if (overlayShellImg) overlayShellImg.style.display = "none";
-            if (overlayTrimImg) overlayTrimImg.style.display = "none";
-            if (overlayTouchpadImg) overlayTouchpadImg.style.display = "none";
-        }
+        // Transparent selections are now image overlays, so the old transparent-base
+        // controller variants and solid compensation overlays are no longer used.
+        if (overlayShellImg) overlayShellImg.style.display = "none";
+        if (overlayTrimImg) overlayTrimImg.style.display = "none";
+        if (overlayTouchpadImg) overlayTouchpadImg.style.display = "none";
 
         // --- BACK SIDE LOGIC ---
         let backSrc = "/assets/controller_back.png";
