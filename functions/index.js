@@ -8,6 +8,7 @@ const SVGtoPDF = require("svg-to-pdfkit");
 const fs = require("fs");
 const path = require("path");
 const nodemailer = require("nodemailer");
+const sharp = require("sharp");
 const { FormData: UndiciFormData, Blob: UndiciBlob } = require("undici");
 const FormDataCtor = typeof FormData !== "undefined" ? FormData : UndiciFormData;
 const BlobCtor = typeof Blob !== "undefined" ? Blob : UndiciBlob;
@@ -1000,6 +1001,90 @@ function buildLayerPreviewDataUri(item, side, siteBaseUrl) {
   return "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
 }
 
+async function getPreviewAssetBuffer(src, siteBaseUrl) {
+  const normalizedSrc = normalizePreviewSrc(src, siteBaseUrl);
+  if (!normalizedSrc || /^cid:/i.test(normalizedSrc)) return null;
+
+  if (/^data:image\//i.test(normalizedSrc)) {
+    const commaIndex = normalizedSrc.indexOf(",");
+    if (commaIndex < 0) return null;
+    const meta = normalizedSrc.slice(5, commaIndex).toLowerCase();
+    const payload = normalizedSrc.slice(commaIndex + 1);
+    if (meta.includes(";base64")) {
+      return Buffer.from(payload, "base64");
+    }
+    return Buffer.from(decodeURIComponent(payload), "utf8");
+  }
+
+  if (/^https?:\/\//i.test(normalizedSrc)) {
+    const response = await fetch(normalizedSrc);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  return null;
+}
+
+async function buildLayerPreviewRasterBuffer(item, side, siteBaseUrl) {
+  const layers = getItemPreviewLayers(item, side)
+    .map((layer, index) => ({
+      src: normalizePreviewSrc(layer.src, siteBaseUrl),
+      opacity: Number.isFinite(Number(layer.opacity)) ? Number(layer.opacity) : 1,
+      zIndex: Number.isFinite(Number(layer.zIndex)) ? Number(layer.zIndex) : index
+    }))
+    .filter((layer) => layer.src)
+    .sort((a, b) => {
+      if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
+      return 0;
+    });
+
+  if (!layers.length) return null;
+
+  const width = 1166;
+  const height = 768;
+  const composites = [];
+
+  for (const layer of layers) {
+    try {
+      const sourceBuffer = await getPreviewAssetBuffer(layer.src, siteBaseUrl);
+      if (!sourceBuffer) continue;
+
+      const normalizedLayer = await sharp(sourceBuffer)
+        .resize(width, height, {
+          fit: "contain",
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
+        .png()
+        .toBuffer();
+
+      composites.push({
+        input: normalizedLayer,
+        top: 0,
+        left: 0,
+        blend: "over",
+        opacity: Math.max(0, Math.min(1, layer.opacity))
+      });
+    } catch (error) {
+      console.warn("[buildLayerPreviewRasterBuffer] layer skipped", error?.message || error);
+    }
+  }
+
+  if (!composites.length) return null;
+
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 4,
+      background: "#141829"
+    }
+  })
+    .composite(composites)
+    .jpeg({ quality: 90, mozjpeg: true })
+    .toBuffer();
+}
+
 function getEmailBranding(settings = {}, siteBaseUrl = "") {
   const websiteUrl = String(settings.websiteBaseUrl || siteBaseUrl || "").trim().replace(/\/$/, "");
   const logoUrl = normalizePreviewSrc(
@@ -1660,6 +1745,13 @@ exports.orderPreview = functions.https.onRequest(async (req, res) => {
     const item = items[itemIndex];
     if (!item) {
       return res.status(404).send("Order item not found");
+    }
+
+    const previewRasterBuffer = await buildLayerPreviewRasterBuffer(item, side, siteBaseUrl);
+    if (previewRasterBuffer) {
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=300");
+      return res.send(previewRasterBuffer);
     }
 
     const previewValue = (side === "back"

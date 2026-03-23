@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-CGEQOtO0.js";const n=`
+import{r as t,j as a}from"./index-B3AjQUxF.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -188,6 +188,7 @@ const mobileThemeToggle = document.getElementById("mobileThemeToggle");
 const navMenuBtn = document.querySelector(".nav-menu-btn");
 const mobileNavOverlay = document.getElementById("mobileNavOverlay");
 const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+let currentTheme = localStorage.getItem("ez_theme") || "dark";
 
 function t(key) {
   return (i18n[navLang] && i18n[navLang][key]) || key;
@@ -219,8 +220,6 @@ function toggleNavLang() {
 updateNavLangLabel();
 if (navLangToggle) navLangToggle.addEventListener("click", toggleNavLang);
 if (mobileLangToggle) mobileLangToggle.addEventListener("click", toggleNavLang);
-
-let currentTheme = localStorage.getItem("ez_theme") || "dark";
 
 function applyTheme() {
   document.body.classList.toggle("theme-light", currentTheme === "light");

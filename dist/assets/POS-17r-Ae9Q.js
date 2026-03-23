@@ -1,4 +1,4 @@
-import{r as e,j as a}from"./index-CGEQOtO0.js";const s=`
+import{r as e,j as a}from"./index-B3AjQUxF.js";const o=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav" style="display:none;"></div>
 
@@ -80,7 +80,7 @@ import{r as e,j as a}from"./index-CGEQOtO0.js";const s=`
     <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
   </nav>
 </aside>
-`,o=`
+`,n=`
   let navLang = localStorage.getItem("ez_lang") || "ar";
   const i18n = window.__EZ_I18N__ || {};
   
@@ -99,7 +99,7 @@ import{r as e,j as a}from"./index-CGEQOtO0.js";const s=`
     });
     
     // Update labels for toggles
-    const langToggle = document.getElementById("langToggle");
+    const langToggle = document.querySelector(".lang-toggle-btn");
     if (langToggle) langToggle.textContent = navLang === "ar" ? "EN" : "AR";
     const mobileLangToggle = document.getElementById("mobileLangToggle");
     if (mobileLangToggle) mobileLangToggle.textContent = navLang === "ar" ? "EN" : "AR";
@@ -143,17 +143,17 @@ import{r as e,j as a}from"./index-CGEQOtO0.js";const s=`
     setStatus(t("posStatusLoading"));
     try {
       const orgId = "892379608";
-      const url = \`/zoho/inventory/v1/items?organization_id=\${orgId}&per_page=200\`;
+      const url = "/zoho/inventory/v1/items?organization_id=" + orgId + "&per_page=200";
       console.log("[POS] Fetching items from:", url);
       const res = await fetch(url);
       if (!res.ok) {
          const errText = await res.text();
-         console.error(\`[POS] Fetch failed (\${res.status}):\`, errText);
+         console.error("[POS] Fetch failed (" + res.status + "):", errText);
          throw new Error("HTTP " + res.status);
       }
       const json = await res.json();
       const items = json.items || [];
-      console.log(\`[POS] Received \${items.length} items from Zoho.\`);
+      console.log("[POS] Received " + items.length + " items from Zoho.");
       
       const filteredItems = items.filter(it => {
           const status = (it.status || it.item_status || "").toLowerCase();
@@ -163,7 +163,7 @@ import{r as e,j as a}from"./index-CGEQOtO0.js";const s=`
           const isNotPS5 = !name.toLowerCase().startsWith("ps5_") && !sku.toLowerCase().startsWith("ps5_");
           return isActive && isNotPS5;
       });
-      console.log(\`[POS] Filtered to \${filteredItems.length} non-configurator items.\`);
+      console.log("[POS] Filtered to " + filteredItems.length + " non-configurator items.");
       
       allProducts = filteredItems;
       
@@ -330,7 +330,7 @@ function renderCart() {
     const div = document.createElement("div");
     div.className = "pos-cart-item";
 
-    const imageUrl = item.preview ? (item.preview.includes('?') ? item.preview + '&organization_id=892379608' : item.preview + '?organization_id=892379608') : '/assets/placeholder.png';
+    let imageUrl = item.preview ? (item.preview.includes('?') ? item.preview + '&organization_id=892379608' : item.preview + '?organization_id=892379608') : '/assets/placeholder.png';
     if (!imageUrl.startsWith('/')) imageUrl = '/assets/placeholder.png'; // safety
 
     let html = '<img class="pos-cart-item-img" src="' + imageUrl + '" onerror="this.src='/assets/placeholder.png'">';
@@ -374,25 +374,38 @@ document.getElementById("filterInStock").onchange = (e) => {
 };
 
 // Cart Actions
-document.getElementById("clearCart").onclick = () => {
-  cart = [];
-  updateCart();
-};
-document.getElementById("posCheckout").onclick = () => {
-  if (cart.length > 0) window.location.href = "/checkout";
-};
-document.getElementById("cartToggle").onclick = () => setCartOpen(true);
-document.getElementById("closeCart").onclick = () => setCartOpen(false);
+const clearCartBtn = document.getElementById("clearCart");
+if (clearCartBtn) {
+  clearCartBtn.onclick = () => {
+    cart = [];
+    updateCart();
+  };
+}
+const posCheckoutBtn = document.getElementById("posCheckout");
+if (posCheckoutBtn) {
+  posCheckoutBtn.onclick = () => {
+    if (cart.length > 0) window.location.href = "/checkout";
+  };
+}
+const cartToggleBtn = document.getElementById("cartToggle");
+if (cartToggleBtn) cartToggleBtn.onclick = () => setCartOpen(true);
+const closeCartBtn = document.getElementById("closeCart");
+if (closeCartBtn) closeCartBtn.onclick = () => setCartOpen(false);
 
 // Mobile Nav Toggles
-document.querySelector(".nav-menu-btn").onclick = () => setMobileNavOpen(true);
-document.getElementById("mobileNavOverlay").onclick = () => setMobileNavOpen(false);
+const navMenuBtn = document.querySelector(".nav-menu-btn");
+if (navMenuBtn) navMenuBtn.onclick = () => setMobileNavOpen(true);
+const mobileNavOverlay = document.getElementById("mobileNavOverlay");
+if (mobileNavOverlay) mobileNavOverlay.onclick = () => setMobileNavOpen(false);
 const closeNavBtn = document.getElementById("closeMobileNav");
 if (closeNavBtn) closeNavBtn.onclick = () => setMobileNavOpen(false);
 
-document.getElementById("mobileNavDrawer").querySelectorAll("a").forEach(a => {
-  a.onclick = () => setMobileNavOpen(false);
-});
+const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+if (mobileNavDrawer) {
+  mobileNavDrawer.querySelectorAll("a").forEach(a => {
+    a.onclick = () => setMobileNavOpen(false);
+  });
+}
 
 // Language Toggles
 const handleLangToggle = () => {
@@ -400,11 +413,13 @@ const handleLangToggle = () => {
   localStorage.setItem("ez_lang", navLang);
   location.reload();
 };
-document.getElementById("langToggle").onclick = handleLangToggle;
-document.getElementById("mobileLangToggle").onclick = handleLangToggle;
+const langToggleBtn = document.querySelector(".lang-toggle-btn");
+if (langToggleBtn) langToggleBtn.onclick = handleLangToggle;
+const mobileLangToggleBtn = document.getElementById("mobileLangToggle");
+if (mobileLangToggleBtn) mobileLangToggleBtn.onclick = handleLangToggle;
 
 // Initialize
 applyTranslations();
 loadItems();
 updateCart(); // Initial badge & items
-`;function i(){return e.useEffect(()=>{const t=document.createElement("script");return t.textContent=o,document.body.appendChild(t),()=>{document.body.contains(t)&&document.body.removeChild(t)}},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:s}})}export{i as default};
+`;function i(){return e.useEffect(()=>{const t=document.createElement("script");return t.textContent=n,document.body.appendChild(t),()=>{document.body.contains(t)&&document.body.removeChild(t)}},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:o}})}export{i as default};
