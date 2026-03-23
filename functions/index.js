@@ -1018,7 +1018,12 @@ function getEmailBranding(settings = {}, siteBaseUrl = "") {
   };
 }
 
-function buildTrackingUrl(settings, orderId, orderNumber, trackingNumber) {
+function buildTrackingUrl(settings, orderId, orderNumber, trackingNumber, siteBaseUrl = "") {
+  const internalBaseUrl = String(siteBaseUrl || settings?.websiteBaseUrl || "").trim().replace(/\/$/, "");
+  if (internalBaseUrl && orderId) {
+    return `${internalBaseUrl}/trackorder?order=${encodeURIComponent(orderId)}`;
+  }
+
   let baseUrl = String(settings?.trackingBaseUrl || "").trim();
   if (!baseUrl) return "";
 
@@ -1042,6 +1047,37 @@ function buildTrackingUrl(settings, orderId, orderNumber, trackingNumber) {
   }
 
   return baseUrl;
+}
+
+function serializeTrackDate(value) {
+  if (!value) return "";
+  if (typeof value?.toDate === "function") return value.toDate().toISOString();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
+function buildPublicTrackingOrder(orderId, orderDoc = {}) {
+  return {
+    id: orderId,
+    orderNumber: orderDoc.orderNumber || "",
+    status: orderDoc.status || "Pending",
+    paymentStatus: orderDoc.paymentStatus || "Pending",
+    total: toFiniteNumber(orderDoc.total, 0),
+    subtotal: toFiniteNumber(orderDoc.subtotal, 0),
+    currency: orderDoc.currency || "BHD",
+    createdAt: serializeTrackDate(orderDoc.createdAt),
+    updatedAt: serializeTrackDate(orderDoc.updatedAt),
+    shipping: {
+      method: orderDoc?.shipping?.method || "",
+      trackingNumber: orderDoc?.shipping?.trackingNumber || ""
+    },
+    items: Array.isArray(orderDoc.items) ? orderDoc.items.map((item) => ({
+      name: item?.name || "Item",
+      quantity: toFiniteNumber(item?.quantity, 1) > 0 ? toFiniteNumber(item.quantity, 1) : 1,
+      unitPrice: item?.unitPrice != null ? toFiniteNumber(item.unitPrice, 0) : null,
+      total: item?.total != null ? toFiniteNumber(item.total, 0) : 0
+    })) : []
+  };
 }
 
 function buildOrderPreviewUrls(orderId, items, siteBaseUrl) {
@@ -1181,7 +1217,7 @@ function buildOrderEmailContext({ req, settings, orderId, orderDoc }) {
   const customerPhone = String(orderDoc?.customer?.phone || "").trim();
   const currency = orderDoc.currency || settings.defaultCurrency || "BHD";
   const siteBaseUrl = getSiteBaseUrl(req, settings);
-  const trackingUrl = buildTrackingUrl(settings, orderId, orderDoc.orderNumber, orderDoc?.shipping?.trackingNumber || "");
+  const trackingUrl = buildTrackingUrl(settings, orderId, orderDoc.orderNumber, orderDoc?.shipping?.trackingNumber || "", siteBaseUrl);
   const previewUrls = buildOrderPreviewUrls(orderId, orderDoc.items, siteBaseUrl);
   const itemsText = renderOrderItemsText(orderDoc.items, currency, previewUrls);
   const itemsHtml = renderOrderItemsHtml(orderDoc.items, currency, previewUrls);
@@ -1413,6 +1449,37 @@ exports.orderHandler = functions
     res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
     res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     if (req.method === "OPTIONS") return res.status(204).send("");
+
+    const requestPath = String((req.path || req.url || "/").split("?")[0] || "/")
+      .replace(/\/+$/, "") || "/";
+
+    if (req.method === "GET") {
+      const isTrackOrderRequest = requestPath === "/trackorder" || requestPath === "/api/trackorder";
+      if (!isTrackOrderRequest) {
+        return res.status(405).json({ error: "method_not_allowed" });
+      }
+
+      try {
+        const orderId = String(req.query.order || req.query.order_id || req.query.id || "").trim();
+        if (!orderId) {
+          return res.status(400).json({ error: "missing_order_id" });
+        }
+
+        const snapshot = await getFirestore().collection("orders").doc(orderId).get();
+        if (!snapshot.exists) {
+          return res.status(404).json({ error: "order_not_found" });
+        }
+
+        return res.json({
+          success: true,
+          order: buildPublicTrackingOrder(snapshot.id, snapshot.data() || {})
+        });
+      } catch (error) {
+        console.error("[orderHandler] trackorder error", error);
+        return res.status(500).json({ error: error.message || "trackorder_failed" });
+      }
+    }
+
     if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
 
     try {
@@ -1595,10 +1662,10 @@ exports.orderPreview = functions.https.onRequest(async (req, res) => {
       return res.status(404).send("Order item not found");
     }
 
-    const previewValue = buildLayerPreviewDataUri(item, side, siteBaseUrl) ||
-      (side === "back"
-        ? (item.previewBack || null)
-        : (item.previewFront || null));
+    const previewValue = (side === "back"
+      ? (item.previewBack || null)
+      : (item.previewFront || null)) ||
+      buildLayerPreviewDataUri(item, side, siteBaseUrl);
 
     if (!previewValue) {
       return res.status(404).send("Preview not found");

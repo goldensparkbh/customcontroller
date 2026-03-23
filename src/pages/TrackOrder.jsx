@@ -326,33 +326,70 @@ async function fetchJson(url, label) {
   return res.json();
 }
 
+function formatDateValue(value) {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function getLineTotal(item) {
+  const quantity = Number(item && item.quantity) > 0 ? Number(item.quantity) : 1;
+  const unit = item && item.unitPrice != null
+    ? Number(item.unitPrice)
+    : (item && item.total != null ? Number(item.total) : 0);
+  return (Number.isFinite(unit) ? unit : 0) * quantity;
+}
+
+function normalizeOrderStatus(status, paymentStatus) {
+  const normalized = String(status || "").trim().toLowerCase();
+  const normalizedPayment = String(paymentStatus || "").trim().toLowerCase();
+
+  if (normalized === "paid" || normalized === "confirmed") return "Paid";
+  if (normalized === "on going" || normalized === "ongoing" || normalized === "in progress") return "On Going";
+  if (normalized === "completed") return "Completed";
+  if (normalized === "shipped") return "Shipped";
+  if (normalized === "canceled" || normalized === "cancelled") return "Canceled";
+  if (normalized === "pending") return normalizedPayment === "paid" ? "Paid" : "On Going";
+  return normalizedPayment === "paid" ? "Paid" : "On Going";
+}
+
+function getTranslatedStatus(status) {
+  if (status === "Paid") return t("trackOrderReceived");
+  if (status === "On Going") return t("trackOrderProcessing");
+  if (status === "Completed") return t("trackOnTheWay");
+  if (status === "Shipped") return t("trackDelivered");
+  if (status === "Canceled") return t("trackCanceled");
+  return status;
+}
+
 async function load() {
   const orderId = getOrderId();
   if (!orderId) {
     setStatus(t("trackNoOrderId"));
     return;
   }
-  setStatus(t("trackLoadingPrefix") + orderId + " …");
+  setStatus(t("trackLoadingPrefix") + orderId + " ...");
   stepsListEl.innerHTML = "";
   orderDetailsEl.innerHTML = "";
   orderItemsEl.innerHTML = "";
 
   try {
-    const so = await fetchJson("/zoho/inventory/v1/salesorders/" + encodeURIComponent(orderId), "salesorder");
-    const salesorder = so.salesorder || {};
-    const soId = salesorder.salesorder_id ? String(salesorder.salesorder_id) : String(orderId);
-    const soNumber = salesorder.salesorder_number || "";
-    const soStatus = salesorder.status || "Unknown";
-    const soDate = salesorder.date || salesorder.created_time || "";
-    const soTotal = typeof salesorder.total === "number" ? salesorder.total.toFixed(2) : "";
-    const currency = salesorder.currency_code || "BHD";
-    // render order details
+    const payload = await fetchJson("/api/trackorder?order=" + encodeURIComponent(orderId), "trackorder");
+    const order = payload.order || {};
+    const orderNumber = order.orderNumber ? "#" + String(order.orderNumber).padStart(6, "0") : String(order.id || orderId);
+    const status = normalizeOrderStatus(order.status, order.paymentStatus);
+    const currency = order.currency || "BHD";
+    const totalText = Number.isFinite(Number(order.total)) ? (currency + " " + Number(order.total).toFixed(2)) : "";
+
     const details = [
-      { label: t("trackOrderIdLabel"), value: soNumber || soId },
-      { label: t("trackStatusLabel"), value: soStatus },
-      { label: t("trackDateLabel"), value: soDate },
-      { label: t("trackTotalLabel"), value: soTotal ? currency + " " + soTotal : "" }
+      { label: t("trackOrderIdLabel"), value: orderNumber },
+      { label: t("trackStatusLabel"), value: getTranslatedStatus(status) },
+      { label: t("trackDateLabel"), value: formatDateValue(order.createdAt) },
+      { label: t("trackTotalLabel"), value: totalText }
     ];
+    if (order.shipping && order.shipping.trackingNumber) {
+      details.push({ label: t("trackTrackingNumberLabel"), value: order.shipping.trackingNumber });
+    }
     orderDetailsEl.innerHTML = "";
     details.forEach(d => {
       const item = document.createElement("div");
@@ -362,14 +399,14 @@ async function load() {
       l.textContent = d.label;
       const v = document.createElement("div");
       v.className = "detail-value";
-      v.textContent = d.value || "—";
+      v.textContent = d.value || "N/A";
       item.appendChild(l);
       item.appendChild(v);
       orderDetailsEl.appendChild(item);
     });
 
     // render line items
-    const items = Array.isArray(salesorder.line_items) ? salesorder.line_items : [];
+    const items = Array.isArray(order.items) ? order.items : [];
     const itemsWrap = document.createElement("div");
     const title = document.createElement("h3");
     title.textContent = t("trackSalesOrderTitle");
@@ -385,14 +422,14 @@ async function load() {
         row.className = "item-row";
         const name = document.createElement("div");
         name.className = "item-label";
-        name.textContent = li.name || li.item_name || "Item";
+        name.textContent = li.name || "Item";
         const qty = document.createElement("div");
         qty.className = "item-qty";
         qty.textContent = t("trackQtyLabel") + " " + (li.quantity || 0);
         const price = document.createElement("div");
         price.className = "item-price";
-        const rate = typeof li.rate === "number" ? li.rate.toFixed(2) : "";
-        price.textContent = rate ? (li.currency_code || currency || "BHD") + " " + rate : "";
+        const lineTotal = getLineTotal(li);
+        price.textContent = Number.isFinite(lineTotal) ? (currency + " " + lineTotal.toFixed(2)) : "";
         row.appendChild(name);
         row.appendChild(qty);
         row.appendChild(price);
@@ -408,66 +445,23 @@ async function load() {
       ontheway: assetBase + "/assets/track/ontheway.png?" + version,
       delivered: assetBase + "/assets/track/delivered.png?" + version
     };
-    const orderDone = true;
-
-    // Packages (scoped to this sales order)
-    let packages = [];
-    try {
-      const pkg = await fetchJson("/zoho/inventory/v1/packages?salesorder_id=" + encodeURIComponent(orderId) + "&per_page=200", "packages");
-      packages = (pkg.packages || []).filter(p => {
-        const pid = p.salesorder_id != null ? String(p.salesorder_id) : "";
-        const pnum = p.salesorder_number || "";
-        return (pid && pid === soId) || (soNumber && pnum === soNumber);
-      });
-    } catch (e) {
-      // ignore
-    }
-    const pkgSummary = packages.length ? "" : "";
-    const processingDone = packages.length > 0;
-
-    // Shipments (scoped to this sales order)
-    let shipments = [];
-    try {
-      const ship = await fetchJson("/zoho/inventory/v1/shipmentorders?salesorder_id=" + encodeURIComponent(orderId) + "&per_page=200", "shipments");
-      shipments = (ship.shipmentorders || []).filter(s => {
-        const sid = s.salesorder_id != null ? String(s.salesorder_id) : "";
-        const snum = s.salesorder_number || "";
-        return (sid && sid === soId) || (soNumber && snum === soNumber);
-      });
-    } catch (e) {
-      // ignore
-    }
-    const onTheWayDone = shipments.length > 0;
-
-    // Delivered (check shipment delivery_status or package delivery_status/status)
-    const deliveredFromShipments = shipments.filter(sh => {
-      const d = (sh.delivery_status || sh.status || "").toLowerCase();
-      return d.includes("delivered");
-    });
-    const deliveredFromPackages = packages.filter(p => {
-      const d = (p.delivery_status || p.status || "").toLowerCase();
-      return d.includes("delivered");
-    });
-    const deliveredCount = deliveredFromShipments.length || deliveredFromPackages.length;
-    const deliveredDone = deliveredCount > 0;
-
-    // Decide current step (last done, unless delivered is done)
-    const stepsData = [
-      { label: t("trackOrderReceived"), value: "", done: orderDone, icon: stepIcons.order },
-      { label: t("trackOrderProcessing"), value: "", done: processingDone, icon: stepIcons.process },
-      { label: t("trackOnTheWay"), value: "", done: onTheWayDone, icon: stepIcons.ontheway },
-      { label: t("trackDelivered"), value: "", done: deliveredDone, icon: stepIcons.delivered }
-    ];
-
-    let currentIndex = -1;
-    if (!deliveredDone) {
-      for (let i = stepsData.length - 1; i >= 0; i--) {
-        if (stepsData[i].done) {
-          currentIndex = i;
-          break;
-        }
-      }
-    }
+    const orderedStatuses = ["Paid", "On Going", "Completed", "Shipped"];
+    const statusIcons = {
+      "Paid": stepIcons.order,
+      "On Going": stepIcons.process,
+      "Completed": stepIcons.delivered,
+      "Shipped": stepIcons.ontheway
+    };
+    const activeStatusIndex = orderedStatuses.indexOf(status);
+    const stepsData = orderedStatuses.map((stepStatus, idx) => ({
+      label: getTranslatedStatus(stepStatus),
+      value: "",
+      done: status === "Canceled"
+        ? (stepStatus === "Paid" && String(order.paymentStatus || "").toLowerCase() === "paid")
+        : activeStatusIndex >= idx,
+      icon: statusIcons[stepStatus]
+    }));
+    const currentIndex = status === "Canceled" ? -1 : activeStatusIndex;
 
     stepsListEl.innerHTML = "";
     stepsData.forEach((step, idx) => {
@@ -476,7 +470,7 @@ async function load() {
       addStep(step.label, step.value, step.done, step.icon, hasLine, isCurrent);
     });
 
-    setStatus(t("trackLoaded"));
+    setStatus(getTranslatedStatus(status));
   } catch (err) {
     console.error(err);
     setStatus(t("trackFailedPrefix") + err.message);
@@ -500,3 +494,4 @@ function TrackOrderPage() {
 }
 
 export default TrackOrderPage;
+

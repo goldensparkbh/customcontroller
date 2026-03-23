@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n';
+import { auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const Navbar = () => {
     const navigate = useNavigate();
     const [lang, setLang] = useState(localStorage.getItem('ez_lang') || 'ar');
+    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
     useEffect(() => {
         // Sync language with standard config variables on mount
@@ -28,6 +31,13 @@ const Navbar = () => {
         });
 
     }, [lang]);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setIsAdminAuthenticated(Boolean(currentUser));
+        });
+        return () => unsubscribe();
+    }, []);
 
     const toggleLanguage = () => {
         const newLang = lang === 'ar' ? 'en' : 'ar';
@@ -62,7 +72,24 @@ const Navbar = () => {
             </div>
 
             {/* Right: Language Toggle only */}
-            <div className="nav-actions">
+            <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {isAdminAuthenticated && (
+                    <button
+                        onClick={() => navigate('/pos')}
+                        className="pos-nav-btn"
+                        style={{
+                            background: 'transparent',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            color: 'var(--color-text, #fff)',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                        }}
+                    >
+                        POS
+                    </button>
+                )}
                 <button
                     onClick={toggleLanguage}
                     className="lang-toggle-btn"

@@ -62,7 +62,11 @@ function App() {
           <Route path="/order-success" element={<OrderSuccessPage />} />
           <Route path="/order-summary" element={<OrderSummaryPage />} />
           <Route path="/trackorder" element={<TrackOrderPage />} />
-          <Route path="/pos" element={<POSPage />} />
+          <Route path="/pos" element={
+            <ProtectedRoute>
+              <POSPage />
+            </ProtectedRoute>
+          } />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/returns" element={<ReturnPolicy />} />
