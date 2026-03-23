@@ -1059,6 +1059,9 @@ function buildOrderPreviewUrls(orderId, items, siteBaseUrl) {
 
 function renderEmailFooter(context) {
   const branding = context.branding || {};
+  const footerLogoBlock = branding.logoUrl
+    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${escapeHtml(context.storeName)}" style="display:block;width:64px;max-width:64px;height:auto;margin:0 auto 14px;" />`
+    : `<div style="margin:0 auto 14px;width:64px;height:64px;border-radius:18px;background:#111827;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#e6edf3;font-weight:800;font-size:11px;">${escapeHtml(context.storeName)}</div>`;
   const footerLinks = [
     branding.websiteUrl ? `<a href="${escapeHtml(branding.websiteUrl)}" style="color:#9efdf8;text-decoration:none;">Website</a>` : "",
     branding.instagramUrl ? `<a href="${escapeHtml(branding.instagramUrl)}" style="color:#9efdf8;text-decoration:none;">Instagram</a>` : "",
@@ -1073,6 +1076,7 @@ function renderEmailFooter(context) {
 
   return `
     <div style="margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;">
+      ${footerLogoBlock}
       ${footerLinks ? `<div style="font-size:13px;color:#9efdf8;line-height:1.8;">${footerLinks}</div>` : ""}
       ${contactBits ? `<div style="margin-top:8px;font-size:12px;color:#8b949e;line-height:1.7;">${contactBits}</div>` : ""}
       <div style="margin-top:10px;font-size:12px;color:#6b7280;">${escapeHtml(context.storeName)}</div>
@@ -1083,8 +1087,8 @@ function renderEmailFooter(context) {
 function wrapOrderEmail({ context, title, subtitle, summaryHtml, bodyHtml, primaryActionHtml = "" }) {
   const branding = context.branding || {};
   const logoBlock = branding.logoUrl
-    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${escapeHtml(context.storeName)}" style="display:block;width:92px;max-width:92px;height:auto;margin:0 auto 18px;" />`
-    : `<div style="margin:0 auto 18px;width:92px;height:92px;border-radius:24px;background:#111827;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#e6edf3;font-weight:800;font-size:14px;">${escapeHtml(context.storeName)}</div>`;
+    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${escapeHtml(context.storeName)}" style="display:block;width:180px;max-width:100%;height:auto;margin:0 auto 22px;" />`
+    : `<div style="margin:0 auto 22px;width:180px;height:96px;border-radius:24px;background:#111827;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#e6edf3;font-weight:800;font-size:20px;">${escapeHtml(context.storeName)}</div>`;
 
   return `
     <div style="margin:0;padding:32px 16px;background:#0b0f14;color:#e6edf3;font-family:Arial,sans-serif;">
