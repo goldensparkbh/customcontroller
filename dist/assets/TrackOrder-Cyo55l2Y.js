@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-BrssmHjO.js";const n=`
+import{r as t,j as a}from"./index-CTIy0p0F.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -152,7 +152,7 @@ import{r as t,j as a}from"./index-BrssmHjO.js";const n=`
     opacity: 0.9;
   }
   .step-card.step-current .step-icon-wrap::before {
-    border-color: rgba(124,252,0,0.7);
+    border-color: rgba(214, 221, 232, 0.62);
     animation: pulseRing 1.6s ease-in-out infinite;
   }
   .step-card.step-current .step-icon-wrap.has-line::after,
@@ -168,6 +168,10 @@ import{r as t,j as a}from"./index-BrssmHjO.js";const n=`
   .step-card.step-done .step-title,
   .step-card.step-done .step-status {
     color: #8ef06b;
+  }
+  .step-card.step-current .step-title,
+  .step-card.step-current .step-status {
+    color: #d6dde8;
   }
   .step-title {
     font-weight: 800;
@@ -470,20 +474,17 @@ async function load() {
         : activeStatusIndex >= idx,
       icon: statusIcons[stepStatus]
     }));
-    let currentIndex = -1;
-    if (status !== "Canceled" && activeStatusIndex >= 0) {
-      currentIndex = activeStatusIndex === 0 ? 1 : activeStatusIndex;
-      if (currentIndex > orderedStatuses.length - 1) {
-        currentIndex = orderedStatuses.length - 1;
-      }
-    }
+    const doneUntilIndex = status === "Canceled"
+      ? (String(order.paymentStatus || "").toLowerCase() === "paid" ? 0 : -1)
+      : activeStatusIndex;
+    const currentIndex = status !== "Canceled" && activeStatusIndex > 0 ? activeStatusIndex : -1;
 
     stepsListEl.innerHTML = "";
     stepsData.forEach((step, idx) => {
       const hasLine = idx !== stepsData.length - 1;
-      const stepState = status === "Canceled"
-        ? (step.done ? "done" : "pending")
-        : (idx < currentIndex ? "done" : (idx === currentIndex ? "current" : "pending"));
+      const stepState = idx === currentIndex
+        ? "current"
+        : (idx <= doneUntilIndex ? "done" : "pending");
       addStep(step.label, step.value, stepState, step.icon, hasLine);
     });
 
