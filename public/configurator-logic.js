@@ -22,6 +22,243 @@
     const playClick = () => playSfx(sfxClickEl);
     const playClick2 = () => playSfx(sfxClick2El);
 
+    function getAudioContext() {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return null;
+        if (!audioContext) {
+            try {
+                audioContext = new AudioCtx();
+            } catch {
+                audioContext = null;
+            }
+        }
+        return audioContext;
+    }
+
+    function createNoiseBuffer(ctx, durationSeconds) {
+        const frameCount = Math.max(1, Math.floor(ctx.sampleRate * durationSeconds));
+        const buffer = ctx.createBuffer(1, frameCount, ctx.sampleRate);
+        const channelData = buffer.getChannelData(0);
+        let lastOut = 0;
+        for (let i = 0; i < frameCount; i += 1) {
+            const white = Math.random() * 2 - 1;
+            lastOut = (lastOut + (0.02 * white)) / 1.02;
+            channelData[i] = lastOut * 0.75;
+        }
+        return buffer;
+    }
+
+    function startAmbientSound() {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        try {
+            if (ctx.state === "suspended") {
+                ctx.resume().catch(() => { });
+            }
+        } catch { }
+
+        if (ambientAudioStarted) return;
+
+        const masterGain = ctx.createGain();
+        masterGain.gain.value = 0.018;
+
+        const lowpass = ctx.createBiquadFilter();
+        lowpass.type = "lowpass";
+        lowpass.frequency.value = 980;
+        lowpass.Q.value = 0.3;
+
+        const noiseSource = ctx.createBufferSource();
+        noiseSource.buffer = createNoiseBuffer(ctx, 3.5);
+        noiseSource.loop = true;
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.value = 0.028;
+
+        const padA = ctx.createOscillator();
+        padA.type = "sine";
+        padA.frequency.value = 174;
+        const padAGain = ctx.createGain();
+        padAGain.gain.value = 0.0055;
+
+        const padB = ctx.createOscillator();
+        padB.type = "triangle";
+        padB.frequency.value = 261.6;
+        const padBGain = ctx.createGain();
+        padBGain.gain.value = 0.0035;
+
+        const shimmer = ctx.createOscillator();
+        shimmer.type = "sine";
+        shimmer.frequency.value = 523.25;
+        const shimmerGain = ctx.createGain();
+        shimmerGain.gain.value = 0.0008;
+
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = 0.07;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.006;
+
+        const detuneLfo = ctx.createOscillator();
+        detuneLfo.type = "sine";
+        detuneLfo.frequency.value = 0.031;
+        const detuneGain = ctx.createGain();
+        detuneGain.gain.value = 6;
+
+        noiseSource.connect(noiseGain);
+        noiseGain.connect(lowpass);
+
+        padA.connect(padAGain);
+        padAGain.connect(lowpass);
+
+        padB.connect(padBGain);
+        padBGain.connect(lowpass);
+
+        shimmer.connect(shimmerGain);
+        shimmerGain.connect(lowpass);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(masterGain.gain);
+
+        detuneLfo.connect(detuneGain);
+        detuneGain.connect(padA.detune);
+        detuneGain.connect(padB.detune);
+        detuneGain.connect(shimmer.detune);
+
+        lowpass.connect(masterGain);
+        masterGain.connect(ctx.destination);
+
+        noiseSource.start();
+        padA.start();
+        padB.start();
+        shimmer.start();
+        lfo.start();
+        detuneLfo.start();
+
+        ambientAudioNodes = [
+            noiseSource, noiseGain,
+            padA, padAGain,
+            padB, padBGain,
+            shimmer, shimmerGain,
+            lfo, lfoGain,
+            detuneLfo, detuneGain,
+            lowpass, masterGain
+        ];
+        ambientAudioStarted = true;
+    }
+
+    function stopAmbientSound() {
+        ambientAudioNodes.forEach(node => {
+            if (!node) return;
+            try {
+                if (typeof node.stop === "function") node.stop();
+            } catch { }
+            try {
+                if (typeof node.disconnect === "function") node.disconnect();
+            } catch { }
+        });
+        ambientAudioNodes = [];
+        ambientAudioStarted = false;
+
+        if (audioContext) {
+            try {
+                audioContext.suspend().catch(() => { });
+            } catch { }
+        }
+    }
+
+    function playClearSweep() {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        try {
+            if (ctx.state === "suspended") {
+                ctx.resume().catch(() => { });
+            }
+        } catch { }
+
+        const now = ctx.currentTime;
+        const sweep = ctx.createOscillator();
+        sweep.type = "triangle";
+        sweep.frequency.setValueAtTime(880, now);
+        sweep.frequency.exponentialRampToValueAtTime(180, now + 0.52);
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = createNoiseBuffer(ctx, 0.7);
+
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = "bandpass";
+        noiseFilter.frequency.setValueAtTime(1200, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(380, now + 0.52);
+        noiseFilter.Q.value = 0.8;
+
+        const sweepGain = ctx.createGain();
+        sweepGain.gain.setValueAtTime(0.0001, now);
+        sweepGain.gain.exponentialRampToValueAtTime(0.05, now + 0.025);
+        sweepGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.58);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.02, now + 0.03);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+
+        sweep.connect(sweepGain);
+        sweepGain.connect(ctx.destination);
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+
+        sweep.start(now);
+        noise.start(now);
+        sweep.stop(now + 0.62);
+        noise.stop(now + 0.5);
+
+        window.setTimeout(() => {
+            [sweep, noise, noiseFilter, sweepGain, noiseGain].forEach(node => {
+                try {
+                    node.disconnect();
+                } catch { }
+            });
+        }, 900);
+    }
+
+    function bindAmbientAudio() {
+        if (ambientUnlockBound) return;
+        ambientUnlockBound = true;
+
+        const unlockAmbient = () => {
+            startAmbientSound();
+        };
+        ["pointerdown", "touchstart", "keydown"].forEach(eventName => {
+            document.addEventListener(eventName, unlockAmbient, { passive: true });
+            ambientCleanupFns.push(() => document.removeEventListener(eventName, unlockAmbient));
+        });
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                stopAmbientSound();
+                return;
+            }
+            startAmbientSound();
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        ambientCleanupFns.push(() => document.removeEventListener("visibilitychange", handleVisibilityChange));
+
+        startAmbientSound();
+    }
+
+    window.__EZ_CONFIGURATOR_CLEANUP__ = function () {
+        stopAmbientSound();
+        ambientCleanupFns.forEach(fn => {
+            try {
+                fn();
+            } catch { }
+        });
+        ambientCleanupFns = [];
+        ambientUnlockBound = false;
+        delete window.__EZ_CONFIGURATOR_CLEANUP__;
+    };
+
     const ZOHO_BASE = "/zoho/inventory/v1";
     const ZOHO_ITEMS_ENDPOINT = ZOHO_BASE + "/items";
 
@@ -57,6 +294,12 @@
     const RETAINED_WARM_IMAGE_LIMIT = isMobile ? 8 : 16;
     let imageWarmupInFlight = 0;
     let globalOverlayWarmupScheduled = false;
+    let clearAnimationInFlight = false;
+    let audioContext = null;
+    let ambientAudioStarted = false;
+    let ambientAudioNodes = [];
+    let ambientUnlockBound = false;
+    let ambientCleanupFns = [];
 
     function normalizeVariant(str) {
         if (!str) return "";
@@ -529,6 +772,7 @@
     const partTooltip = document.getElementById("partTooltip");
 
     const navLangToggle = document.getElementById("langToggle");
+    bindAmbientAudio();
     const mobileLangToggle = document.getElementById("mobileLangToggle");
     const navMenuBtn = document.querySelector(".nav-menu-btn");
     const mobileNavOverlay = document.getElementById("mobileNavOverlay");
@@ -1638,8 +1882,64 @@
         if (alt) alt.textContent = formatted;
     }
 
-    function clearAllSelections() {
-        if (!confirm(t("alertConfirmClear") || "Clear all selections?")) return;
+    function getActiveFaceElement() {
+        return currentSide === "back" ? faceBackEl : faceFrontEl;
+    }
+
+    function getVisibleCustomizationLayersForCurrentSide() {
+        const activeFace = getActiveFaceElement();
+        if (!activeFace) return [];
+
+        return Array.from(activeFace.querySelectorAll("img"))
+            .filter((img, index) => {
+                if (index === 0) return false;
+                if (!img.getAttribute("src")) return false;
+                const computed = window.getComputedStyle(img);
+                return computed.display !== "none" && computed.visibility !== "hidden" && Number(computed.opacity || "1") > 0.01;
+            });
+    }
+
+    function animateCurrentViewClear() {
+        const visibleLayers = getVisibleCustomizationLayersForCurrentSide();
+        playClearSweep();
+
+        if (!visibleLayers.length) return Promise.resolve();
+
+        clearAnimationInFlight = true;
+
+        return new Promise((resolve) => {
+            let settled = false;
+            let completed = 0;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                clearAnimationInFlight = false;
+                visibleLayers.forEach(layer => {
+                    layer.classList.remove("config-layer-clearing");
+                    layer.style.removeProperty("--clear-stagger");
+                });
+                resolve();
+            };
+
+            const fallbackTimer = window.setTimeout(finish, 900);
+
+            visibleLayers.forEach((layer, index) => {
+                layer.style.setProperty("--clear-stagger", `${index * 45}ms`);
+                layer.classList.add("config-layer-clearing");
+                layer.addEventListener("animationend", () => {
+                    completed += 1;
+                    if (completed >= visibleLayers.length) {
+                        window.clearTimeout(fallbackTimer);
+                        finish();
+                    }
+                }, { once: true });
+            });
+        });
+    }
+
+    async function clearAllSelections() {
+        if (clearAnimationInFlight) return;
+        await animateCurrentViewClear();
         ALL_PARTS.forEach(p => {
             configState[p.id] = null;
             optionState[p.id] = null;

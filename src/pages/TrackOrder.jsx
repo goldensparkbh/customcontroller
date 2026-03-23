@@ -460,7 +460,16 @@ async function load() {
         : activeStatusIndex >= idx,
       icon: statusIcons[stepStatus]
     }));
-    const currentIndex = status === "Canceled" ? -1 : activeStatusIndex;
+    let currentIndex = -1;
+    if (status !== "Canceled" && activeStatusIndex >= 0) {
+      if (activeStatusIndex === 0) {
+        currentIndex = 0;
+      } else if (activeStatusIndex < orderedStatuses.length - 1) {
+        currentIndex = activeStatusIndex + 1;
+      } else {
+        currentIndex = activeStatusIndex;
+      }
+    }
 
     stepsListEl.innerHTML = "";
     stepsData.forEach((step, idx) => {

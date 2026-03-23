@@ -1687,6 +1687,35 @@ img {
   transform: translateY(1px) scale(0.98);
 }
 
+.controller-face img.config-layer-clearing {
+  pointer-events: none;
+  will-change: clip-path, opacity, transform, filter;
+  transform-origin: right center;
+  animation: configuratorLayerClear 0.56s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--clear-stagger, 0ms);
+}
+
+@keyframes configuratorLayerClear {
+  0% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0) saturate(1);
+  }
+
+  50% {
+    opacity: 0.94;
+    filter: blur(1.5px) saturate(1.05);
+  }
+
+  100% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(-10px) scale(0.985);
+    filter: blur(10px) saturate(0.82);
+  }
+}
+
 .add-to-cart-btn:active {
   transform: translateY(1px) scale(0.98);
   box-shadow:

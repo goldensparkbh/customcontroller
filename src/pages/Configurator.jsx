@@ -235,6 +235,13 @@ const ConfiguratorPage = () => {
     }
 
     return () => {
+      if (typeof window.__EZ_CONFIGURATOR_CLEANUP__ === 'function') {
+        try {
+          window.__EZ_CONFIGURATOR_CLEANUP__();
+        } catch (error) {
+          console.warn('Configurator cleanup failed', error);
+        }
+      }
       document.body.classList.remove('configurator-page-active');
       document.body.classList.remove('configurator-intro-active');
       window.cancelAnimationFrame(introFrame);

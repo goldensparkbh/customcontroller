@@ -1147,7 +1147,6 @@
     }
 
     function clearAllSelections() {
-        if (!confirm(t("alertConfirmClear") || "Clear all selections?")) return;
         ALL_PARTS.forEach(p => {
             configState[p.id] = null;
             optionState[p.id] = (p.id === "backShellMain") ? "standard" : null;

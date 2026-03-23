@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-CF12XcSE.js";const n=`
+import{r as t,j as a}from"./index-D4jd4Uu7.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -456,7 +456,16 @@ async function load() {
         : activeStatusIndex >= idx,
       icon: statusIcons[stepStatus]
     }));
-    const currentIndex = status === "Canceled" ? -1 : activeStatusIndex;
+    let currentIndex = -1;
+    if (status !== "Canceled" && activeStatusIndex >= 0) {
+      if (activeStatusIndex === 0) {
+        currentIndex = 0;
+      } else if (activeStatusIndex < orderedStatuses.length - 1) {
+        currentIndex = activeStatusIndex + 1;
+      } else {
+        currentIndex = activeStatusIndex;
+      }
+    }
 
     stepsListEl.innerHTML = "";
     stepsData.forEach((step, idx) => {
