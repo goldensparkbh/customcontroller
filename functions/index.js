@@ -1068,7 +1068,7 @@ async function getPreviewAssetBuffer(src, siteBaseUrl) {
   return null;
 }
 
-async function buildLayerPreviewRasterBuffer(item, side, siteBaseUrl) {
+async function buildLayerPreviewRasterBuffer(item, side, siteBaseUrl, options = {}) {
   const layers = getItemPreviewLayers(item, side)
     .map((layer, index) => ({
       src: normalizePreviewSrc(layer.src, siteBaseUrl),
@@ -1083,8 +1083,9 @@ async function buildLayerPreviewRasterBuffer(item, side, siteBaseUrl) {
 
   if (!layers.length) return null;
 
-  const width = 1166;
-  const height = 768;
+  const width = Math.max(240, Math.min(1166, Number(options.width) || 1166));
+  const height = Math.round((width / 1166) * 768);
+  const quality = Math.max(55, Math.min(90, Number(options.quality) || 84));
   const composites = [];
 
   for (const layer of layers) {
@@ -1123,7 +1124,25 @@ async function buildLayerPreviewRasterBuffer(item, side, siteBaseUrl) {
     }
   })
     .composite(composites)
-    .jpeg({ quality: 90, mozjpeg: true })
+    .jpeg({ quality, mozjpeg: true, progressive: true })
+    .toBuffer();
+}
+
+async function buildOptimizedPreviewBuffer(previewSrc, siteBaseUrl, options = {}) {
+  const sourceBuffer = await getPreviewAssetBuffer(previewSrc, siteBaseUrl);
+  if (!sourceBuffer) return null;
+
+  const width = Math.max(240, Math.min(1166, Number(options.width) || 1166));
+  const height = Math.round((width / 1166) * 768);
+  const quality = Math.max(55, Math.min(90, Number(options.quality) || 84));
+
+  return sharp(sourceBuffer)
+    .resize(width, height, {
+      fit: "contain",
+      background: { r: 20, g: 24, b: 41, alpha: 1 }
+    })
+    .flatten({ background: "#141829" })
+    .jpeg({ quality, mozjpeg: true, progressive: true })
     .toBuffer();
 }
 
@@ -1210,12 +1229,14 @@ function buildPublicTrackingOrder(orderId, orderDoc = {}) {
 function buildOrderPreviewUrls(orderId, items, siteBaseUrl) {
   if (!siteBaseUrl) return [];
 
+  const emailPreviewQuery = "w=560&q=72";
+
   return (Array.isArray(items) ? items : []).map((item, itemIndex) => ({
     front: hasItemPreview(item, "front") ?
-      `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=front` :
+      `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=front&${emailPreviewQuery}` :
       "",
     back: hasItemPreview(item, "back") ?
-      `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=back` :
+      `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=back&${emailPreviewQuery}` :
       ""
   }));
 }
@@ -1277,13 +1298,10 @@ function renderOrderItemsText(items, currency, previewUrls) {
     const quantity = toFiniteNumber(item?.quantity, 1) > 0 ? toFiniteNumber(item?.quantity, 1) : 1;
     const lineTotal = getOrderLineTotal(item);
     const customizationLines = getItemCustomizationLines(item);
-    const preview = previewUrls[index] || {};
 
     return [
       `${index + 1}. ${item?.name || "Custom Controller"} x${quantity} - ${formatMoney(lineTotal, currency)}`,
-      ...customizationLines.map((line) => `   - ${line}`),
-      preview.front ? `   - Front preview: ${preview.front}` : "",
-      preview.back ? `   - Back preview: ${preview.back}` : ""
+      ...customizationLines.map((line) => `   - ${line}`)
     ].filter(Boolean).join("\n");
   }).join("\n\n");
 }
@@ -1325,10 +1343,6 @@ function renderOrderItemsHtml(items, currency, previewUrls) {
         ${previewCards ? `
           <div style="margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;">
             ${previewCards}
-          </div>
-          <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px;">
-            ${preview.front ? `<a href="${escapeHtml(preview.front)}" style="color:#9efdf8;text-decoration:none;">Open front image</a>` : ""}
-            ${preview.back ? `<a href="${escapeHtml(preview.back)}" style="color:#9efdf8;text-decoration:none;">Open back image</a>` : ""}
           </div>
         ` : ""}
       </div>
@@ -1770,6 +1784,8 @@ exports.orderPreview = functions.https.onRequest(async (req, res) => {
     const orderId = String(req.query.orderId || "").trim();
     const itemIndex = Math.max(0, parseInt(req.query.itemIndex, 10) || 0);
     const side = String(req.query.side || "front").toLowerCase() === "back" ? "back" : "front";
+    const width = Math.max(240, Math.min(1166, parseInt(req.query.w || req.query.width, 10) || 1166));
+    const quality = Math.max(55, Math.min(90, parseInt(req.query.q || req.query.quality, 10) || 84));
 
     if (!orderId) {
       return res.status(400).send("Missing orderId");
@@ -1789,23 +1805,30 @@ exports.orderPreview = functions.https.onRequest(async (req, res) => {
       return res.status(404).send("Order item not found");
     }
 
-    const previewRasterBuffer = await buildLayerPreviewRasterBuffer(item, side, siteBaseUrl);
+    const previewRasterBuffer = await buildLayerPreviewRasterBuffer(item, side, siteBaseUrl, { width, quality });
     if (previewRasterBuffer) {
       res.setHeader("Content-Type", "image/jpeg");
-      res.setHeader("Cache-Control", "public, max-age=300");
+      res.setHeader("Cache-Control", "public, max-age=86400");
       return res.send(previewRasterBuffer);
     }
 
-    const previewValue = (side === "back"
-      ? (item.previewBack || null)
-      : (item.previewFront || null)) ||
-      buildLayerPreviewDataUri(item, side, siteBaseUrl);
+    const previewValue = side === "back" ? (item.previewBack || null) : (item.previewFront || null);
+    const optimizedPreviewBuffer = previewValue
+      ? await buildOptimizedPreviewBuffer(previewValue, siteBaseUrl, { width, quality })
+      : null;
+    if (optimizedPreviewBuffer) {
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.send(optimizedPreviewBuffer);
+    }
 
-    if (!previewValue) {
+    const previewFallbackValue = previewValue || buildLayerPreviewDataUri(item, side, siteBaseUrl);
+
+    if (!previewFallbackValue) {
       return res.status(404).send("Preview not found");
     }
 
-    return sendImageValueResponse(res, previewValue);
+    return sendImageValueResponse(res, previewFallbackValue);
   } catch (error) {
     console.error("[orderPreview] error", error);
     return res.status(500).send(error.message || "Failed to load preview");
