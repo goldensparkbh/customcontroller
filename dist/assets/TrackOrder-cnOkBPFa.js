@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-D4jd4Uu7.js";const n=`
+import{r as t,j as a}from"./index-B51uPg5M.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -143,7 +143,7 @@ import{r as t,j as a}from"./index-D4jd4Uu7.js";const n=`
     filter: none;
     transition: filter 0.2s ease, opacity 0.2s ease;
   }
-  .step-card.pending .step-icon {
+  .step-card.step-pending .step-icon {
     filter: grayscale(1) brightness(0.7);
     opacity: 0.7;
   }
@@ -154,6 +154,20 @@ import{r as t,j as a}from"./index-D4jd4Uu7.js";const n=`
   .step-card.step-current .step-icon-wrap::before {
     border-color: rgba(124,252,0,0.7);
     animation: pulseRing 1.6s ease-in-out infinite;
+  }
+  .step-card.step-current .step-icon-wrap.has-line::after,
+  .step-card.step-pending .step-icon-wrap.has-line::after {
+    background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+  }
+  .step-card.step-done .step-icon-wrap::before {
+    border-color: rgba(124,252,0,0.55);
+  }
+  .step-card.step-done .step-icon-wrap.has-line::after {
+    background: linear-gradient(90deg, rgba(124,252,0,0.8), rgba(124,252,0,0.22));
+  }
+  .step-card.step-done .step-title,
+  .step-card.step-done .step-status {
+    color: #8ef06b;
   }
   .step-title {
     font-weight: 800;
@@ -279,9 +293,9 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
-function addStep(label, value, done, icon, hasLine, current) {
+function addStep(label, value, state, icon, hasLine) {
   const card = document.createElement("div");
-  card.className = "step-card" + (done ? " step-done" : " pending") + (current ? " step-current" : "");
+  card.className = "step-card step-" + state;
   const iconWrap = document.createElement("div");
   iconWrap.className = "step-icon-wrap" + (hasLine ? " has-line" : "");
   const img = document.createElement("img");
@@ -456,22 +470,15 @@ async function load() {
         : activeStatusIndex >= idx,
       icon: statusIcons[stepStatus]
     }));
-    let currentIndex = -1;
-    if (status !== "Canceled" && activeStatusIndex >= 0) {
-      if (activeStatusIndex === 0) {
-        currentIndex = 0;
-      } else if (activeStatusIndex < orderedStatuses.length - 1) {
-        currentIndex = activeStatusIndex + 1;
-      } else {
-        currentIndex = activeStatusIndex;
-      }
-    }
+    const currentIndex = status === "Canceled" ? -1 : activeStatusIndex;
 
     stepsListEl.innerHTML = "";
     stepsData.forEach((step, idx) => {
-      const isCurrent = idx === currentIndex;
       const hasLine = idx !== stepsData.length - 1;
-      addStep(step.label, step.value, step.done, step.icon, hasLine, isCurrent);
+      const stepState = status === "Canceled"
+        ? (step.done ? "done" : "pending")
+        : (idx < currentIndex ? "done" : (idx === currentIndex ? "current" : "pending"));
+      addStep(step.label, step.value, stepState, step.icon, hasLine);
     });
 
     setStatus(getTranslatedStatus(status));
