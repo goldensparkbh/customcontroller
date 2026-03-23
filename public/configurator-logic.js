@@ -480,6 +480,21 @@
         }
     }
 
+    function getEntryQty(entry) {
+        if (!entry || typeof entry !== "object") return null;
+        const candidates = [entry.qty, entry.quantity, entry.availableQty, entry.available_quantity];
+        for (const candidate of candidates) {
+            const qty = Number(candidate);
+            if (Number.isFinite(qty)) return qty;
+        }
+        return null;
+    }
+
+    function isEntryOutOfStock(entry) {
+        const qty = getEntryQty(entry);
+        return qty !== null && qty <= 0;
+    }
+
 
     const controllerWrapper = document.getElementById("controllerWrapper");
     const controllerArea = document.getElementById("controllerArea");
@@ -691,17 +706,19 @@
     function findColorSelection(partId, key) {
         if (!key) return null;
         const palette = getPaletteForPart(partId);
-        return palette.find(c => c.key === key) ||
+        const match = palette.find(c => c.key === key) ||
             palette.find(c => c.hex === key) ||
             palette.find(c => (c.key || "").split("_")[0] === (key || "").split("_")[0]) ||
             null;
+        return isEntryOutOfStock(match) ? null : match;
     }
 
     function findOptionSelection(partId, key) {
         if (!key) return null;
         if (key === "standard") return null;
         const options = getOptionsForPart(partId);
-        return options.find(o => o.key === key) || null;
+        const match = options.find(o => o.key === key) || null;
+        return isEntryOutOfStock(match) ? null : match;
     }
 
     function retainWarmImage(url, img) {
@@ -1397,11 +1414,18 @@
             if (isOption && entry.isGamemode) {
                 cell.classList.add("is-gamemode-option");
             }
+            const isOutOfStock = isEntryOutOfStock(entry);
+            if (isOutOfStock) {
+                cell.classList.add("is-disabled");
+                cell.setAttribute("aria-disabled", "true");
+                cell.title = t("outOfStock") || "Out of Stock";
+            }
             const isSelected = isOption ? (optionState[partId] === entry.key) : (configState[partId] === entry.key);
             cell.classList.toggle("active", isSelected);
 
             const swatch = document.createElement("div");
             swatch.className = isOption ? "cd-swatch-op" : "cd-swatch";
+            if (isOutOfStock) swatch.classList.add("is-out-of-stock");
             if (entry.icon) {
                 swatch.style.backgroundImage = `url('${entry.icon}')`;
                 swatch.style.backgroundSize = "cover";
@@ -1410,11 +1434,14 @@
                 swatch.style.backgroundColor = entry.hex;
             }
 
-            const shouldShowPriceInside = entry.price != null && entry.price > 0 && entry.key !== "rampkit" && !entry.isGamemode;
-            if (shouldShowPriceInside) {
+            const shouldShowPriceInside = !isOutOfStock && entry.price != null && entry.price > 0 && entry.key !== "rampkit" && !entry.isGamemode;
+            const shouldShowStockInside = isOutOfStock && !entry.isGamemode;
+            if (shouldShowPriceInside || shouldShowStockInside) {
                 const priceLabel = document.createElement("span");
-                priceLabel.className = "swatch-price";
-                priceLabel.textContent = i18n[currentLang].currencyPrefix + entry.price;
+                priceLabel.className = isOutOfStock ? "swatch-price is-out-of-stock" : "swatch-price";
+                priceLabel.textContent = isOutOfStock ?
+                    (t("outOfStock") || "Out of Stock") :
+                    (i18n[currentLang].currencyPrefix + entry.price);
                 swatch.appendChild(priceLabel);
             }
 
@@ -1438,10 +1465,12 @@
                     title.textContent = entry.valName || t("option_" + entry.key);
                     label.appendChild(title);
 
-                    if (entry.price != null) {
+                    if (entry.price != null || isOutOfStock) {
                         const price = document.createElement("div");
-                        price.className = "cd-gamemode-price";
-                        price.textContent = i18n[currentLang].currencyPrefix + Number(entry.price).toFixed(2);
+                        price.className = isOutOfStock ? "cd-gamemode-price is-out-of-stock" : "cd-gamemode-price";
+                        price.textContent = isOutOfStock ?
+                            (t("outOfStock") || "Out of Stock") :
+                            (i18n[currentLang].currencyPrefix + Number(entry.price).toFixed(2));
                         label.appendChild(price);
                     }
                 } else {
@@ -1452,6 +1481,7 @@
             }
 
             cell.addEventListener("click", () => {
+                if (isOutOfStock) return;
                 if (isOption) applyOption(partId, entry.key);
                 else applyColor(partId, entry.key);
             });
@@ -1460,6 +1490,13 @@
     }
 
     function applyColor(partId, colorKey) {
+        const requestedColor = getPaletteForPart(partId).find(c =>
+            c.key === colorKey ||
+            c.hex === colorKey ||
+            (c.key || "").split("_")[0] === (colorKey || "").split("_")[0]
+        );
+        if (configState[partId] !== colorKey && isEntryOutOfStock(requestedColor)) return;
+
         playClick2();
 
         // Toggle Logic: If clicking the same key, deselect it
@@ -1513,6 +1550,9 @@
     }
 
     function applyOption(partId, optionKey) {
+        const requestedOption = getOptionsForPart(partId).find(o => o.key === optionKey) || null;
+        if (optionKey !== "standard" && optionState[partId] !== optionKey && isEntryOutOfStock(requestedOption)) return;
+
         playClick2();
 
         // Toggle Logic

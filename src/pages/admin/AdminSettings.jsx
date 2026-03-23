@@ -13,6 +13,10 @@ const defaultSettings = {
   invoicePrefix: 'INV',
   trackingBaseUrl: '',
   websiteBaseUrl: '',
+  logoUrl: '',
+  instagramUrl: 'https://www.instagram.com/fhonelstore/?hl=en',
+  tiktokUrl: '',
+  facebookUrl: '',
   smtpHost: '',
   smtpPort: '587',
   smtpSecure: false,
@@ -192,12 +196,60 @@ const AdminSettings = () => {
             </label>
 
             <label style={{ display: 'grid', gap: '0.45rem' }}>
+              <span>Logo URL</span>
+              <input
+                name="logoUrl"
+                value={formData.logoUrl}
+                onChange={handleChange}
+                placeholder="https://customcontroller.co/assets/logo.png"
+                style={fieldStyle}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+            <label style={{ display: 'grid', gap: '0.45rem' }}>
               <span>Tracking Base URL</span>
               <input
                 name="trackingBaseUrl"
                 value={formData.trackingBaseUrl}
                 onChange={handleChange}
                 placeholder="https://carrier.example/track?code={trackingNumber}"
+                style={fieldStyle}
+              />
+            </label>
+
+            <label style={{ display: 'grid', gap: '0.45rem' }}>
+              <span>Instagram URL</span>
+              <input
+                name="instagramUrl"
+                value={formData.instagramUrl}
+                onChange={handleChange}
+                placeholder="https://www.instagram.com/yourstore"
+                style={fieldStyle}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+            <label style={{ display: 'grid', gap: '0.45rem' }}>
+              <span>TikTok URL</span>
+              <input
+                name="tiktokUrl"
+                value={formData.tiktokUrl}
+                onChange={handleChange}
+                placeholder="https://www.tiktok.com/@yourstore"
+                style={fieldStyle}
+              />
+            </label>
+
+            <label style={{ display: 'grid', gap: '0.45rem' }}>
+              <span>Facebook URL</span>
+              <input
+                name="facebookUrl"
+                value={formData.facebookUrl}
+                onChange={handleChange}
+                placeholder="https://www.facebook.com/yourstore"
                 style={fieldStyle}
               />
             </label>

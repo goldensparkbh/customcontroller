@@ -576,6 +576,10 @@ function applyInventoryDeduction(record, deductionQty, metadata = {}) {
   };
 }
 
+function normalizeNumericString(value) {
+  return String(value == null ? "" : value).replace(/\D/g, "");
+}
+
 function collectConfiguratorInventoryAdjustments(items) {
   const adjustments = new Map();
 
@@ -603,9 +607,94 @@ function collectConfiguratorInventoryAdjustments(items) {
   return adjustments;
 }
 
-async function applyConfiguratorInventoryAdjustments(items, metadata = {}) {
+function mergeAdjustmentMaps(target, source) {
+  for (const [pathKey, quantity] of source.entries()) {
+    if (!pathKey || !(quantity > 0)) continue;
+    target.set(pathKey, (target.get(pathKey) || 0) + quantity);
+  }
+  return target;
+}
+
+function hasCustomConfiguratorSelections(item) {
+  return !!(item && item.parts && typeof item.parts === "object" && Object.keys(item.parts).length > 0);
+}
+
+function getNormalItemDirectDocCandidates(item) {
+  const directCandidates = [
+    item?.inventoryDocPath,
+    item?.firestoreDocPath,
+    item?.itemDocPath,
+    item?.recordPath,
+    item?.normalItemId,
+    item?.itemDocId,
+    item?.productId,
+    item?.productDocId,
+    item?.itemId,
+    item?.docId
+  ];
+
+  if (typeof item?.id === "string" && item.id.trim() && !/^\d+$/.test(item.id.trim())) {
+    directCandidates.push(item.id.trim());
+  }
+
+  return directCandidates
+    .map((candidate) => String(candidate || "").trim())
+    .filter(Boolean);
+}
+
+async function resolveNormalItemDocPath(db, item) {
+  if (!item || hasCustomConfiguratorSelections(item)) return "";
+
+  const directCandidates = getNormalItemDirectDocCandidates(item);
+  for (const candidate of directCandidates) {
+    const normalizedPath = candidate.includes("/") ? candidate.replace(/^\/+/, "") : `items/${candidate}`;
+    if (!normalizedPath.startsWith("items/")) continue;
+
+    const snapshot = await db.doc(normalizedPath).get();
+    if (snapshot.exists) return snapshot.ref.path;
+  }
+
+  const itemNumber = normalizeNumericString(item?.itemNumber || item?.inventoryNumber || item?.recordNumber);
+  if (itemNumber) {
+    const itemNumberSnap = await db.collection("items").where("itemNumber", "==", itemNumber).limit(1).get();
+    if (!itemNumberSnap.empty) return itemNumberSnap.docs[0].ref.path;
+  }
+
+  const barcode = normalizeNumericString(item?.barcode);
+  if (barcode) {
+    const barcodeSnap = await db.collection("items").where("barcode", "==", barcode).limit(1).get();
+    if (!barcodeSnap.empty) return barcodeSnap.docs[0].ref.path;
+  }
+
+  return "";
+}
+
+async function collectNormalItemInventoryAdjustments(items) {
   const db = getFirestore();
+  const adjustments = new Map();
+
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item || hasCustomConfiguratorSelections(item)) continue;
+
+    const qty = toFiniteNumber(item?.quantity, 1) > 0 ? toFiniteNumber(item.quantity, 1) : 1;
+    const docPath = await resolveNormalItemDocPath(db, item);
+    if (!docPath) continue;
+
+    adjustments.set(docPath, (adjustments.get(docPath) || 0) + qty);
+  }
+
+  return adjustments;
+}
+
+async function collectOrderInventoryAdjustments(items) {
   const adjustments = collectConfiguratorInventoryAdjustments(items);
+  const normalItemAdjustments = await collectNormalItemInventoryAdjustments(items);
+  return mergeAdjustmentMaps(adjustments, normalItemAdjustments);
+}
+
+async function applyOrderInventoryAdjustments(items, metadata = {}) {
+  const db = getFirestore();
+  const adjustments = await collectOrderInventoryAdjustments(items);
   const applied = [];
 
   if (!adjustments.size) return applied;
@@ -636,6 +725,7 @@ async function applyConfiguratorInventoryAdjustments(items, metadata = {}) {
 
       applied.push({
         path: docPath,
+        sourceType: docPath.startsWith("configurator_parts/") ? "configurator_option" : "normal_item",
         quantity,
         deducted: nextInventory.deducted,
         remaining: nextInventory.quantity
@@ -684,6 +774,26 @@ function getEmailOrderLabel(orderNumber) {
 
 function formatMoney(value, currency) {
   return `${currency || "BHD"} ${toFiniteNumber(value, 0).toFixed(2)}`;
+}
+
+function formatAddress(shipping = {}) {
+  if (!shipping || typeof shipping !== "object") return "N/A";
+  if (String(shipping.method || "").toLowerCase() === "pickup") {
+    return "Store Pickup";
+  }
+
+  return [
+    shipping.address,
+    shipping.addressLine,
+    shipping.city,
+    shipping.state,
+    shipping.country,
+    shipping.blockNumber ? `Block ${shipping.blockNumber}` : "",
+    shipping.roadNumber ? `Road ${shipping.roadNumber}` : "",
+    shipping.houseBuildingNumber ? `Building ${shipping.houseBuildingNumber}` : "",
+    shipping.flat ? `Flat ${shipping.flat}` : "",
+    shipping.saudiUnifiedAddress ? `Unified Address ${shipping.saudiUnifiedAddress}` : ""
+  ].filter(Boolean).join(", ") || "N/A";
 }
 
 function getStoreSettingsSnapshot(snapshot) {
@@ -819,12 +929,16 @@ function getItemCustomizationLines(item) {
 }
 
 function getSiteBaseUrl(req, settings = {}) {
+  const forwardedProto = String(req?.headers?.["x-forwarded-proto"] || "").trim();
+  const host = String((req?.get ? req.get("host") : "") || req?.headers?.host || "").trim();
+  const hostBasedUrl = host ? `${forwardedProto || "https"}://${host}` : "";
   const candidates = [
     process.env.PUBLIC_SITE_URL,
     process.env.APP_BASE_URL,
     process.env.SITE_URL,
     settings.websiteBaseUrl,
     settings.storeUrl,
+    hostBasedUrl,
     req?.get ? req.get("origin") : "",
     req?.headers?.origin
   ];
@@ -837,6 +951,71 @@ function getSiteBaseUrl(req, settings = {}) {
   }
 
   return "";
+}
+
+function normalizePreviewSrc(src, siteBaseUrl) {
+  const value = String(src || "").trim();
+  if (!value) return "";
+  if (/^(data:image\/|https?:\/\/|cid:)/i.test(value)) return value;
+  if (value.startsWith("//")) return `https:${value}`;
+  if (value.startsWith("/")) {
+    const base = String(siteBaseUrl || "").trim().replace(/\/$/, "");
+    return base ? `${base}${value}` : value;
+  }
+  return value;
+}
+
+function getItemPreviewLayers(item, side) {
+  const key = side === "back" ? "previewBackLayers" : "previewFrontLayers";
+  return Array.isArray(item?.[key]) ? item[key].filter((layer) => layer && layer.src) : [];
+}
+
+function hasItemPreview(item, side) {
+  return getItemPreviewLayers(item, side).length > 0 || Boolean(side === "back" ? item?.previewBack : item?.previewFront);
+}
+
+function buildLayerPreviewDataUri(item, side, siteBaseUrl) {
+  const layers = getItemPreviewLayers(item, side)
+    .map((layer, index) => ({
+      src: normalizePreviewSrc(layer.src, siteBaseUrl),
+      opacity: Number.isFinite(Number(layer.opacity)) ? Number(layer.opacity) : 1,
+      zIndex: Number.isFinite(Number(layer.zIndex)) ? Number(layer.zIndex) : index
+    }))
+    .filter((layer) => layer.src)
+    .sort((a, b) => {
+      if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
+      return 0;
+    });
+
+  if (!layers.length) return "";
+
+  const width = 1166;
+  const height = 768;
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <rect width="${width}" height="${height}" fill="#141829" />
+  ${layers.map((layer) => `<image href="${escapeHtml(layer.src)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" opacity="${Math.max(0, Math.min(1, layer.opacity))}" />`).join("\n")}
+</svg>`;
+
+  return "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
+}
+
+function getEmailBranding(settings = {}, siteBaseUrl = "") {
+  const websiteUrl = String(settings.websiteBaseUrl || siteBaseUrl || "").trim().replace(/\/$/, "");
+  const logoUrl = normalizePreviewSrc(
+    settings.logoUrl || (websiteUrl ? `${websiteUrl}/assets/logo.png` : ""),
+    websiteUrl
+  );
+
+  return {
+    websiteUrl,
+    logoUrl,
+    instagramUrl: String(settings.instagramUrl || "https://www.instagram.com/fhonelstore/?hl=en").trim(),
+    tiktokUrl: String(settings.tiktokUrl || "").trim(),
+    facebookUrl: String(settings.facebookUrl || "").trim(),
+    supportEmail: String(settings.supportEmail || "").trim(),
+    supportPhone: String(settings.supportPhone || "").trim()
+  };
 }
 
 function buildTrackingUrl(settings, orderId, orderNumber, trackingNumber) {
@@ -869,13 +1048,61 @@ function buildOrderPreviewUrls(orderId, items, siteBaseUrl) {
   if (!siteBaseUrl) return [];
 
   return (Array.isArray(items) ? items : []).map((item, itemIndex) => ({
-    front: item?.previewFront ?
+    front: hasItemPreview(item, "front") ?
       `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=front` :
       "",
-    back: item?.previewBack ?
+    back: hasItemPreview(item, "back") ?
       `${siteBaseUrl}/api/orderPreview?orderId=${encodeURIComponent(orderId)}&itemIndex=${itemIndex}&side=back` :
       ""
   }));
+}
+
+function renderEmailFooter(context) {
+  const branding = context.branding || {};
+  const footerLinks = [
+    branding.websiteUrl ? `<a href="${escapeHtml(branding.websiteUrl)}" style="color:#9efdf8;text-decoration:none;">Website</a>` : "",
+    branding.instagramUrl ? `<a href="${escapeHtml(branding.instagramUrl)}" style="color:#9efdf8;text-decoration:none;">Instagram</a>` : "",
+    branding.tiktokUrl ? `<a href="${escapeHtml(branding.tiktokUrl)}" style="color:#9efdf8;text-decoration:none;">TikTok</a>` : "",
+    branding.facebookUrl ? `<a href="${escapeHtml(branding.facebookUrl)}" style="color:#9efdf8;text-decoration:none;">Facebook</a>` : ""
+  ].filter(Boolean).join('<span style="color:#3a4556;"> · </span>');
+
+  const contactBits = [
+    branding.supportEmail ? `Email: ${escapeHtml(branding.supportEmail)}` : "",
+    branding.supportPhone ? `Phone: ${escapeHtml(branding.supportPhone)}` : ""
+  ].filter(Boolean).join('<span style="color:#3a4556;"> · </span>');
+
+  return `
+    <div style="margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;">
+      ${footerLinks ? `<div style="font-size:13px;color:#9efdf8;line-height:1.8;">${footerLinks}</div>` : ""}
+      ${contactBits ? `<div style="margin-top:8px;font-size:12px;color:#8b949e;line-height:1.7;">${contactBits}</div>` : ""}
+      <div style="margin-top:10px;font-size:12px;color:#6b7280;">${escapeHtml(context.storeName)}</div>
+    </div>
+  `;
+}
+
+function wrapOrderEmail({ context, title, subtitle, summaryHtml, bodyHtml, primaryActionHtml = "" }) {
+  const branding = context.branding || {};
+  const logoBlock = branding.logoUrl
+    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${escapeHtml(context.storeName)}" style="display:block;width:92px;max-width:92px;height:auto;margin:0 auto 18px;" />`
+    : `<div style="margin:0 auto 18px;width:92px;height:92px;border-radius:24px;background:#111827;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#e6edf3;font-weight:800;font-size:14px;">${escapeHtml(context.storeName)}</div>`;
+
+  return `
+    <div style="margin:0;padding:32px 16px;background:#0b0f14;color:#e6edf3;font-family:Arial,sans-serif;">
+      <div style="max-width:820px;margin:0 auto;background:#121821;border:1px solid rgba(255,255,255,0.08);border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,0.35);">
+        <div style="padding:30px 30px 24px;background:linear-gradient(180deg,#151d27 0%,#121821 100%);text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);">
+          ${logoBlock}
+          <div style="font-size:30px;font-weight:800;line-height:1.2;color:#ffffff;">${escapeHtml(title)}</div>
+          <div style="margin-top:10px;font-size:15px;line-height:1.7;color:#a7b0bd;">${subtitle}</div>
+          ${primaryActionHtml ? `<div style="margin-top:20px;">${primaryActionHtml}</div>` : ""}
+        </div>
+        <div style="padding:26px 30px 30px;">
+          ${summaryHtml}
+          ${bodyHtml}
+          ${renderEmailFooter(context)}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderOrderItemsText(items, currency, previewUrls) {
@@ -900,20 +1127,41 @@ function renderOrderItemsHtml(items, currency, previewUrls) {
     const lineTotal = getOrderLineTotal(item);
     const customizationLines = getItemCustomizationLines(item);
     const preview = previewUrls[index] || {};
+    const previewCards = [
+      preview.front ? `
+        <div style="flex:1 1 240px;min-width:220px;">
+          <div style="margin-bottom:8px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#8b949e;">Front</div>
+          <div style="background:#0f141b;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;text-align:center;">
+            <img src="${escapeHtml(preview.front)}" alt="Front preview" style="display:block;width:100%;height:auto;border-radius:10px;background:#141829;" />
+          </div>
+        </div>
+      ` : "",
+      preview.back ? `
+        <div style="flex:1 1 240px;min-width:220px;">
+          <div style="margin-bottom:8px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#8b949e;">Back</div>
+          <div style="background:#0f141b;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;text-align:center;">
+            <img src="${escapeHtml(preview.back)}" alt="Back preview" style="display:block;width:100%;height:auto;border-radius:10px;background:#141829;" />
+          </div>
+        </div>
+      ` : ""
+    ].filter(Boolean).join("");
 
     return `
-      <div style="padding:16px 0;border-top:${index === 0 ? "none" : "1px solid #e5e7eb"};">
-        <div style="font-size:15px;font-weight:700;color:#111827;">${escapeHtml(item?.name || "Custom Controller")}</div>
-        <div style="margin-top:4px;font-size:13px;color:#4b5563;">Qty ${quantity} · ${escapeHtml(formatMoney(lineTotal, currency))}</div>
+      <div style="padding:18px 0;border-top:${index === 0 ? "none" : "1px solid rgba(255,255,255,0.08)"};">
+        <div style="font-size:18px;font-weight:700;color:#ffffff;">${escapeHtml(item?.name || "Custom Controller")}</div>
+        <div style="margin-top:6px;font-size:13px;color:#9aa4b2;">Qty ${quantity} · ${escapeHtml(formatMoney(lineTotal, currency))}</div>
         ${customizationLines.length ? `
-          <ul style="margin:10px 0 0;padding-inline-start:18px;color:#374151;font-size:13px;">
+          <ul style="margin:12px 0 0;padding-inline-start:18px;color:#cdd6df;font-size:13px;line-height:1.7;">
             ${customizationLines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
           </ul>
         ` : ""}
-        ${(preview.front || preview.back) ? `
-          <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px;">
-            ${preview.front ? `<a href="${escapeHtml(preview.front)}" style="color:#0f766e;text-decoration:none;">Front preview</a>` : ""}
-            ${preview.back ? `<a href="${escapeHtml(preview.back)}" style="color:#0f766e;text-decoration:none;">Back preview</a>` : ""}
+        ${previewCards ? `
+          <div style="margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;">
+            ${previewCards}
+          </div>
+          <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px;">
+            ${preview.front ? `<a href="${escapeHtml(preview.front)}" style="color:#9efdf8;text-decoration:none;">Open front image</a>` : ""}
+            ${preview.back ? `<a href="${escapeHtml(preview.back)}" style="color:#9efdf8;text-decoration:none;">Open back image</a>` : ""}
           </div>
         ` : ""}
       </div>
@@ -928,8 +1176,8 @@ function buildOrderEmailContext({ req, settings, orderId, orderDoc }) {
   const customerEmail = String(orderDoc?.customer?.email || "").trim();
   const customerPhone = String(orderDoc?.customer?.phone || "").trim();
   const currency = orderDoc.currency || settings.defaultCurrency || "BHD";
-  const trackingUrl = buildTrackingUrl(settings, orderId, orderDoc.orderNumber, orderDoc?.shipping?.trackingNumber || "");
   const siteBaseUrl = getSiteBaseUrl(req, settings);
+  const trackingUrl = buildTrackingUrl(settings, orderId, orderDoc.orderNumber, orderDoc?.shipping?.trackingNumber || "");
   const previewUrls = buildOrderPreviewUrls(orderId, orderDoc.items, siteBaseUrl);
   const itemsText = renderOrderItemsText(orderDoc.items, currency, previewUrls);
   const itemsHtml = renderOrderItemsHtml(orderDoc.items, currency, previewUrls);
@@ -952,7 +1200,8 @@ function buildOrderEmailContext({ req, settings, orderId, orderDoc }) {
     subtotalText: formatMoney(orderDoc.subtotal, currency),
     trackingUrl,
     urgency: orderDoc.urgency || "Normal",
-    createdAtText: new Date().toLocaleString()
+    createdAtText: new Date().toLocaleString(),
+    branding: getEmailBranding(settings, siteBaseUrl)
   };
 }
 
@@ -976,36 +1225,37 @@ function buildAdminOrderEmail(context) {
     "Items:",
     context.itemsText || "No items"
   ].filter(Boolean).join("\n");
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;color:#0f172a;">
-      <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px;border:1px solid #e2e8f0;">
-        <div style="font-size:24px;font-weight:700;margin-bottom:8px;">New paid order ${escapeHtml(context.orderLabel)}</div>
-        <div style="color:#475569;margin-bottom:20px;">A paid order was created in ${escapeHtml(context.storeName)}.</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
-          <div><strong>Customer</strong><div>${escapeHtml(context.customerName)}</div></div>
-          <div><strong>Email</strong><div>${escapeHtml(context.customerEmail || "N/A")}</div></div>
-          <div><strong>Phone</strong><div>${escapeHtml(context.customerPhone || "N/A")}</div></div>
-          <div><strong>Urgency</strong><div>${escapeHtml(context.urgency)}</div></div>
-          <div><strong>Payment</strong><div>${escapeHtml(context.paymentMethod)}</div></div>
-          <div><strong>Reference</strong><div>${escapeHtml(context.paymentReference)}</div></div>
-          <div><strong>Subtotal</strong><div>${escapeHtml(context.subtotalText)}</div></div>
-          <div><strong>Total</strong><div>${escapeHtml(context.totalText)}</div></div>
-        </div>
-        <div style="margin-bottom:20px;">
-          <div style="font-weight:700;margin-bottom:4px;">Shipping address</div>
-          <div style="color:#475569;">${escapeHtml(context.addressText)}</div>
-        </div>
-        ${context.trackingUrl ? `
-          <div style="margin-bottom:20px;">
-            <a href="${escapeHtml(context.trackingUrl)}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:999px;">Tracking link</a>
-          </div>
-        ` : ""}
-        <div style="font-weight:700;margin-bottom:10px;">Items</div>
-        <div>${context.itemsHtml || "<div>No items</div>"}</div>
-      </div>
+  const summaryHtml = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px;">
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Customer</div><div style="margin-top:6px;color:#ffffff;font-weight:700;">${escapeHtml(context.customerName)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Email</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.customerEmail || "N/A")}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Phone</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.customerPhone || "N/A")}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Urgency</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.urgency)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Payment</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.paymentMethod)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Reference</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.paymentReference)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Subtotal</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.subtotalText)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Total</div><div style="margin-top:6px;color:#9efdf8;font-weight:800;">${escapeHtml(context.totalText)}</div></div>
     </div>
   `;
+  const bodyHtml = `
+    <div style="margin-bottom:20px;padding:16px;border-radius:16px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);">
+      <div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Shipping address</div>
+      <div style="margin-top:8px;color:#d7dee7;line-height:1.7;">${escapeHtml(context.addressText)}</div>
+    </div>
+    <div style="font-size:18px;font-weight:700;color:#ffffff;margin-bottom:10px;">Items</div>
+    <div>${context.itemsHtml || "<div style=\"color:#8b949e;\">No items</div>"}</div>
+  `;
+  const primaryActionHtml = context.trackingUrl
+    ? `<a href="${escapeHtml(context.trackingUrl)}" style="display:inline-block;background:#0de1d8;color:#07131a;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:800;">Open Tracking</a>`
+    : "";
+  const html = wrapOrderEmail({
+    context,
+    title: `New paid order ${context.orderLabel}`,
+    subtitle: `A new paid order was created in ${escapeHtml(context.storeName)}.`,
+    summaryHtml,
+    bodyHtml,
+    primaryActionHtml
+  });
 
   return { subject, text, html };
 }
@@ -1028,32 +1278,33 @@ function buildCustomerOrderEmail(context) {
     `Thank you,`,
     context.storeName
   ].filter(Boolean).join("\n");
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;color:#0f172a;">
-      <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px;border:1px solid #e2e8f0;">
-        <div style="font-size:24px;font-weight:700;margin-bottom:8px;">Your order ${escapeHtml(context.orderLabel)} is confirmed</div>
-        <div style="color:#475569;margin-bottom:20px;">Hello ${escapeHtml(context.customerName)}, your paid order has been received successfully.</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
-          <div><strong>Payment reference</strong><div>${escapeHtml(context.paymentReference)}</div></div>
-          <div><strong>Total</strong><div>${escapeHtml(context.totalText)}</div></div>
-          <div><strong>Email</strong><div>${escapeHtml(context.customerEmail || "N/A")}</div></div>
-          <div><strong>Phone</strong><div>${escapeHtml(context.customerPhone || "N/A")}</div></div>
-        </div>
-        ${context.trackingUrl ? `
-          <div style="margin-bottom:20px;">
-            <a href="${escapeHtml(context.trackingUrl)}" style="display:inline-block;background:#0f766e;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;">Track your order</a>
-          </div>
-        ` : ""}
-        <div style="margin-bottom:20px;">
-          <div style="font-weight:700;margin-bottom:4px;">Shipping address</div>
-          <div style="color:#475569;">${escapeHtml(context.addressText)}</div>
-        </div>
-        <div style="font-weight:700;margin-bottom:10px;">Order details</div>
-        <div>${context.itemsHtml || "<div>No items</div>"}</div>
-      </div>
+  const summaryHtml = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px;">
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Order</div><div style="margin-top:6px;color:#ffffff;font-weight:700;">${escapeHtml(context.orderLabel)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Payment Reference</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.paymentReference)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Total</div><div style="margin-top:6px;color:#9efdf8;font-weight:800;">${escapeHtml(context.totalText)}</div></div>
+      <div style="padding:14px;border-radius:14px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Email</div><div style="margin-top:6px;color:#d7dee7;">${escapeHtml(context.customerEmail || "N/A")}</div></div>
     </div>
   `;
+  const bodyHtml = `
+    <div style="margin-bottom:20px;padding:16px;border-radius:16px;background:#0f141b;border:1px solid rgba(255,255,255,0.08);">
+      <div style="font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em;">Shipping address</div>
+      <div style="margin-top:8px;color:#d7dee7;line-height:1.7;">${escapeHtml(context.addressText)}</div>
+    </div>
+    <div style="font-size:18px;font-weight:700;color:#ffffff;margin-bottom:10px;">Your items</div>
+    <div>${context.itemsHtml || "<div style=\"color:#8b949e;\">No items</div>"}</div>
+  `;
+  const primaryActionHtml = context.trackingUrl
+    ? `<a href="${escapeHtml(context.trackingUrl)}" style="display:inline-block;background:#0de1d8;color:#07131a;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:800;">Track your order</a>`
+    : "";
+  const html = wrapOrderEmail({
+    context,
+    title: `Your order ${context.orderLabel} is confirmed`,
+    subtitle: `Hello ${escapeHtml(context.customerName)}, your paid order has been received successfully.`,
+    summaryHtml,
+    bodyHtml,
+    primaryActionHtml
+  });
 
   return { subject, text, html };
 }
@@ -1226,7 +1477,7 @@ exports.orderHandler = functions
       };
 
       try {
-        inventoryAdjustments = await applyConfiguratorInventoryAdjustments(amounts.items, {
+        inventoryAdjustments = await applyOrderInventoryAdjustments(amounts.items, {
           orderId: docRef.id,
           orderNumber
         });
@@ -1331,6 +1582,8 @@ exports.orderPreview = functions.https.onRequest(async (req, res) => {
       return res.status(404).send("Order not found");
     }
 
+    const settings = await getGeneralAdminSettings();
+    const siteBaseUrl = getSiteBaseUrl(req, settings);
     const order = snapshot.data() || {};
     const items = Array.isArray(order.items) ? order.items : [];
     const item = items[itemIndex];
@@ -1338,9 +1591,10 @@ exports.orderPreview = functions.https.onRequest(async (req, res) => {
       return res.status(404).send("Order item not found");
     }
 
-    const previewValue = side === "back"
-      ? (item.previewBack || null)
-      : (item.previewFront || null);
+    const previewValue = buildLayerPreviewDataUri(item, side, siteBaseUrl) ||
+      (side === "back"
+        ? (item.previewBack || null)
+        : (item.previewFront || null));
 
     if (!previewValue) {
       return res.status(404).send("Preview not found");
