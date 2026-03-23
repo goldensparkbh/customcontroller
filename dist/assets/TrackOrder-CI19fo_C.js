@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-CTIy0p0F.js";const n=`
+import{r as t,j as a}from"./index-FiMOSVbW.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -114,7 +114,6 @@ import{r as t,j as a}from"./index-CTIy0p0F.js";const n=`
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
     border: none;
     position: relative;
   }
@@ -132,8 +131,8 @@ import{r as t,j as a}from"./index-CTIy0p0F.js";const n=`
     top: 50%;
     left: calc(100% + 8px);
     width: 70px;
-    height: 2px;
-    background: linear-gradient(90deg, rgba(124,252,0,0.7), rgba(124,252,0,0.15));
+    height: 0;
+    border-top: 3px dotted rgba(214, 221, 232, 0.35);
     transform: translateY(-50%);
   }
   .step-icon {
@@ -157,13 +156,13 @@ import{r as t,j as a}from"./index-CTIy0p0F.js";const n=`
   }
   .step-card.step-current .step-icon-wrap.has-line::after,
   .step-card.step-pending .step-icon-wrap.has-line::after {
-    background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+    border-top-color: rgba(214, 221, 232, 0.35);
   }
   .step-card.step-done .step-icon-wrap::before {
     border-color: rgba(124,252,0,0.55);
   }
   .step-card.step-done .step-icon-wrap.has-line::after {
-    background: linear-gradient(90deg, rgba(124,252,0,0.8), rgba(124,252,0,0.22));
+    border-top-color: rgba(124,252,0,0.58);
   }
   .step-card.step-done .step-title,
   .step-card.step-done .step-status {
@@ -185,10 +184,10 @@ import{r as t,j as a}from"./index-CTIy0p0F.js";const n=`
   }
   @media (max-width: 900px) {
     .steps-list { justify-content: center; }
+    .step-icon-wrap.has-line::after { display: none; }
   }
   @media (max-width: 640px) {
     .steps-list { gap: 18px; }
-    .step-icon-wrap.has-line::after { width: 50px; }
   }
   @keyframes pulseRing {
     0% { transform: scale(0.95); opacity: 0.6; }

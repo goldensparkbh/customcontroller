@@ -2005,6 +2005,10 @@ html[dir="rtl"] .part-name {
   /* keeps controller + buttons centered */
   margin-bottom: clamp(180px, 30vh, 260px);
   will-change: transform, opacity, filter;
+  --controller-view-rotate-x: -8deg;
+  --controller-view-rotate-y: -17deg;
+  --controller-view-hover-x: 0deg;
+  --controller-view-hover-y: 0deg;
 }
 
 .controller-area.has-selection::before {
@@ -2064,6 +2068,7 @@ html[dir="rtl"] .part-name {
   height: 100%;
   position: relative;
   z-index: 1;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), filter 420ms ease;
 }
 
 .controller-face {
@@ -2104,6 +2109,71 @@ html[dir="rtl"] .part-name {
 
 .controller-wrapper.is-back .controller-flip {
   transform: none;
+}
+
+.controller-area.view-mode-3d {
+  perspective: 2200px;
+}
+
+.controller-area.view-mode-3d::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 5%;
+  height: 13%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0) 78%);
+  filter: blur(16px);
+  transform: translateY(18px) scaleX(0.92);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.controller-area.view-mode-3d .controller-flip {
+  transform-style: preserve-3d;
+  transform:
+    rotateX(calc(var(--controller-view-rotate-x) + var(--controller-view-hover-x)))
+    rotateY(calc(var(--controller-view-rotate-y) + var(--controller-view-hover-y)))
+    translateZ(0);
+  filter: drop-shadow(0 28px 42px rgba(0, 0, 0, 0.82));
+}
+
+.controller-area.view-mode-3d .controller-face {
+  transform-style: preserve-3d;
+}
+
+.controller-area.view-mode-3d .controller-face-front,
+.controller-area.view-mode-3d .controller-face-back {
+  transform: translateZ(18px);
+}
+
+.controller-area.view-mode-3d .controller-face-front::after,
+.controller-area.view-mode-3d .controller-face-back::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  bottom: 12%;
+  width: clamp(18px, 2.8vw, 30px);
+  border-radius: 18px;
+  pointer-events: none;
+  opacity: 0.96;
+  z-index: 2;
+}
+
+.controller-area.view-mode-3d .controller-face-front::after {
+  right: 1.8%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(21, 26, 36, 0.92) 50%, rgba(8, 10, 18, 0.98) 100%);
+  transform: skewY(-8deg) translateZ(-12px);
+  box-shadow: 10px 0 18px rgba(0, 0, 0, 0.26);
+}
+
+.controller-area.view-mode-3d .controller-face-back::after {
+  left: 1.8%;
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.06) 0%, rgba(21, 26, 36, 0.92) 50%, rgba(8, 10, 18, 0.98) 100%);
+  transform: skewY(8deg) translateZ(-12px);
+  box-shadow: -10px 0 18px rgba(0, 0, 0, 0.26);
 }
 
 .controller-face .part-layer-img {
@@ -2283,6 +2353,48 @@ html[dir="rtl"] .part-name {
   gap: 6px;
   z-index: 12;
   margin: 0;
+}
+
+.controller-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(8, 11, 18, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.82),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+}
+
+.view-mode-btn {
+  min-width: 48px;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.view-mode-btn:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.view-mode-btn.active {
+  background: var(--button-primary-bg);
+  color: #0b1020;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(0, 229, 255, 0.6);
 }
 
 .flip-toggle {
@@ -5947,6 +6059,20 @@ body.theme-light .part-layer {
     max-width: calc(100vw - 16px);
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     gap: 8px;
+  }
+
+  body.configurator-page-active .controller-buttons-stack {
+    gap: 8px;
+  }
+
+  body.configurator-page-active .controller-view-toggle {
+    transform: scale(0.96);
+  }
+
+  body.configurator-page-active .view-mode-btn {
+    min-width: 44px;
+    padding: 6px 10px;
+    font-size: 0.68rem;
   }
 }
 

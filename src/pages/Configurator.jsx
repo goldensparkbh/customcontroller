@@ -38,6 +38,10 @@ const configuratorMarkup = `
 <img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
 </span>
 </button>
+<div class="controller-view-toggle" id="controllerViewToggle" aria-label="View mode">
+<button class="view-mode-btn active" type="button" data-view-mode="2d" aria-pressed="true">2D</button>
+<button class="view-mode-btn" type="button" data-view-mode="3d" aria-pressed="false">3D</button>
+</div>
 </div>
     <div class="mobile-panel-switch" id="mobilePanelSwitch" aria-label="تبديل لوحة الأجزاء والألوان">
       <button class="panel-switch-btn active" data-panel="options" type="button" aria-pressed="true">
@@ -271,3 +275,4 @@ const ConfiguratorPage = () => {
 };
 
 export default ConfiguratorPage;
+

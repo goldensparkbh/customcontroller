@@ -167,61 +167,6 @@
         }
     }
 
-    function playClearSweep() {
-        const ctx = getAudioContext();
-        if (!ctx) return;
-        try {
-            if (ctx.state === "suspended") {
-                ctx.resume().catch(() => { });
-            }
-        } catch { }
-
-        const now = ctx.currentTime;
-        const sweep = ctx.createOscillator();
-        sweep.type = "triangle";
-        sweep.frequency.setValueAtTime(880, now);
-        sweep.frequency.exponentialRampToValueAtTime(180, now + 0.52);
-
-        const noise = ctx.createBufferSource();
-        noise.buffer = createNoiseBuffer(ctx, 0.7);
-
-        const noiseFilter = ctx.createBiquadFilter();
-        noiseFilter.type = "bandpass";
-        noiseFilter.frequency.setValueAtTime(1200, now);
-        noiseFilter.frequency.exponentialRampToValueAtTime(380, now + 0.52);
-        noiseFilter.Q.value = 0.8;
-
-        const sweepGain = ctx.createGain();
-        sweepGain.gain.setValueAtTime(0.0001, now);
-        sweepGain.gain.exponentialRampToValueAtTime(0.05, now + 0.025);
-        sweepGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.58);
-
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.setValueAtTime(0.0001, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.02, now + 0.03);
-        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
-
-        sweep.connect(sweepGain);
-        sweepGain.connect(ctx.destination);
-
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-
-        sweep.start(now);
-        noise.start(now);
-        sweep.stop(now + 0.62);
-        noise.stop(now + 0.5);
-
-        window.setTimeout(() => {
-            [sweep, noise, noiseFilter, sweepGain, noiseGain].forEach(node => {
-                try {
-                    node.disconnect();
-                } catch { }
-            });
-        }, 900);
-    }
-
     function bindAmbientAudio() {
         if (ambientUnlockBound) return;
         ambientUnlockBound = true;
@@ -279,6 +224,7 @@
     const selectedTransparencyByPart = {};
     let selectionPaletteMode = null;
     let currentSide = "front";
+    let currentViewMode = localStorage.getItem("ez_config_view_mode") === "3d" ? "3d" : "2d";
     let hoverPartId = null;
     let tooltipVisible = false;
     let availablePartsSet = new Set();
@@ -755,6 +701,8 @@
 
     const controllerFlip = document.getElementById("controllerFlip");
     const controllerFlipBtn = document.getElementById("controllerFlipBtn");
+    const controllerViewToggle = document.getElementById("controllerViewToggle");
+    const viewModeButtons = Array.from(document.querySelectorAll(".view-mode-btn"));
     const summaryAmountEl = document.getElementById("summaryAmount");
     const addToCartBtn = document.getElementById("addToCartBtn");
     const addToCartHome = addToCartBtn ? { parent: addToCartBtn.parentElement, next: addToCartBtn.nextSibling } : null;
@@ -773,6 +721,64 @@
 
     const navLangToggle = document.getElementById("langToggle");
     bindAmbientAudio();
+
+    function getBaseViewRotation() {
+        return currentSide === "back"
+            ? { x: -8, y: 17 }
+            : { x: -8, y: -17 };
+    }
+
+    function reset3DTilt() {
+        if (!controllerArea) return;
+        const base = getBaseViewRotation();
+        controllerArea.style.setProperty("--controller-view-rotate-x", `${base.x}deg`);
+        controllerArea.style.setProperty("--controller-view-rotate-y", `${base.y}deg`);
+        controllerArea.style.setProperty("--controller-view-hover-x", "0deg");
+        controllerArea.style.setProperty("--controller-view-hover-y", "0deg");
+    }
+
+    function updateViewModeUI() {
+        if (!controllerArea) return;
+        controllerArea.classList.toggle("view-mode-3d", currentViewMode === "3d");
+        controllerArea.classList.toggle("view-mode-2d", currentViewMode !== "3d");
+        if (controllerWrapper) controllerWrapper.classList.toggle("view-mode-3d", currentViewMode === "3d");
+        if (controllerViewToggle) controllerViewToggle.setAttribute("data-mode", currentViewMode);
+
+        viewModeButtons.forEach((btn) => {
+            const isActive = btn.dataset.viewMode === currentViewMode;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+
+        reset3DTilt();
+    }
+
+    function setViewMode(mode, options = {}) {
+        const nextMode = mode === "3d" ? "3d" : "2d";
+        if (currentViewMode === nextMode && !options.force) {
+            updateViewModeUI();
+            return;
+        }
+        currentViewMode = nextMode;
+        if (options.persist !== false) {
+            localStorage.setItem("ez_config_view_mode", currentViewMode);
+        }
+        updateViewModeUI();
+    }
+
+    function handle3DPointerMove(event) {
+        if (currentViewMode !== "3d" || !controllerArea || isMobileLayout()) return;
+        const rect = controllerArea.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        const px = ((event.clientX - rect.left) / rect.width) - 0.5;
+        const py = ((event.clientY - rect.top) / rect.height) - 0.5;
+        const hoverY = Math.max(-8, Math.min(8, px * 16));
+        const hoverX = Math.max(-6, Math.min(6, -py * 12));
+
+        controllerArea.style.setProperty("--controller-view-hover-y", `${hoverY}deg`);
+        controllerArea.style.setProperty("--controller-view-hover-x", `${hoverX}deg`);
+    }
     const mobileLangToggle = document.getElementById("mobileLangToggle");
     const navMenuBtn = document.querySelector(".nav-menu-btn");
     const mobileNavOverlay = document.getElementById("mobileNavOverlay");
@@ -1287,6 +1293,7 @@
         }
     }
 
+    setViewMode(currentViewMode, { persist: false, force: true });
 
 
 
@@ -1859,6 +1866,7 @@
         if (controllerFlipBtn) {
             controllerFlipBtn.classList.toggle("flipped", side === "back");
         }
+        reset3DTilt();
         saveConfigToStorage();
     }
 
@@ -1866,6 +1874,22 @@
         controllerFlipBtn.addEventListener("click", () => {
             setSide(currentSide === "front" ? "back" : "front");
             playClick();
+        });
+    }
+
+    if (controllerViewToggle) {
+        controllerViewToggle.addEventListener("click", (event) => {
+            const btn = event.target.closest(".view-mode-btn");
+            if (!btn) return;
+            setViewMode(btn.dataset.viewMode || "2d");
+            playClick();
+        });
+    }
+
+    if (controllerArea) {
+        controllerArea.addEventListener("pointermove", handle3DPointerMove);
+        controllerArea.addEventListener("pointerleave", () => {
+            if (currentViewMode === "3d") reset3DTilt();
         });
     }
 
@@ -1901,7 +1925,6 @@
 
     function animateCurrentViewClear() {
         const visibleLayers = getVisibleCustomizationLayersForCurrentSide();
-        playClearSweep();
 
         if (!visibleLayers.length) return Promise.resolve();
 
