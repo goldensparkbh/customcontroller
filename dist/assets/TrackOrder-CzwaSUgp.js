@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-DGFR0W_T.js";const n=`
+import{r as t,j as a}from"./index-Cwj7LXov.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -105,28 +105,6 @@ import{r as t,j as a}from"./index-DGFR0W_T.js";const n=`
     min-height: 260px;
     flex: 1 1 220px;
   }
-  .step-line {
-    position: absolute;
-    top: 63px;
-    inset-inline-start: calc(50% + 73px);
-    inset-inline-end: -14px;
-    height: 3px;
-    background-image: repeating-linear-gradient(
-      90deg,
-      rgba(214, 221, 232, 0.38) 0 4px,
-      transparent 4px 8px
-    );
-    background-repeat: repeat-x;
-    background-size: 8px 3px;
-    pointer-events: none;
-  }
-  html[dir="rtl"] .step-line {
-    background-image: repeating-linear-gradient(
-      270deg,
-      rgba(214, 221, 232, 0.38) 0 4px,
-      transparent 4px 8px
-    );
-  }
   .step-icon-wrap {
     width: 130px;
     height: 130px;
@@ -168,36 +146,6 @@ import{r as t,j as a}from"./index-DGFR0W_T.js";const n=`
   .step-card.step-done .step-icon-wrap::before {
     border-color: rgba(124,252,0,0.55);
   }
-  .step-card.step-current .step-line,
-  .step-card.step-pending .step-line {
-    background-image: repeating-linear-gradient(
-      90deg,
-      rgba(214, 221, 232, 0.38) 0 4px,
-      transparent 4px 8px
-    );
-  }
-  html[dir="rtl"] .step-card.step-current .step-line,
-  html[dir="rtl"] .step-card.step-pending .step-line {
-    background-image: repeating-linear-gradient(
-      270deg,
-      rgba(214, 221, 232, 0.38) 0 4px,
-      transparent 4px 8px
-    );
-  }
-  .step-card.step-done .step-line {
-    background-image: repeating-linear-gradient(
-      90deg,
-      rgba(124,252,0,0.62) 0 4px,
-      transparent 4px 8px
-    );
-  }
-  html[dir="rtl"] .step-card.step-done .step-line {
-    background-image: repeating-linear-gradient(
-      270deg,
-      rgba(124,252,0,0.62) 0 4px,
-      transparent 4px 8px
-    );
-  }
   .step-card.step-done .step-title,
   .step-card.step-done .step-status {
     color: #8ef06b;
@@ -218,7 +166,6 @@ import{r as t,j as a}from"./index-DGFR0W_T.js";const n=`
   }
   @media (max-width: 900px) {
     .steps-list { justify-content: center; }
-    .step-line { display: none; }
   }
   @media (max-width: 640px) {
     .steps-list { gap: 18px; }
@@ -330,11 +277,11 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
-function addStep(label, value, state, icon, hasLine) {
+function addStep(label, value, state, icon) {
   const card = document.createElement("div");
   card.className = "step-card step-" + state;
   const iconWrap = document.createElement("div");
-  iconWrap.className = "step-icon-wrap" + (hasLine ? " has-line" : "");
+  iconWrap.className = "step-icon-wrap";
   const img = document.createElement("img");
   img.className = "step-icon";
   img.src = icon;
@@ -353,11 +300,6 @@ function addStep(label, value, state, icon, hasLine) {
   card.appendChild(iconWrap);
   card.appendChild(title);
   card.appendChild(status);
-  if (hasLine) {
-    const line = document.createElement("div");
-    line.className = "step-line";
-    card.appendChild(line);
-  }
   stepsListEl.appendChild(card);
 }
 
@@ -514,11 +456,10 @@ async function load() {
 
     stepsListEl.innerHTML = "";
     stepsData.forEach((step, idx) => {
-      const hasLine = idx !== stepsData.length - 1;
       const stepState = idx === currentIndex
         ? "current"
         : (idx <= doneUntilIndex ? "done" : "pending");
-      addStep(step.label, step.value, stepState, step.icon, hasLine);
+      addStep(step.label, step.value, stepState, step.icon);
     });
 
     setStatus(getTranslatedStatus(status));
