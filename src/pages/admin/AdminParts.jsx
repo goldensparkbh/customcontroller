@@ -68,10 +68,11 @@ const AdminParts = () => {
     const [subSellPrice, setSubSellPrice] = useState('0');
     const [subInventoryDetails, setSubInventoryDetails] = useState([]);
     const [subType, setSubType] = useState('color');
-    const [subSide, setSubSide] = useState('front');
     const [subColorHex, setSubColorHex] = useState('#ffffff');
     const [subImageFile, setSubImageFile] = useState(null);
     const [subImagePreview, setSubImagePreview] = useState('');
+    const [subSecondImageFile, setSubSecondImageFile] = useState(null);
+    const [subSecondImagePreview, setSubSecondImagePreview] = useState('');
     const [subIconFile, setSubIconFile] = useState(null);
     const [subIconPreview, setSubIconPreview] = useState('');
 
@@ -201,11 +202,12 @@ const AdminParts = () => {
         setSubSellPrice('0');
         setSubInventoryDetails([]);
         setSubType('color');
-        setSubSide('front');
         setSubColorHex('#ffffff');
         setSubImagePreview('');
+        setSubSecondImagePreview('');
         setSubIconPreview('');
         setSubImageFile(null);
+        setSubSecondImageFile(null);
         setSubIconFile(null);
         setShowOptionFormModal(true);
     };
@@ -219,11 +221,12 @@ const AdminParts = () => {
         setSubSellPrice(String(sub.sellPrice ?? sub.price ?? 0));
         setSubInventoryDetails(hydrateInventoryFormEntries(sub));
         setSubType(sub.type || 'color');
-        setSubSide(sub.side || 'front');
         setSubColorHex(sub.hex || '#ffffff');
         setSubImagePreview(sub.image || '');
+        setSubSecondImagePreview(sub.secondImage || '');
         setSubIconPreview(sub.icon || '');
         setSubImageFile(null);
+        setSubSecondImageFile(null);
         setSubIconFile(null);
         setShowOptionFormModal(true);
     };
@@ -237,6 +240,13 @@ const AdminParts = () => {
                 const storageRef = ref(storage, `configurator/overlays/${selectedPart.id}/${Date.now()}_${subImageFile.name}`);
                 await uploadBytes(storageRef, subImageFile);
                 imageUrl = await getDownloadURL(storageRef);
+            }
+
+            let secondImageUrl = subSecondImagePreview;
+            if (subSecondImageFile) {
+                const storageRef2 = ref(storage, `configurator/overlays/second_${selectedPart.id}/${Date.now()}_${subSecondImageFile.name}`);
+                await uploadBytes(storageRef2, subSecondImageFile);
+                secondImageUrl = await getDownloadURL(storageRef2);
             }
 
             let iconUrl = subIconPreview;
@@ -269,8 +279,8 @@ const AdminParts = () => {
                 price: inventoryPayload.price,
                 quantity: inventoryPayload.quantity,
                 type: subType,
-                side: subSide,
                 image: imageUrl,
+                secondImage: secondImageUrl,
                 updatedAt: new Date()
             };
 
@@ -641,13 +651,6 @@ const AdminParts = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Side Overlay Target:</label>
-                                    <select value={subSide} onChange={e => setSubSide(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }}>
-                                        <option value="front">Front</option>
-                                        <option value="back">Back</option>
-                                    </select>
-                                </div>
-                                <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Purchase Price:</label>
                                     <input type="number" step="0.01" min="0" value={subPurchasePrice} onChange={e => setSubPurchasePrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
                                 </div>
@@ -682,11 +685,19 @@ const AdminParts = () => {
                                 />
                             </div>
 
-                            <div style={{ background: '#0d1117', padding: '1rem', borderRadius: '8px', border: '1px solid #30363d', marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.25rem', color: '#c9d1d9', fontWeight: 600 }}>Overlay Image (.png transparent controller overlay):</label>
-                                <span style={{ fontSize: '0.8rem', color: '#8b949e', display: 'block', marginBottom: '1rem' }}>Optional for game modes. If left blank, the option can still exist but it will not add an overlay image.</span>
-                                <input type="file" accept="image/png,image/*" onChange={e => setSubImageFile(e.target.files[0])} style={{ color: '#fff' }} />
-                                {subImagePreview && !subImageFile && <img src={subImagePreview} alt="Preview" style={{ height: '80px', marginTop: '1rem', display: 'block', background: '#000', padding: '0.5rem', borderRadius: '4px' }} />}
+                            <div style={{ background: '#0d1117', padding: '1rem', borderRadius: '8px', border: '1px solid #30363d', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1, minWidth: '250px' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', color: '#c9d1d9', fontWeight: 600 }}>Primary Overlay Image (.png):</label>
+                                    <span style={{ fontSize: '0.8rem', color: '#8b949e', display: 'block', marginBottom: '1rem' }}>Applied to the <strong>{selectedPart.side}</strong> side of the controller.</span>
+                                    <input type="file" accept="image/png,image/*" onChange={e => setSubImageFile(e.target.files[0])} style={{ color: '#fff' }} />
+                                    {subImagePreview && !subImageFile && <img src={subImagePreview} alt="Preview" style={{ height: '80px', marginTop: '1rem', display: 'block', background: '#000', padding: '0.5rem', borderRadius: '4px' }} />}
+                                </div>
+                                <div style={{ flex: 1, minWidth: '250px' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', color: '#c9d1d9', fontWeight: 600 }}>Secondary Overlay Image (.png):</label>
+                                    <span style={{ fontSize: '0.8rem', color: '#8b949e', display: 'block', marginBottom: '1rem' }}>Applied to the <strong>{selectedPart.side === 'front' ? 'back' : 'front'}</strong> side of the controller.</span>
+                                    <input type="file" accept="image/png,image/*" onChange={e => setSubSecondImageFile(e.target.files[0])} style={{ color: '#fff' }} />
+                                    {subSecondImagePreview && !subSecondImageFile && <img src={subSecondImagePreview} alt="Preview" style={{ height: '80px', marginTop: '1rem', display: 'block', background: '#000', padding: '0.5rem', borderRadius: '4px' }} />}
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" onClick={() => setShowOptionFormModal(false)} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>

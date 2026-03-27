@@ -629,6 +629,7 @@
                         qty: qty,
                         isGamemode: isGamemode,
                         image: opt.image || null, // The overlay stack image!
+                        secondImage: opt.secondImage || null,
                         icon: opt.icon || (isGamemode && opt.image ? opt.image : null), // Display in palette
                         isTransparent: isTransparent
                     };
@@ -744,11 +745,17 @@
 
         ALL_PARTS.forEach(part => {
             // 1. Color/Tint layer as IMG
-            const layer = document.createElement("img");
-            layer.className = "part-layer-img";
-            layer.dataset.partId = part.id;
-            layer.style.display = "none";
-            layer.style.zIndex = (part.priority || 1) * 10;
+            const layerMain = document.createElement("img");
+            layerMain.className = "part-layer-img";
+            layerMain.dataset.partId = part.id;
+            layerMain.style.display = "none";
+            layerMain.style.zIndex = (part.priority || 1) * 10;
+
+            const layerOpposite = document.createElement("img");
+            layerOpposite.className = "part-layer-img";
+            layerOpposite.dataset.partId = part.id + "_opp";
+            layerOpposite.style.display = "none";
+            layerOpposite.style.zIndex = (part.priority || 1) * 10;
 
             // 2. Gloss/Lighting layer (Legacy support)
             const gloss = document.createElement("div");
@@ -757,18 +764,24 @@
 
             if (part.side === "front") {
                 if (faceFrontEl) {
-                    faceFrontEl.appendChild(layer);
+                    faceFrontEl.appendChild(layerMain);
                     faceFrontEl.appendChild(gloss);
+                }
+                if (faceBackEl) {
+                    faceBackEl.appendChild(layerOpposite);
                 }
             } else {
                 if (faceBackEl) {
-                    faceBackEl.appendChild(layer);
+                    faceBackEl.appendChild(layerMain);
                     faceBackEl.appendChild(gloss);
+                }
+                if (faceFrontEl) {
+                    faceFrontEl.appendChild(layerOpposite);
                 }
             }
 
             if (!layers[part.id]) layers[part.id] = [];
-            layers[part.id].push(layer);
+            layers[part.id].push({ main: layerMain, opp: layerOpposite });
 
             if (!glossLayers[part.id]) glossLayers[part.id] = [];
             glossLayers[part.id].push(gloss);
@@ -836,7 +849,8 @@
 
     function getRenderedLayerImage(partId) {
         const partLayers = layers[partId] || [];
-        for (const layer of partLayers) {
+        for (const layerObj of partLayers) {
+            const layer = layerObj.main;
             if (!layer || typeof layer.getAttribute !== "function") continue;
             if (layer.style && layer.style.display === "none") continue;
             const src = layer.getAttribute("src");
@@ -1009,9 +1023,11 @@
         const urls = new Set();
         getPaletteForPart(partId).forEach(entry => {
             if (entry && entry.image) urls.add(entry.image);
+            if (entry && entry.secondImage) urls.add(entry.secondImage);
         });
         getOptionsForPart(partId).forEach(entry => {
             if (entry && entry.image) urls.add(entry.image);
+            if (entry && entry.secondImage) urls.add(entry.secondImage);
         });
         return Array.from(urls);
     }
@@ -1029,8 +1045,14 @@
             if (colorObj && colorObj.image) {
                 queueImageWarmup(colorObj.image, { priority: "high", retain: true });
             }
+            if (colorObj && colorObj.secondImage) {
+                queueImageWarmup(colorObj.secondImage, { priority: "high", retain: true });
+            }
             if (optionObj && optionObj.image) {
                 queueImageWarmup(optionObj.image, { priority: "high", retain: true });
+            }
+            if (optionObj && optionObj.secondImage) {
+                queueImageWarmup(optionObj.secondImage, { priority: "high", retain: true });
             }
         });
     }
@@ -1069,21 +1091,47 @@
         selectedOptionPriceByPart[partId] = optionObj && optionObj.price != null ? Number(optionObj.price) : 0;
 
         const targetLayers = layers[partId] || [];
-        targetLayers.forEach((layer) => {
-            if (optionObj && optionObj.image) {
-                layer.src = optionObj.image;
-                layer.style.display = "block";
+        targetLayers.forEach((obj) => {
+            if (optionObj) {
+                if (optionObj.image) {
+                    obj.main.src = optionObj.image;
+                    obj.main.style.display = "block";
+                } else {
+                    obj.main.removeAttribute("src");
+                    obj.main.style.display = "none";
+                }
+                if (optionObj.secondImage) {
+                    obj.opp.src = optionObj.secondImage;
+                    obj.opp.style.display = "block";
+                } else {
+                    obj.opp.removeAttribute("src");
+                    obj.opp.style.display = "none";
+                }
                 return;
             }
 
-            if (colorObj && colorObj.image) {
-                layer.src = colorObj.image;
-                layer.style.display = "block";
+            if (colorObj) {
+                if (colorObj.image) {
+                    obj.main.src = colorObj.image;
+                    obj.main.style.display = "block";
+                } else {
+                    obj.main.removeAttribute("src");
+                    obj.main.style.display = "none";
+                }
+                if (colorObj.secondImage) {
+                    obj.opp.src = colorObj.secondImage;
+                    obj.opp.style.display = "block";
+                } else {
+                    obj.opp.removeAttribute("src");
+                    obj.opp.style.display = "none";
+                }
                 return;
             }
 
-            layer.removeAttribute("src");
-            layer.style.display = "none";
+            obj.main.removeAttribute("src");
+            obj.main.style.display = "none";
+            obj.opp.removeAttribute("src");
+            obj.opp.style.display = "none";
         });
 
         const targetGloss = glossLayers[partId] || [];
@@ -1199,8 +1247,9 @@
         // --- BACK SIDE LOGIC ---
         let backSrc = "/assets/controller_back.png";
         if (configState["backShellMain"] || optionState["backShellMain"]) {
-            (layers["backShellMain"] || []).forEach(l => {
-                if (l.getAttribute("src")) l.style.display = "block";
+            (layers["backShellMain"] || []).forEach(obj => {
+                if (obj.main.getAttribute("src")) obj.main.style.display = "block";
+                if (obj.opp.getAttribute("src")) obj.opp.style.display = "block";
             });
         }
 
@@ -1444,7 +1493,10 @@
         resetOptionsPanel();
         Object.values(layers).forEach(layerArr => {
             if (Array.isArray(layerArr)) {
-                layerArr.forEach(l => l.classList.remove("selected"));
+                layerArr.forEach(obj => {
+                    obj.main.classList.remove("selected");
+                    obj.opp.classList.remove("selected");
+                });
             }
         });
 
