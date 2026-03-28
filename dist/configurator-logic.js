@@ -1290,9 +1290,9 @@
         });
     });
 
-        disableMobilePanels();
-        setMobileActionBar(false);
-    }
+    // Initial panel setup
+    disableMobilePanels();
+    setMobileActionBar(false);
 
     function applyTranslations() {
         const dict = i18n[currentLang];
