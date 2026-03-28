@@ -215,7 +215,8 @@
     const zohoFetchError = { hasError: false, message: "" };
 
     // Persistent state
-    let baseControllerPrice = 0;
+    const configData = window.__CONFIG_DATA__ || {};
+    let baseControllerPrice = configData.baseControllerPrice || 0;
     const partsRowsById = {};
     let selectedPartId = null;
     let currentPanel = "options";
@@ -1606,6 +1607,14 @@
             const solid = entries.filter(e => isAllButtons || !e.isTransparent);
             const trans = isAllButtons ? [] : entries.filter(e => e.isTransparent);
 
+            const nullEntry = { key: null, isNullOption: true };
+
+            if (solid.length > 0) {
+                solid.unshift(nullEntry);
+            } else if (trans.length > 0) {
+                trans.unshift(nullEntry);
+            }
+
             if (solid.length > 0) renderSection(target, solid, t("solidColors"), false);
             if (trans.length > 0) renderSection(target, trans, t("transparentColors"), false);
         }
@@ -1632,18 +1641,34 @@
                 cell.setAttribute("aria-disabled", "true");
                 cell.title = t("outOfStock") || "Out of Stock";
             }
-            const isSelected = isOption ? (optionState[partId] === entry.key) : (configState[partId] === entry.key);
+            let isSelected = false;
+            if (isOption) {
+                isSelected = (optionState[partId] === entry.key) || (entry.isNullOption && !optionState[partId]);
+            } else {
+                isSelected = (configState[partId] === entry.key) || (entry.isNullOption && !configState[partId]);
+            }
             cell.classList.toggle("active", isSelected);
 
             const swatch = document.createElement("div");
             swatch.className = isOption ? "cd-swatch-op" : "cd-swatch";
-            if (isOutOfStock) swatch.classList.add("is-out-of-stock");
-            if (entry.icon) {
-                swatch.style.backgroundImage = `url('${entry.icon}')`;
-                swatch.style.backgroundSize = "cover";
+            
+            if (entry.isNullOption) {
+                swatch.style.display = "flex";
+                swatch.style.alignItems = "center";
+                swatch.style.justifyContent = "center";
+                swatch.style.fontSize = "1.5rem";
+                swatch.textContent = "🚫";
                 swatch.style.backgroundColor = "transparent";
+                swatch.style.border = "1px dashed #30363d";
             } else {
-                swatch.style.backgroundColor = entry.hex;
+                if (isOutOfStock) swatch.classList.add("is-out-of-stock");
+                if (entry.icon) {
+                    swatch.style.backgroundImage = `url('${entry.icon}')`;
+                    swatch.style.backgroundSize = "cover";
+                    swatch.style.backgroundColor = "transparent";
+                } else {
+                    swatch.style.backgroundColor = entry.hex;
+                }
             }
 
             const shouldShowPriceInside = !isOutOfStock && entry.price != null && entry.price > 0 && entry.key !== "rampkit" && !entry.isGamemode;
@@ -1702,17 +1727,21 @@
     }
 
     function applyColor(partId, colorKey) {
+        if (configState[partId] === colorKey && colorKey !== null) {
+            // Do not toggle off. Just return.
+            return;
+        }
+
         const requestedColor = getPaletteForPart(partId).find(c =>
             c.key === colorKey ||
             c.hex === colorKey ||
             (c.key || "").split("_")[0] === (colorKey || "").split("_")[0]
         );
-        if (configState[partId] !== colorKey && isEntryOutOfStock(requestedColor)) return;
+        if (colorKey !== null && isEntryOutOfStock(requestedColor)) return;
 
         playClick2();
 
-        // Toggle Logic: If clicking the same key, deselect it
-        if (configState[partId] === colorKey) {
+        if (colorKey === null) {
             configState[partId] = null;
             selectedPriceByPart[partId] = 0;
         } else {

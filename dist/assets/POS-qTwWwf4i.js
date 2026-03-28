@@ -1,4 +1,4 @@
-import{r as e,j as a}from"./index-DlO-Hkzf.js";const o=`
+import{r as e,j as a}from"./index-DRUxOraz.js";const o=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav" style="display:none;"></div>
 

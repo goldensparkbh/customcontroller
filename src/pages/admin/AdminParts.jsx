@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
@@ -45,6 +45,8 @@ const AdminParts = () => {
     const [selectedPart, setSelectedPart] = useState(null);
     const [subitems, setSubitems] = useState([]);
     const [viewMode, setViewMode] = useState('grid');
+    const [basePrice, setBasePrice] = useState('0');
+    const [isSavingBasePrice, setIsSavingBasePrice] = useState(false);
 
     // Modal States
     const [showPartFormModal, setShowPartFormModal] = useState(false);
@@ -75,6 +77,7 @@ const AdminParts = () => {
     const [subSecondImagePreview, setSubSecondImagePreview] = useState('');
     const [subIconFile, setSubIconFile] = useState(null);
     const [subIconPreview, setSubIconPreview] = useState('');
+    const [subActive, setSubActive] = useState(true);
 
     const fetchParts = async () => {
         setLoading(true);
@@ -83,6 +86,12 @@ const AdminParts = () => {
             const partsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             partsList.sort((a, b) => (a.priority || 0) - (b.priority || 0));
             setParts(partsList);
+
+            // Fetch Base Price
+            const basePriceDoc = await getDoc(doc(db, 'configurator_settings', 'general'));
+            if (basePriceDoc.exists()) {
+                setBasePrice(String(basePriceDoc.data().basePrice || 0));
+            }
         } catch (e) {
             console.error("Error fetching parts: ", e);
         }
@@ -92,6 +101,18 @@ const AdminParts = () => {
     useEffect(() => {
         fetchParts();
     }, []);
+
+    const handleSaveBasePrice = async () => {
+        setIsSavingBasePrice(true);
+        try {
+            await setDoc(doc(db, 'configurator_settings', 'general'), { basePrice: Number(basePrice) }, { merge: true });
+            alert("Base price saved successfully!");
+        } catch (error) {
+            console.error("Error saving base price:", error);
+            alert("Failed to save base price.");
+        }
+        setIsSavingBasePrice(false);
+    };
 
     // --- PART LOGIC ---
 
@@ -209,6 +230,7 @@ const AdminParts = () => {
         setSubImageFile(null);
         setSubSecondImageFile(null);
         setSubIconFile(null);
+        setSubActive(true);
         setShowOptionFormModal(true);
     };
 
@@ -228,6 +250,7 @@ const AdminParts = () => {
         setSubImageFile(null);
         setSubSecondImageFile(null);
         setSubIconFile(null);
+        setSubActive(sub.active !== false); // default to true if undefined
         setShowOptionFormModal(true);
     };
 
@@ -279,6 +302,7 @@ const AdminParts = () => {
                 price: inventoryPayload.price,
                 quantity: inventoryPayload.quantity,
                 type: subType,
+                active: subActive,
                 image: imageUrl,
                 secondImage: secondImageUrl,
                 updatedAt: new Date()
@@ -358,6 +382,32 @@ const AdminParts = () => {
 
     return (
         <div>
+            {/* BASE PRICE SETTINGS */}
+            <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '250px' }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff' }}>Base Controller Price</h3>
+                    <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>This is the initial price of the controller before any customizations are applied.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 600 }}>$</span>
+                    <input 
+                        type="number" 
+                        min="0" 
+                        step="0.01" 
+                        value={basePrice} 
+                        onChange={e => setBasePrice(e.target.value)} 
+                        style={{ ...fieldStyle, width: '120px', fontSize: '1.1rem' }} 
+                    />
+                    <button 
+                        onClick={handleSaveBasePrice} 
+                        disabled={isSavingBasePrice}
+                        style={{ padding: '0.7rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: '#fff', borderRadius: '6px', cursor: isSavingBasePrice ? 'wait' : 'pointer', fontWeight: 600 }}
+                    >
+                        {isSavingBasePrice ? 'Saving...' : 'Save Price'}
+                    </button>
+                </div>
+            </div>
+
             {/* MAIN VIEW */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -588,7 +638,10 @@ const AdminParts = () => {
                                                 <span style={{ fontSize: '0.75rem', padding: '2px 6px', background: '#30363d', borderRadius: '12px', color: '#c9d1d9' }}>{sub.type}</span>
                                             </div>
 
-                                            <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem', color: '#fff' }}>{sub.name}</div>
+                                            <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {sub.name}
+                                                {sub.active === false && <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: '#f8514933', color: '#ff7b72', borderRadius: '12px' }}>Inactive</span>}
+                                            </div>
                                             <div style={{ fontSize: '0.82rem', color: '#8b949e' }}>#{padNumericString(sub.itemNumber)} · Barcode {sub.barcode}</div>
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Sell Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.sellPrice ?? sub.price)}</strong></div>
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Purchase Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.purchasePrice)}</strong></div>
@@ -649,6 +702,16 @@ const AdminParts = () => {
                                         <option value="color">Color</option>
                                         <option value="gamemode">Game Mode / Performance</option>
                                     </select>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        id="subActiveCheck" 
+                                        checked={subActive} 
+                                        onChange={e => setSubActive(e.target.checked)} 
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }} 
+                                    />
+                                    <label htmlFor="subActiveCheck" style={{ color: '#c9d1d9', cursor: 'pointer', userSelect: 'none' }}>Active (Visible to users)</label>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Purchase Price:</label>

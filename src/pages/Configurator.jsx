@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { i18n } from '../i18n';
 import { buildInventoryPayload } from './admin/inventoryPricing';
 import LoadingState from '../components/LoadingState.jsx';
@@ -199,11 +199,17 @@ const ConfiguratorPage = () => {
                 quantity: raw.quantity ?? 0
               })
             };
-          });
+          }).filter(opt => opt.active !== false);
+        }
+
+        const basePriceDoc = await getDoc(doc(db, 'configurator_settings', 'general'));
+        let basePrice = 0;
+        if (basePriceDoc.exists()) {
+            basePrice = Number(basePriceDoc.data().basePrice) || 0;
         }
 
         window.__CONFIG_FIREBASE_DATA__ = partsList;
-        window.__CONFIG_DATA__ = { i18n };
+        window.__CONFIG_DATA__ = { i18n, baseControllerPrice: basePrice };
       } catch (err) {
         console.error("Firebase fetch error:", err);
       } finally {
