@@ -2686,14 +2686,15 @@ body.theme-light .flip-toggle {
   transform: translateY(-2px);
 }
 
-.parts-item.active {
+.parts-item.active,
+.parts-list .parts-item.active {
   border-color: #1f6feb !important;
-  background: rgba(31, 111, 235, 0.1);
+  background: rgba(31, 111, 235, 0.1) !important;
   box-shadow: 
-    0 0 15px rgba(31, 111, 235, 0.3),
+    0 0 15px rgba(31, 111, 235, 0.4),
     inset 0 0 10px rgba(31, 111, 235, 0.2);
-  transform: scale(1.02);
-  z-index: 5;
+  transform: scale(1.04);
+  z-index: 10;
 }
 
 .parts-thumb {
@@ -4843,8 +4844,9 @@ textarea {
   body.configurator-page-active .parts-item:hover,
   body.configurator-page-active .parts-item.active {
     border-color: #1f6feb !important;
-    background: rgba(31, 111, 235, 0.12) !important;
-    box-shadow: 0 0 12px rgba(31, 111, 235, 0.4) !important;
+    background: rgba(31, 111, 235, 0.15) !important;
+    box-shadow: 0 0 18px rgba(31, 111, 235, 0.5) !important;
+    transform: scale(1.04);
   }
 
   body.configurator-page-active .parts-item .parts-thumb {
