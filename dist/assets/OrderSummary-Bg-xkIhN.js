@@ -1,22 +1,39 @@
-import{r as t,j as a}from"./index-5gLeFk5j.js";const n=`
+import{r as t,j as a}from"./index-BxlkSWP5.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav" style="display:none;"></div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
-  <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-  <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
+  <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">Premade Designs</a>
+  <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">Build Yours Now</a>
   <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
-  <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">فاتح</button>
+  <button class="mobile-nav-link mobile-nav-theme" id="mobileThemeToggle" type="button">Light</button>
 </aside>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
-  <div class="card" style="max-width:480px; width:100%; text-align:center;">
-    <div class="card-title" data-i18n="paymentFailedTitle" style="color: #ff4d4d;">فشل الدفع</div>
-    <div style="font-size:3rem; margin:20px 0;">❌</div>
-    <div id="failMessage" data-i18n="paymentFailedMessage" style="font-size:1rem; margin:10px 0;">لم تكتمل عملية الدفع بنجاح.</div>
-    <div id="redirectMsg" data-i18n="redirectingCart" style="font-size:0.9rem; margin-top:10px; opacity:0.7;">جاري التحويل للسلة...</div>
+  <div class="card" style="max-width:640px; width:100%;">
+    <div class="card-title" data-i18n="orderSummaryTitle">Order Summary</div>
+    <div id="orderStatus" style="margin-bottom:8px;"></div>
+    <div id="orderItems"></div>
+    <div id="orderTotals" style="margin-top:10px; font-weight:700;"></div>
   </div>
 </div>
 `,l=`
+  function getLineItemTotal(item) {
+    const qty = item.quantity || 1;
+    const unit = item.unitPrice != null ? item.unitPrice : (item.total != null ? item.total : 0);
+    return Number(unit) * qty;
+  }
+
+  function getDraftTotal(draft) {
+    const cart = Array.isArray(draft && draft.cart) ? draft.cart : [];
+    const subtotal = Number(draft && draft.subtotal) > 0
+      ? Number(draft.subtotal)
+      : cart.reduce((sum, item) => sum + getLineItemTotal(item), 0);
+    const shippingCost = Number(draft && draft.shippingCost);
+    return Number(draft && draft.total) > 0
+      ? Number(draft.total)
+      : subtotal + (Number.isFinite(shippingCost) && shippingCost > 0 ? shippingCost : 0);
+  }
+
   let navLang = localStorage.getItem("ez_lang") || "ar";
   const i18n = window.__EZ_I18N__ || {};
   const navLangToggle = document.getElementById("langToggle");
@@ -26,7 +43,7 @@ import{r as t,j as a}from"./index-5gLeFk5j.js";const n=`
   const navMenuBtn = document.querySelector(".nav-menu-btn");
   const mobileNavOverlay = document.getElementById("mobileNavOverlay");
   const mobileNavDrawer = document.getElementById("mobileNavDrawer");
-  
+
   function t(key) {
     return (i18n[navLang] && i18n[navLang][key]) || key;
   }
@@ -83,7 +100,6 @@ import{r as t,j as a}from"./index-5gLeFk5j.js";const n=`
   applyTheme();
   updateThemeLabel();
   applyTranslations();
-  
   if (navLangToggle) navLangToggle.addEventListener("click", toggleNavLang);
   if (mobileLangToggle) mobileLangToggle.addEventListener("click", toggleNavLang);
   if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
@@ -110,9 +126,33 @@ import{r as t,j as a}from"./index-5gLeFk5j.js";const n=`
     });
   }
 
-  // --- FAILURE LOGIC ---
-  // Redirect to cart after 5 seconds
-  setTimeout(() => {
-    window.location.href = "/cart";
-  }, 5000);
-`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>{document.body.contains(e)&&document.body.removeChild(e)}},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};
+  const resultRaw = localStorage.getItem("ezOrderResult");
+  const draftRaw = localStorage.getItem("ezOrderDraft");
+  const statusEl = document.getElementById("orderStatus");
+  const itemsEl = document.getElementById("orderItems");
+  const totalsEl = document.getElementById("orderTotals");
+
+  if (!resultRaw || !draftRaw) {
+    statusEl.textContent = t("orderStatusMissing");
+    setTimeout(() => window.location.href = "/cart", 1200);
+  } else {
+    const draft = JSON.parse(draftRaw);
+    const cart = Array.isArray(draft.cart) ? draft.cart : [];
+    const total = getDraftTotal(draft);
+    statusEl.innerHTML = t("orderStatusLabel") + " <strong>" + t("orderStatusConfirmed") + "</strong>";
+    const list = document.createElement("ul");
+    cart.forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent =
+        (item.name || t("orderItemFallback")) +
+        " x " +
+        (item.quantity || 1) +
+        " - " +
+        (draft.currencyPrefix || "BHD ") +
+        getLineItemTotal(item).toFixed(2);
+      list.appendChild(li);
+    });
+    itemsEl.appendChild(list);
+    totalsEl.textContent = t("orderTotalLabel") + " " + (draft.currencyPrefix || "BHD ") + total.toFixed(2);
+  }
+`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>document.body.removeChild(e)},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};

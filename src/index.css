@@ -4575,86 +4575,9 @@ textarea {
     border-color: var(--color-text);
   }
 
-  body.configurator-page-active .page-content {
-    padding-top: 6px;
-    padding-bottom: calc(var(--mobile-bottom-bar-height, 88px) + 12px);
-    height: calc(100vh - var(--mobile-bottom-bar-height, 88px));
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  body.configurator-page-active .controller-column {
-    position: sticky;
-    top: 8px;
-    z-index: 50;
-    padding-bottom: 0;
-    background: none;
-  }
-
-
-  body.configurator-page-active .controller-buttons-stack {
-    margin-top: 10px;
-  }
-
-  body.configurator-page-active .side-toggle-container {
-    display: flex;
-    margin-top: 6px;
-  }
-  body.configurator-page-active .main-layout {
-    height: 100vh;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 76px;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "controller parts"
-      "colors parts";
-    gap: 0;
-    align-items: stretch;
-    overflow: hidden;
-  }
-
-  html[dir="rtl"] body.configurator-page-active .main-layout {
-    grid-template-columns: 76px minmax(0, 1fr);
-    grid-template-areas:
-      "parts controller"
-      "parts colors";
-  }
-
-  body.configurator-page-active .controller-column {
-    grid-area: controller;
-    height: 42vh;
-    min-height: 280px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    background: radial-gradient(circle at center, rgba(31, 111, 235, 0.05), transparent);
-    z-index: 2;
-  }
-
-  body.configurator-page-active .colors-column {
-    grid-area: colors;
-    height: calc(58vh - 60px);
-    overflow-y: auto;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(13, 17, 23, 0.4);
-    backdrop-filter: blur(10px);
-    z-index: 2;
-  }
-
-  body.configurator-page-active .parts-column {
-    grid-area: parts;
-    width: 76px;
-    height: calc(100vh - 60px);
-    background: rgba(13, 17, 23, 0.6);
-    backdrop-filter: blur(15px);
-    border-inline-start: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 10;
-  }
 
 }
 
-@media (min-width: 901px) {
   body.configurator-page-active .parts-column,
   body.configurator-page-active .colors-column {
     position: relative;
@@ -4906,7 +4829,6 @@ textarea {
     order: 2;
     margin: 0;
   }
-}
 
 @keyframes controllerIntroSweep {
   0% {

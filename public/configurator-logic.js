@@ -1188,13 +1188,8 @@
     }
 
     function setPanel(panel) {
-        if (currentPanel === panel && selectedPartId && isMobileLayout()) {
-            clearSelection();
-            return;
-        }
         currentPanel = panel;
-        const mobile = isMobileLayout();
-        selectionPaletteMode = mobile ? currentPanel : panel;
+        selectionPaletteMode = panel;
 
         document.body.classList.toggle("config-panel-options", panel === "options");
         document.body.classList.toggle("config-panel-colors", panel === "colors");
@@ -1209,21 +1204,12 @@
             btn.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
 
-        if (!mobile && accordionItems.length >= 2) {
+        if (accordionItems.length >= 2) {
             accordionItems.forEach((item) => item.classList.add("open"));
             refreshAccordionHeights();
         }
 
         if (selectedPartId) {
-            openColorPanelForPart(selectedPartId);
-        } else {
-            if (mobile) updateMobileOptionsBar();
-        }
-
-        if (mobile) {
-            updateMobileOptionsBar();
-        }
-
         saveConfigToStorage();
     }
 
@@ -1273,7 +1259,7 @@
     }
 
     function isMobileLayout() {
-        return mobileQuery && mobileQuery.matches;
+        return false;
     }
 
     function disableMobilePanels() {
@@ -1304,39 +1290,8 @@
         });
     });
 
-    if (configuratorControls) {
-        configuratorControls.addEventListener("click", (e) => {
-            if (!isMobileLayout()) return;
-            const btn = e.target.closest(".control-btn");
-            if (!btn) return;
-            if (btn.dataset.action === "flip") {
-                setSide(currentSide === "front" ? "back" : "front");
-                playClick();
-                return;
-            }
-            const panel = btn.dataset.panel;
-            if (panel) setPanel(panel);
-        });
-
-        if (isMobileLayout()) {
-            setPanel(currentPanel);
-            setMobileActionBar(true);
-        } else {
-            disableMobilePanels();
-            setMobileActionBar(false);
-        }
-
-        if (mobileQuery && mobileQuery.addEventListener) {
-            mobileQuery.addEventListener("change", (e) => {
-                if (e.matches) {
-                    setPanel(currentPanel);
-                    setMobileActionBar(true);
-                } else {
-                    disableMobilePanels();
-                    setMobileActionBar(false);
-                }
-            });
-        }
+        disableMobilePanels();
+        setMobileActionBar(false);
     }
 
     function applyTranslations() {
@@ -1565,61 +1520,17 @@
 
         colorEmptyState.style.display = "none";
         const mobile = isMobileLayout();
-
-        if (mobile) {
-            // Mobile: Show grids based on content
-            if (optionsPanelGrid) {
-                optionsPanelGrid.style.display = hasOptions ? "grid" : "none";
-                buildPaletteCells(optionsPanelGrid, options, true);
-            }
-            if (colorPanelGrid) {
-                colorPanelGrid.style.display = hasColors ? "grid" : "none";
-                buildPaletteCells(colorPanelGrid, hasColors ? palette : [], false);
-            }
-
-            updateMobileOptionsBar();
-        } else {
-            // Desktop: Show headers and grids only if they have content
-
-            if (optionsPanelGrid) {
-                optionsPanelGrid.style.display = hasOptions ? "grid" : "none";
-                buildPaletteCells(optionsPanelGrid, options, true);
-            }
-            
-
-            if (colorPanelGrid) {
-                colorPanelGrid.style.display = hasColors ? "grid" : "none";
-                buildPaletteCells(colorPanelGrid, hasColors ? palette : [], false);
-            }
+        // Desktop (Universal): Show headers and grids only if they have content
+        if (optionsPanelGrid) {
+            optionsPanelGrid.style.display = hasOptions ? "grid" : "none";
+            buildPaletteCells(optionsPanelGrid, options, true);
+        }
+        if (colorPanelGrid) {
+            colorPanelGrid.style.display = hasColors ? "grid" : "none";
+            buildPaletteCells(colorPanelGrid, hasColors ? palette : [], false);
         }
     }
 
-    function updateMobileOptionsBar() {
-        if (!mobileOptionsGrid) return;
-        mobileOptionsGrid.innerHTML = "";
-        ALL_PARTS.forEach(part => {
-            if (part.hiddenUI || !isPartActive(part)) return;
-            const cell = document.createElement("div");
-            cell.className = "mobile-part-item";
-
-            const btn = document.createElement("button");
-            btn.className = "mobile-part-btn";
-            if (selectedPartId === part.id) btn.classList.add("selected");
-            const img = document.createElement("img");
-            img.src = part.icon;
-            btn.appendChild(img);
-
-            btn.addEventListener("click", () => selectPart(part.id));
-            cell.appendChild(btn);
-            mobileOptionsGrid.appendChild(cell);
-        });
-
-        if (mobileOptionsGrid.children.length === 0) {
-            mobileOptionsGrid.classList.remove("has-content");
-        } else {
-            mobileOptionsGrid.classList.add("has-content");
-        }
-    }
 
 
 
