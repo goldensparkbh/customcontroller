@@ -1161,6 +1161,7 @@
         setSide(currentSide === "back" ? "back" : "front");
         syncBaseImages();
         updatePartsUI();
+        updateVisualizerLayers();
         updateSummary();
         saveConfigToStorage();
     }
@@ -1210,6 +1211,9 @@
         }
 
         if (selectedPartId) {
+            openColorPanelForPart(selectedPartId);
+        }
+
         saveConfigToStorage();
     }
 
@@ -1352,6 +1356,7 @@
         if (summaryAmountEl) updateSummary();
         buildPartsList();
         updatePartsUI();
+        updateVisualizerLayers();
         if (selectedPartId) openColorPanelForPart(selectedPartId);
     }
 
@@ -1428,11 +1433,12 @@
             setSide(part.side);
         }
         updatePartsUI();
+        updateVisualizerLayers();
         openColorPanelForPart(partId);
         saveConfigToStorage();
     }
 
-    function updatePartsUI() {
+    function _updateSidebarIcons() {
         // Use Live DOM Search for increased reliability instead of stale map references
         const allItems = document.querySelectorAll(".parts-item");
         
@@ -1464,9 +1470,15 @@
         });
     }
 
+    function updatePartsUI() {
+        _updateSidebarIcons();
+        updateVisualizerLayers();
+    }
+
     function clearSelection() {
         selectedPartId = null;
         updatePartsUI();
+        updateVisualizerLayers();
         resetColorPanel();
         resetOptionsPanel();
         Object.values(layers).forEach(layerArr => {
@@ -1877,7 +1889,7 @@
         updateSummary();
         if (selectedPartId === partId) openColorPanelForPart(partId);
     }
-    function updatePartsUI() {
+    function updateVisualizerLayers() {
         ALL_PARTS.forEach(part => {
             const partId = part.id;
             const targetLayers = layers[partId] || [];
@@ -2072,6 +2084,7 @@
         syncBaseImages();
         updateSummary();
         updatePartsUI();
+        updateVisualizerLayers();
         if (selectedPartId) openColorPanelForPart(selectedPartId);
         else if (isMobileLayout()) updateMobileOptionsBar();
     }
