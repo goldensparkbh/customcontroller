@@ -72,7 +72,7 @@ const AdminParts = () => {
     const [subType, setSubType] = useState('color');
     const [subColorHex, setSubColorHex] = useState('#ffffff');
     const [subDisablesColors, setSubDisablesColors] = useState(false);
-    const [subIncompatibleWith, setSubIncompatibleWith] = useState(''); // Comma-separated list of IDs
+    const [subIncompatibleWith, setSubIncompatibleWith] = useState([]); // Array of IDs
     const [subPriority, setSubPriority] = useState(1);
     const [subImageFile, setSubImageFile] = useState(null);
     const [subImagePreview, setSubImagePreview] = useState('');
@@ -235,7 +235,7 @@ const AdminParts = () => {
         setSubImageFile(null);
         setSubSecondImageFile(null);
         setSubIconFile(null);
-        setSubIncompatibleWith('');
+        setSubIncompatibleWith([]);
         setSubPriority(1);
         setSubActive(true);
         setSubAllowsMultiple(false);
@@ -263,7 +263,7 @@ const AdminParts = () => {
         setSubAllowsMultiple(!!sub.allowsMultiple);
         setSubExclusiveGroup(sub.exclusiveGroup || '');
         setSubDisablesColors(!!sub.disablesColors);
-        setSubIncompatibleWith(Array.isArray(sub.incompatibleWith) ? sub.incompatibleWith.join(', ') : '');
+        setSubIncompatibleWith(Array.isArray(sub.incompatibleWith) ? sub.incompatibleWith : []);
         setSubPriority(sub.priority || 1);
         setShowOptionFormModal(true);
     };
@@ -323,7 +323,7 @@ const AdminParts = () => {
                 disablesColors: subDisablesColors,
                 allowsMultiple: subAllowsMultiple,
                 exclusiveGroup: subExclusiveGroup,
-                incompatibleWith: subIncompatibleWith.split(',').map(id => id.trim()).filter(id => id.length > 0),
+                incompatibleWith: subIncompatibleWith,
                 priority: Number(subPriority || 1)
             };
 
@@ -809,17 +809,41 @@ const AdminParts = () => {
                                             />
                                             <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#8b949e' }}>Options in the same group are mutually exclusive (Standard radio button behavior).</p>
                                         </div>
-
                                         <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Incompatible with (IDs):</label>
-                                            <input 
-                                                value={subIncompatibleWith} 
-                                                onChange={e => setSubIncompatibleWith(e.target.value)} 
-                                                placeholder="e.g. opt_123, opt_456"
-                                                style={{ ...fieldStyle }} 
-                                            />
-                                            <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#8b949e' }}>Comma-separated list of option IDs that are incompatible with this one.</p>
+                                            <label style={{ display: 'block', marginBottom: '0.8rem', color: '#c9d1d9', fontWeight: 600 }}>Incompatible with:</label>
+                                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem' }}>
+                                                {subitems
+                                                    .filter(item => item.id !== editSubId) // Filter out current item
+                                                    .map(item => (
+                                                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                id={`incompat-${item.id}`}
+                                                                checked={subIncompatibleWith.includes(item.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSubIncompatibleWith([...subIncompatibleWith, item.id]);
+                                                                    } else {
+                                                                        setSubIncompatibleWith(subIncompatibleWith.filter(i => i !== item.id));
+                                                                    }
+                                                                }}
+                                                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                            />
+                                                            <label htmlFor={`incompat-${item.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3', cursor: 'pointer', flex: 1 }}>
+                                                                {item.icon && <img src={item.icon} alt="" style={{ height: '24px', width: '24px', objectFit: 'contain', background: '#21262d', borderRadius: '3px' }} />}
+                                                                <span style={{ fontSize: '0.85rem' }}>{item.name}</span>
+                                                                <span style={{ fontSize: '0.7rem', color: '#8b949e' }}>({item.id})</span>
+                                                            </label>
+                                                        </div>
+                                                    ))
+                                                }
+                                                {subitems.filter(item => item.id !== editSubId).length === 0 && (
+                                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#8b949e', fontSize: '0.85rem' }}>No other items available for this part.</div>
+                                                )}
+                                            </div>
+                                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#8b949e' }}>Select items that cannot be active at the same time as this one.</p>
                                         </div>
+
                                     </div>
                                 </div>
                             )}

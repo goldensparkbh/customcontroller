@@ -1684,7 +1684,6 @@
                      isIncompatible = currentSelectedKeys.some(k => {
                          const other = entries.find(o => o.key === k);
                          if (other && other.incompatibleWith && other.incompatibleWith.includes(entry.key)) return true;
-                         if (entry.exclusiveGroup && other && other.exclusiveGroup === entry.exclusiveGroup) return true;
                          if (entry.incompatibleWith && entry.incompatibleWith.includes(k)) return true;
                          return false;
                      });
@@ -1882,18 +1881,19 @@
         const isAlreadySelected = currentSelections.includes(optionKey);
 
         if (isAlreadySelected) {
-            // Deselect if already selected
+            // Deselect if already selected (toggable)
             currentSelections = currentSelections.filter(k => k !== optionKey);
         } else {
             // 1. Handle Exclusive Groups (Deselect others in same group)
-            if (requestedOption.exclusiveGroup) {
+            // But only if the new option doesn't explicitly 'allowMultiple' within the group
+            if (requestedOption.exclusiveGroup && !requestedOption.allowsMultiple) {
                 currentSelections = currentSelections.filter(k => {
                     const opt = options.find(o => o.key === k);
                     return !opt || opt.exclusiveGroup !== requestedOption.exclusiveGroup;
                 });
             }
 
-            // 2. Handle Incompatibilities (Newest wins)
+            // 2. Handle Incompatibilities (Newest wins / Conflict resolution)
             const incompatibleList = Array.isArray(requestedOption.incompatibleWith) ? requestedOption.incompatibleWith : [];
             if (incompatibleList.length > 0) {
                 currentSelections = currentSelections.filter(k => !incompatibleList.includes(k));
@@ -1906,12 +1906,14 @@
                 return !opt || !list.includes(optionKey);
             });
 
-            // 3. Handle Simple Radio Behavior (if not allowing multiple)
+            // 3. Handle Simple Radio Behavior (if NOT part of a group AND not allowing multiple)
+            // This is for standard "choose one of many" behavior
             if (!requestedOption.allowsMultiple && !requestedOption.exclusiveGroup) {
-                // Remove all other non-multiple, non-group items if this one is exclusive
+                // Remove all other non-multiple, non-group items
                 currentSelections = currentSelections.filter(k => {
                     const opt = options.find(o => o.key === k);
-                    return opt && opt.allowsMultiple;
+                    // Keep if it has its own group (isolation) or allows multiple
+                    return opt && (opt.allowsMultiple || opt.exclusiveGroup);
                 });
             }
 
