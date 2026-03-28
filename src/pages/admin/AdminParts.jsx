@@ -813,7 +813,7 @@ const AdminParts = () => {
                                             <label style={{ display: 'block', marginBottom: '0.8rem', color: '#c9d1d9', fontWeight: 600 }}>Incompatible with:</label>
                                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem' }}>
                                                 {subitems
-                                                    .filter(item => item.id !== editSubId) // Filter out current item
+                                                    .filter(item => item.id !== editSubId && item.type === 'gamemode') // Show only gamemode options
                                                     .map(item => (
                                                         <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                             <input 
@@ -837,8 +837,8 @@ const AdminParts = () => {
                                                         </div>
                                                     ))
                                                 }
-                                                {subitems.filter(item => item.id !== editSubId).length === 0 && (
-                                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#8b949e', fontSize: '0.85rem' }}>No other items available for this part.</div>
+                                                {subitems.filter(item => item.id !== editSubId && item.type === 'gamemode').length === 0 && (
+                                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#8b949e', fontSize: '0.85rem' }}>No other gamemode options available for this part.</div>
                                                 )}
                                             </div>
                                             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#8b949e' }}>Select items that cannot be active at the same time as this one.</p>

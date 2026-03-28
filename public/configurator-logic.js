@@ -1922,7 +1922,18 @@
 
         optionState[partId] = currentSelections;
         
-        // Update price (sum of all selected options)
+        // --- 4. Handle Color-Disabling Cleanup & Price Reset ---
+        const colorDisabled = currentSelections.some(k => {
+            const opt = options.find(o => o.key === k);
+            return opt && opt.disablesColors;
+        });
+
+        if (colorDisabled) {
+            configState[partId] = null;
+            selectedPriceByPart[partId] = 0;
+        }
+
+        // --- 5. Update Price (Sum of all active gamemodes) ---
         let totalPrice = 0;
         currentSelections.forEach(k => {
             const opt = options.find(o => o.key === k);
