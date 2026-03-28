@@ -889,6 +889,26 @@ body.theme-light .footer {
   max-width: 460px;
 }
 
+.cd-cell.is-incompatible,
+.cd-cell-op.is-incompatible {
+  filter: grayscale(1) opacity(0.5);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.cd-cell.is-incompatible::after,
+.cd-cell-op.is-incompatible::after {
+  content: "✕";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ff4444;
+  font-size: 1.5rem;
+  font-weight: bold;
+  pointer-events: none;
+}
+
 /* PREMADE GRID ----------------------------------------------- */
 
 .build-grid {

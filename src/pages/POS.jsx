@@ -1,444 +1,593 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { db } from '../firebase'; // Update with proper path if needed
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  serverTimestamp, 
+  query, 
+  where 
+} from 'firebase/firestore';
 
-const posMarkup = `
-<canvas id="bgCanvas"></canvas>
-<div class="top-nav" style="display:none;"></div>
-
-<div class="pos-container">
-  <!-- Dynamic Sidebar -->
-  <aside class="pos-sidebar">
-    <div class="pos-sidebar-inner">
-      <div class="pos-search-box">
-        <input type="text" id="posSearch" placeholder="بحث عن منتج..." data-i18n-placeholder="posSearchPlaceholder">
-        <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      </div>
-      
-      <div class="pos-filter-group">
-        <h3 data-i18n="posCategories">الأقسام</h3>
-        <div class="pos-category-list" id="posCategoryList">
-          <button class="pos-category-btn active" data-category="all" data-i18n="posCatAll">الكل</button>
-        </div>
-      </div>
-
-      <div class="pos-filter-group">
-        <h3 data-i18n="posStatusFilter">الحالة</h3>
-        <div class="pos-status-filters">
-           <label class="pos-filter-item">
-             <input type="checkbox" id="filterInStock" checked>
-             <span data-i18n="posFilterInStock">متوفر فقط</span>
-           </label>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main Content -->
-  <main class="pos-main">
-    <div class="pos-toolbar">
-      <div id="posStatus" class="pos-status-msg"></div>
-      <div class="pos-view-options">
-        <span id="posItemCount">0</span> <span data-i18n="posCountSuffix">منتجات</span>
-      </div>
-    </div>
-    
-    <div class="pos-grid" id="posGrid">
-      <!-- Loading Skeletons -->
-      <div class="pos-skeleton"></div>
-      <div class="pos-skeleton"></div>
-      <div class="pos-skeleton"></div>
-      <div class="pos-skeleton"></div>
-    </div>
-  </main>
-
-  <!-- POS Cart Panel -->
-  <aside class="pos-cart-panel" id="posCartPanel">
-    <div class="pos-cart-header">
-      <button class="pos-cart-close" id="closeCart">&times;</button>
-      <h3 data-i18n="posCartTitle">السلة</h3>
-      <button class="pos-cart-clear" id="clearCart" data-i18n="posClearCart">مسح</button>
-    </div>
-    <div class="pos-cart-items" id="posCartItems">
-      <!-- Cart items injected here -->
-      <div class="pos-cart-empty" data-i18n="posCartEmpty">السلة فارغة</div>
-    </div>
-    <div class="pos-cart-footer">
-      <div class="pos-cart-total-row">
-        <span data-i18n="posSubtotal">المجموع</span>
-        <span id="posSubtotalValue">0.000 BHD</span>
-      </div>
-      <button class="pos-checkout-btn" id="posCheckout" data-i18n="posCheckout">إتمام الطلب</button>
-    </div>
-  </aside>
-</div>
-
-<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-<aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
-  <div class="mobile-drawer-header">
-     <button class="nav-close-btn" id="closeMobileNav">&times;</button>
-  </div>
-  <nav class="mobile-nav-list">
-    <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
-    <a class="mobile-nav-link mobile-nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
-    <button class="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
-  </nav>
-</aside>
-`;
-
-const posScript = `
-  let navLang = localStorage.getItem("ez_lang") || "ar";
+const POS = () => {
+  // --- Translations ---
+  const [lang, setLang] = useState(localStorage.getItem("ez_lang") || "ar");
   const i18n = window.__EZ_I18N__ || {};
   
-  function t(key) {
-    return (i18n[navLang] && i18n[navLang][key]) || key;
-  }
-
-  function applyTranslations() {
-    document.querySelectorAll("[data-i18n]").forEach(el => {
-      const key = el.getAttribute("data-i18n");
-      el.textContent = t(key);
-    });
-    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-      const key = el.getAttribute("data-i18n-placeholder");
-      el.placeholder = t(key);
-    });
-    
-    // Update labels for toggles
-    const langToggle = document.querySelector(".lang-toggle-btn");
-    if (langToggle) langToggle.textContent = navLang === "ar" ? "EN" : "AR";
-    const mobileLangToggle = document.getElementById("mobileLangToggle");
-    if (mobileLangToggle) mobileLangToggle.textContent = navLang === "ar" ? "EN" : "AR";
-  }
-
-  // --- Mobile Navigation ---
-  function setMobileNavOpen(isOpen) {
-    const overlay = document.getElementById("mobileNavOverlay");
-    const drawer = document.getElementById("mobileNavDrawer");
-    const btn = document.querySelector(".nav-menu-btn");
-    
-    if (overlay) overlay.classList.toggle("open", isOpen);
-    if (drawer) drawer.classList.toggle("open", isOpen);
-    if (btn) btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    document.body.classList.toggle("mobile-nav-open", isOpen);
-  }
-
-  // --- Cart Drawer Logic ---
-  function setCartOpen(isOpen) {
-    const panel = document.getElementById("posCartPanel");
-    if (panel) panel.classList.toggle("open", isOpen);
-  }
-
-  let allProducts = [];
-  let currentCategory = "all";
-  let searchQuery = "";
-  let showInStockOnly = true;
-  let lastProductsHash = "";
-
-  const gridEl = document.getElementById("posGrid");
-  const statusEl = document.getElementById("posStatus");
-  const countEl = document.getElementById("posItemCount");
-  const cartItemsEl = document.getElementById("posCartItems");
-  const subtotalValueEl = document.getElementById("posSubtotalValue");
-  const categoryListEl = document.getElementById("posCategoryList");
-
-  function setStatus(msg) { statusEl.textContent = msg; }
-
-  async function loadItems() {
-    // gridEl.innerHTML remains skeletons initially
-    setStatus(t("posStatusLoading"));
-    try {
-      const orgId = "892379608";
-      const url = "/zoho/inventory/v1/items?organization_id=" + orgId + "&per_page=200";
-      console.log("[POS] Fetching items from:", url);
-      const res = await fetch(url);
-      if (!res.ok) {
-         const errText = await res.text();
-         console.error("[POS] Fetch failed (" + res.status + "):", errText);
-         throw new Error("HTTP " + res.status);
-      }
-      const json = await res.json();
-      const items = json.items || [];
-      console.log("[POS] Received " + items.length + " items from Zoho.");
-      
-      const filteredItems = items.filter(it => {
-          const status = (it.status || it.item_status || "").toLowerCase();
-          const name = it.name || it.item_name || "";
-          const sku = it.sku || "";
-          const isActive = (status === "" || status === "active" || status === "active");
-          const isNotPS5 = !name.toLowerCase().startsWith("ps5_") && !sku.toLowerCase().startsWith("ps5_");
-          return isActive && isNotPS5;
-      });
-      console.log("[POS] Filtered to " + filteredItems.length + " non-configurator items.");
-      
-      allProducts = filteredItems;
-      
-      renderCategories();
-      filterAndRender();
-      setStatus(allProducts.length + " " + t("posStatusLoadedSuffix"));
-    } catch (err) {
-      console.error("[POS] Error fetching items:", err);
-      setStatus(t("posStatusFailedPrefix") + err.message);
-    }
-  }
-
-  function renderCategories() {
-    const cats = new Set();
-    allProducts.forEach(p => {
-      let cat = p.cf_category;
-      if (!cat && p.custom_fields) {
-          const found = p.custom_fields.find(f => f.label === "Category" || f.api_name === "cf_category");
-          if (found) cat = found.value;
-      }
-      if (!cat) cat = p.category_name; 
-      
-      p._displayCategory = cat || "Other";
-      if (cat) cats.add(cat);
-    });
-    
-    categoryListEl.innerHTML = '<button class="pos-category-btn active" data-category="all">' + t("posCatAll") + '</button>';
-    const sortedCats = Array.from(cats).sort();
-    sortedCats.forEach(cat => {
-      const btn = document.createElement("button");
-      btn.className = "pos-category-btn";
-      btn.dataset.category = cat;
-      btn.textContent = cat;
-      btn.onclick = () => {
-        document.querySelectorAll(".pos-category-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentCategory = cat;
-        filterAndRender();
-      };
-      categoryListEl.appendChild(btn);
-    });
-    
-    document.querySelector('[data-category="all"]').onclick = (e) => {
-        document.querySelectorAll(".pos-category-btn").forEach(b => b.classList.remove("active"));
-        e.target.classList.add("active");
-        currentCategory = "all";
-        filterAndRender();
-    };
-  }
-
-  function filterAndRender() {
-    const filtered = allProducts.filter(p => {
-      const matchCat = currentCategory === "all" || p._displayCategory === currentCategory;
-      const name = p.name || p.item_name || "";
-      const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
-      const avail = p.available_stock != null ? p.available_stock : (p.stock_on_hand || 0);
-      const matchStock = !showInStockOnly || (avail > 0);
-      return matchCat && matchSearch && matchStock;
-    });
-
-    renderProducts(filtered);
-  }
-
-  function renderProducts(items) {
-    const currentHash = items.map(it => it.item_id || it.itemid).join(",");
-    if (currentHash === lastProductsHash && gridEl.children.length > 0 && !gridEl.querySelector(".pos-skeleton")) return;
-    lastProductsHash = currentHash;
-
-    countEl.textContent = items.length;
-    
-    if (items.length === 0) {
-      gridEl.innerHTML = '<div class="pos-empty-state">' + t("posNoProductsFound") + '</div>';
-      return;
-    }
-
-    const fragment = document.createDocumentFragment();
-    items.forEach(it => {
-      const card = document.createElement("div");
-      card.className = "pos-product-card";
-      
-      const rate = typeof it.rate === "number" ? it.rate.toFixed(3) : "0.000";
-      const avail = it.available_stock != null ? it.available_stock : it.stock_on_hand;
-      const itemId = it.item_id || it.itemid;
-      const hasImg = it.image_name || it.image_id || it.image_url;
-      const imageUrl = hasImg ? '/zoho/inventory/v1/items/' + itemId + '/image?organization_id=892379608' : '/assets/placeholder.png';
-
-let html = '<div class="pos-product-img">';
-html += '<img src="' + imageUrl + '" alt="' + (it.name || it.item_name) + '" onerror="this.src=\'/assets/placeholder.png\'">';
-html += '</div>';
-html += '<div class="pos-product-info">';
-html += '<div class="pos-product-name">' + (it.name || it.item_name) + '</div>';
-html += '<div class="pos-product-price">BHD ' + rate + '</div>';
-html += '<div class="pos-product-stock">' + t("posStockLabel") + ': ' + (avail ?? "—") + '</div>';
-html += '</div>';
-html += '<button class="pos-add-btn" ' + (avail != null && avail <= 0 ? 'disabled' : '') + '>' + t("posAddToCart") + '</button>';
-
-card.innerHTML = html;
-card.querySelector(".pos-add-btn").onclick = () => addToCart(it);
-fragment.appendChild(card);
-    });
-
-gridEl.innerHTML = "";
-gridEl.appendChild(fragment);
-  }
-
-// Cart Management
-let cart = [];
-try {
-  const saved = localStorage.getItem("ezCart");
-  if (saved) cart = JSON.parse(saved);
-} catch (e) { }
-
-function addToCart(item) {
-  const itemId = item.item_id || item.itemid;
-  const existing = cart.find(c => c.itemId === itemId);
-  if (existing) {
-    existing.quantity++;
-  } else {
-    const hasImg = item.image_name || item.image_id || item.image_url;
-    cart.push({
-      id: Date.now(),
-      itemId: itemId,
-      name: item.name || item.item_name,
-      unitPrice: item.rate,
-      quantity: 1,
-      preview: hasImg ? '/zoho/inventory/v1/items/' + itemId + '/image' : '/assets/placeholder.png'
-    });
-  }
-  updateCart();
-  if (window.innerWidth <= 1000) {
-    setCartOpen(true);
-  }
-}
-
-function removeFromCart(id) {
-  cart = cart.filter(c => c.id !== id);
-  updateCart();
-}
-
-function updateCart() {
-  localStorage.setItem("ezCart", JSON.stringify(cart));
-  renderCart();
-
-  const badge = document.getElementById("cartBadge");
-  if (badge) {
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    badge.textContent = totalItems;
-    badge.style.display = totalItems > 0 ? "flex" : "none";
-  }
-}
-
-function renderCart() {
-  cartItemsEl.innerHTML = "";
-  if (cart.length === 0) {
-    cartItemsEl.innerHTML = '<div class="pos-cart-empty">' + t("posCartEmpty") + '</div>';
-    subtotalValueEl.textContent = "0.000 BHD";
-    return;
-  }
-
-  let subtotal = 0;
-  cart.forEach(item => {
-    subtotal += item.unitPrice * item.quantity;
-    const div = document.createElement("div");
-    div.className = "pos-cart-item";
-
-    let imageUrl = item.preview ? (item.preview.includes('?') ? item.preview + '&organization_id=892379608' : item.preview + '?organization_id=892379608') : '/assets/placeholder.png';
-    if (!imageUrl.startsWith('/')) imageUrl = '/assets/placeholder.png'; // safety
-
-    let html = '<img class="pos-cart-item-img" src="' + imageUrl + '" onerror="this.src=\'/assets/placeholder.png\'">';
-    html += '<div class="pos-cart-item-info">';
-    html += '<div class="pos-cart-item-name">' + item.name + '</div>';
-    html += '<div class="pos-cart-item-price">BHD ' + item.unitPrice.toFixed(3) + '</div>';
-    html += '</div>';
-    html += '<div class="pos-cart-item-ctrl">';
-    html += '<button class="qty-minus">-</button>';
-    html += '<span class="pos-cart-item-qty">' + item.quantity + '</span>';
-    html += '<button class="qty-plus">+</button>';
-    html += '</div>';
-
-    div.innerHTML = html;
-    div.querySelector(".qty-minus").onclick = () => {
-      if (item.quantity > 1) { item.quantity--; updateCart(); }
-      else { removeFromCart(item.id); }
-    };
-    div.querySelector(".qty-plus").onclick = () => { item.quantity++; updateCart(); };
-
-    cartItemsEl.appendChild(div);
-  });
-
-  subtotalValueEl.textContent = subtotal.toFixed(3) + " BHD";
-}
-
-// --- Event Listeners ---
-
-// Search & Filter with debounce
-let searchTimeout;
-document.getElementById("posSearch").oninput = (e) => {
-  clearTimeout(searchTimeout);
-  searchQuery = e.target.value;
-  searchTimeout = setTimeout(() => {
-    filterAndRender();
-  }, 300);
-};
-document.getElementById("filterInStock").onchange = (e) => {
-  showInStockOnly = e.target.checked;
-  filterAndRender();
-};
-
-// Cart Actions
-const clearCartBtn = document.getElementById("clearCart");
-if (clearCartBtn) {
-  clearCartBtn.onclick = () => {
-    cart = [];
-    updateCart();
+  const t = (key) => {
+    return (i18n[lang] && i18n[lang][key]) || key;
   };
-}
-const posCheckoutBtn = document.getElementById("posCheckout");
-if (posCheckoutBtn) {
-  posCheckoutBtn.onclick = () => {
-    if (cart.length > 0) window.location.href = "/checkout";
-  };
-}
-const cartToggleBtn = document.getElementById("cartToggle");
-if (cartToggleBtn) cartToggleBtn.onclick = () => setCartOpen(true);
-const closeCartBtn = document.getElementById("closeCart");
-if (closeCartBtn) closeCartBtn.onclick = () => setCartOpen(false);
 
-// Mobile Nav Toggles
-const navMenuBtn = document.querySelector(".nav-menu-btn");
-if (navMenuBtn) navMenuBtn.onclick = () => setMobileNavOpen(true);
-const mobileNavOverlay = document.getElementById("mobileNavOverlay");
-if (mobileNavOverlay) mobileNavOverlay.onclick = () => setMobileNavOpen(false);
-const closeNavBtn = document.getElementById("closeMobileNav");
-if (closeNavBtn) closeNavBtn.onclick = () => setMobileNavOpen(false);
+  // --- State ---
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [cart, setCart] = useState([]);
+  
+  // Customer Info (Mandatory per User Request)
+  const [customer, setCustomer] = useState({ name: '', phone: '' });
+  
+  // UI State
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cash'); // cash, card, transfer
+  const [isProcessing, setIsProcessing] = useState(false);
 
-const mobileNavDrawer = document.getElementById("mobileNavDrawer");
-if (mobileNavDrawer) {
-  mobileNavDrawer.querySelectorAll("a").forEach(a => {
-    a.onclick = () => setMobileNavOpen(false);
-  });
-}
-
-// Language Toggles
-const handleLangToggle = () => {
-  navLang = navLang === "ar" ? "en" : "ar";
-  localStorage.setItem("ez_lang", navLang);
-  location.reload();
-};
-const langToggleBtn = document.querySelector(".lang-toggle-btn");
-if (langToggleBtn) langToggleBtn.onclick = handleLangToggle;
-const mobileLangToggleBtn = document.getElementById("mobileLangToggle");
-if (mobileLangToggleBtn) mobileLangToggleBtn.onclick = handleLangToggle;
-
-// Initialize
-applyTranslations();
-loadItems();
-updateCart(); // Initial badge & items
-`;
-
-function POSPage() {
+  // Barcode Buffer
+  const barcodeBuffer = useRef('');
+  
+  // --- Initialization ---
   useEffect(() => {
-    const scriptEl = document.createElement('script');
-    scriptEl.textContent = posScript;
-    document.body.appendChild(scriptEl);
-    return () => {
-      if (document.body.contains(scriptEl)) document.body.removeChild(scriptEl);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // 1. Fetch Normal Items from Firestore 'items' collection
+        const itemsSnap = await getDocs(collection(db, 'items'));
+        const firestoreNormalItems = itemsSnap.docs.map(docSnap => {
+          const it = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: it.name || '',
+            sku: it.barcode || it.itemNumber || docSnap.id,
+            price: parseFloat(it.sellPrice || it.price || 0),
+            stock: it.quantity || 0,
+            category: it.category || 'General',
+            image: it.images?.[0] || null,
+            isCustom: false
+          };
+        });
+
+        // 2. Fetch Customizable Parts from Firestore 'configurator_parts' collection
+        const partsSnap = await getDocs(collection(db, 'configurator_parts'));
+        const firestoreParts = partsSnap.docs.map(docSnap => {
+          const p = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: p.title || p.name || 'Custom Part',
+            sku: `PART-${docSnap.id}`,
+            price: 0, 
+            stock: 999, 
+            category: 'Customization',
+            image: p.icon || null,
+            isCustom: true
+          };
+        });
+
+        setItems([...firestoreNormalItems, ...firestoreParts]);
+      } catch (err) {
+        console.error("POS Fetch Error:", err);
+        setError("Failed to load products from Firestore.");
+      } finally {
+        setLoading(false);
+      }
     };
+
+    fetchData();
+
+    const handleKeydown = (e) => {
+      if (e.key === 'Enter') {
+        processBarcode(barcodeBuffer.current);
+        barcodeBuffer.current = '';
+      } else if (e.key.length === 1) {
+        barcodeBuffer.current += e.key;
+        // Buffer clear timeout
+        if (window._barcodeTimeout) clearTimeout(window._barcodeTimeout);
+        window._barcodeTimeout = setTimeout(() => { barcodeBuffer.current = ''; }, 200);
+      }
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
   }, []);
 
-  return <div dangerouslySetInnerHTML={{ __html: posMarkup }} />;
-}
+  const processBarcode = (code) => {
+    if (!code) return;
+    const found = items.find(it => it.sku === code || it.id === code);
+    if (found) addToCart(found);
+  };
 
-export default POSPage;
+  // --- Actions ---
+  const addToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(c => c.id === product.id);
+      if (existing) {
+        return prev.map(c => c.id === product.id ? { ...c, qty: c.qty + 1 } : c);
+      }
+      return [...prev, { ...product, qty: 1 }];
+    });
+  };
+
+  const updateQty = (id, delta) => {
+    setCart(prev => prev.map(c => {
+      if (c.id === id) {
+        return { ...c, qty: Math.max(0, c.qty + delta) };
+      }
+      return c;
+    }).filter(c => c.qty > 0));
+  };
+
+  const total = useMemo(() => cart.reduce((sum, it) => sum + (it.price * it.qty), 0), [cart]);
+
+  const filteredItems = useMemo(() => {
+    return items.filter(it => {
+      const matchSearch = it.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          it.sku.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCat = activeCategory === 'all' || it.category === activeCategory;
+      return matchSearch && matchCat;
+    });
+  }, [items, searchQuery, activeCategory]);
+
+  const categories = useMemo(() => {
+    const set = new Set(items.map(it => it.category));
+    return ['all', ...Array.from(set).sort()];
+  }, [items]);
+
+  const handleCheckout = async () => {
+    if (!customer.name || !customer.phone) {
+      alert(t("posCustomerRequired") || "Customer Name and Phone are required.");
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const orderData = {
+        items: cart,
+        total,
+        customer,
+        paymentMethod,
+        timestamp: serverTimestamp(),
+        currency: 'BHD',
+        vatIncluded: true,
+        source: 'POS'
+      };
+
+      await addDoc(collection(db, 'pos_orders'), orderData);
+      
+      // Print handling
+      generateReceipt(orderData);
+
+      setIsCheckingOut(false);
+      setCart([]);
+      setCustomer({ name: '', phone: '' });
+    } catch (err) {
+      console.error("Order save error:", err);
+      alert("Failed to save order.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const generateReceipt = (order) => {
+    const receiptWindow = window.open('', '_blank', 'width=400,height=600');
+    const itemsHtml = order.items.map(it => `
+      <tr>
+        <td>${it.name} x ${it.qty}</td>
+        <td style="text-align:right">BHD ${(it.price * it.qty).toFixed(3)}</td>
+      </tr>
+    `).join('');
+
+    receiptWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - Golden Spark</title>
+          <style>
+            body { font-family: 'Courier New', Courier, monospace; font-size: 12px; padding: 20px; text-align: center; }
+            .header { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+            .sub-header { margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            td { padding: 5px 0; border-bottom: 1px dashed #ccc; }
+            .total { font-weight: bold; font-size: 16px; margin-top: 20px; text-align: right; }
+            .footer { margin-top: 30px; font-size: 10px; color: #666; }
+            @media print { body { padding: 10px; } }
+          </style>
+        </head>
+        <body onload="window.print();window.close();">
+          <div class="header">GOLDEN SPARK</div>
+          <div class="sub-header">Premium Custom Controllers<br>Bahrain</div>
+          <p style="text-align:left">
+            Customer: ${order.customer.name}<br>
+            Phone: ${order.customer.phone}<br>
+            Date: ${new Date().toLocaleString()}
+          </p>
+          <table>
+            ${itemsHtml}
+          </table>
+          <div class="total">TOTAL: BHD ${order.total.toFixed(3)}</div>
+          <p style="text-align:right;font-size:10px;">VAT Inclusive</p>
+          <div class="footer">Thank you for choosing Golden Spark!</div>
+        </body>
+      </html>
+    `);
+    receiptWindow.document.close();
+  };
+  const toggleLang = () => {
+    const nextLang = lang === 'ar' ? 'en' : 'ar';
+    setLang(nextLang);
+    localStorage.setItem("ez_lang", nextLang);
+    document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+  };
+
+  const removeFromCart = (id) => setCart(prev => prev.filter(c => c.id !== id));
+
+  // --- Rendering ---
+  return (
+    <div className={`pos-app ${lang === 'ar' ? 'rtl' : 'ltr'}`}>
+      {/* 1. Header & Search */}
+      <header className="pos-header">
+        <div className="pos-brand">
+          <div className="logo-spark" />
+          <div>
+            <h1>GOLDEN SPARK POS</h1>
+            <span className="pos-status">{items.length} {t("posProductsLoaded") || "Products Loaded"}</span>
+          </div>
+        </div>
+        
+        <div className="pos-search">
+          <input 
+            type="text" 
+            placeholder={t("posSearchPlaceholder") || "Search products or scan..."} 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <kbd className="kb-hint">MOD + K</kbd>
+        </div>
+
+        <div className="pos-header-actions">
+           <button onClick={toggleLang} className="btn-lang-toggle">
+             {lang === 'ar' ? 'English' : 'العربية'}
+           </button>
+           <div className="user-profile">
+             <div className="avatar">A</div>
+             <span>Admin</span>
+           </div>
+        </div>
+      </header>
+
+      <div className="pos-layout">
+        {/* 2. Left Column: Categories */}
+        <aside className="pos-sidebar">
+          <div className="sidebar-group">
+            <h3>{t("posCategories") || "Categories"}</h3>
+            <div className="cat-list">
+              {categories.map(cat => (
+                <button 
+                  key={cat} 
+                  className={`cat-btn ${activeCategory === cat ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(cat)}
+                >
+                  <span className="cat-dot" />
+                  {cat === 'all' ? (t("posCatAll") || "All") : cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* 3. Center Column: Products */}
+        <main className="pos-main">
+          {loading ? (
+            <div className="pos-loader-container">
+              <div className="pos-spinner" />
+              <span>{t("posStatusLoading") || "Syncing Inventory..."}</span>
+            </div>
+          ) : (
+            <div className="product-grid">
+              {filteredItems.map(it => (
+                <div key={it.id} className="product-card" onClick={() => addToCart(it)}>
+                  <div className="product-img-wrapper">
+                    {it.image ? (
+                        <img src={it.image} alt={it.name} loading="lazy" />
+                    ) : (
+                        <div className="product-placeholder">{it.name.charAt(0)}</div>
+                    )}
+                    <div className="product-overlay">
+                       <span className="add-icon">+</span>
+                    </div>
+                  </div>
+                  <div className="product-details">
+                    <span className="product-category">{it.category}</span>
+                    <span className="product-name">{it.name}</span>
+                    <div className="product-footer">
+                      <span className="product-sku">{it.sku}</span>
+                      <span className="product-price">BHD {it.price.toFixed(3)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* 4. Right Column: Cart */}
+        <aside className="pos-checkout-sidebar">
+          <div className="cart-container">
+            <div className="cart-header">
+              <h3>{t("posCartTitle") || "Current Order"}</h3>
+              <button onClick={() => setCart([])} className="btn-clear-cart">{t("posClearCart") || "Clear"}</button>
+            </div>
+            
+            <div className="cart-scroll-area">
+              {cart.length === 0 && (
+                <div className="cart-empty-state">
+                  <div className="empty-icon">🛒</div>
+                  <span>{t("posCartEmpty") || "Cart is empty"}</span>
+                </div>
+              )}
+              {cart.map(it => (
+                <div key={it.id} className="cart-row">
+                  <div className="cart-row-main">
+                    <span className="cart-row-name">{it.name}</span>
+                    <span className="cart-row-price">BHD {(it.price * it.qty).toFixed(3)}</span>
+                  </div>
+                  <div className="cart-row-controls">
+                    <div className="qty-stepper">
+                      <button onClick={() => updateQty(it.id, -1)}>−</button>
+                      <span className="qty-val">{it.qty}</span>
+                      <button onClick={() => updateQty(it.id, 1)}>+</button>
+                    </div>
+                    <button onClick={() => removeFromCart(it.id)} className="btn-remove-item">×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="cart-checkout-section">
+              {/* Mandatory Customer Info */}
+              <div className="pos-customer-form">
+                <div className="form-field">
+                  <label>{t("posCustomerName") || "Customer Name"}</label>
+                  <input 
+                    type="text" 
+                    placeholder="John Doe" 
+                    value={customer.name}
+                    onChange={(e) => setCustomer({...customer, name: e.target.value})}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>{t("posCustomerPhone") || "Phone Number"}</label>
+                  <input 
+                    type="tel" 
+                    placeholder="33xxxxxx" 
+                    value={customer.phone}
+                    onChange={(e) => setCustomer({...customer, phone: e.target.value})}
+                  />
+                </div>
+              </div>
+              
+              <div className="pos-bill-summary">
+                <div className="bill-line">
+                  <span>{t("posSubtotal") || "Total"}</span>
+                  <span className="bill-val">BHD {total.toFixed(3)}</span>
+                </div>
+                <div className="bill-notice">
+                   {t("posVatInclusive") || "VAT Inclusive pricing"}
+                </div>
+              </div>
+              
+              <button 
+                className="btn-pay-now" 
+                disabled={cart.length === 0 || isProcessing}
+                onClick={() => setIsCheckingOut(true)}
+              >
+                {isProcessing ? t("posProcessing") || "Processing..." : (t("posCheckout") || "Complete Order")}
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* 5. Checkout Modal */}
+      {isCheckingOut && (
+        <div className="pos-modal-overlay">
+          <div className="pos-modal">
+            <header className="modal-header">
+               <h2>{t("posPaymentMethod") || "Select Payment"}</h2>
+               <button onClick={() => setIsCheckingOut(false)} className="modal-close">&times;</button>
+            </header>
+            
+            <div className="modal-content">
+              <div className="payment-grid">
+                <button className={`pay-method ${paymentMethod === 'cash' ? 'selected' : ''}`} onClick={() => setPaymentMethod('cash')}>
+                  <span className="pay-icon">💵</span>
+                  <span>{t("posPayCash") || "Cash"}</span>
+                </button>
+                <button className={`pay-method ${paymentMethod === 'card' ? 'selected' : ''}`} onClick={() => setPaymentMethod('card')}>
+                  <span className="pay-icon">💳</span>
+                  <span>{t("posPayCard") || "Card"}</span>
+                </button>
+                <button className={`pay-method ${paymentMethod === 'transfer' ? 'selected' : ''}`} onClick={() => setPaymentMethod('transfer')}>
+                  <span className="pay-icon">📱</span>
+                  <span>{t("posPayBenefit") || "Benefit"}</span>
+                </button>
+              </div>
+
+              <div className="checkout-summary">
+                 <div className="summary-row large">
+                    <span>{t("posTotalToPay") || "Amount to Pay"}</span>
+                    <strong>BHD {total.toFixed(3)}</strong>
+                 </div>
+                 <div className="summary-row small">
+                    <span>{t("posVatStatement") || "VAT (Inclusive)"}</span>
+                    <span>-</span>
+                 </div>
+              </div>
+            </div>
+
+            <footer className="modal-footer">
+              <button onClick={() => setIsCheckingOut(false)} className="btn-cancel-modal">{t("posCancel") || "Go Back"}</button>
+              <button onClick={handleCheckout} className="btn-confirm-pay" disabled={isProcessing}>
+                {isProcessing ? "..." : (t("posConfirmPay") || "Complete & Print Receipt")}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        :root {
+          --pos-bg: #0b0e14;
+          --pos-surface: #141a23;
+          --pos-border: #232d3d;
+          --pos-accent: #38bdf8;
+          --pos-text: #f8fafc;
+          --pos-text-mute: #94a3b8;
+        }
+
+        .pos-app { 
+          display: flex; flex-direction: column; height: 100vh; 
+          background: var(--pos-bg); color: var(--pos-text); 
+          font-family: 'Cairo', system-ui, sans-serif; 
+          overflow: hidden;
+        }
+        .pos-app.rtl { direction: rtl; }
+
+        /* Header */
+        .pos-header { 
+          height: 70px; padding: 0 2rem; 
+          background: var(--pos-surface); border-bottom: 1px solid var(--pos-border);
+          display: flex; align-items: center; justify-content: space-between;
+          backdrop-filter: blur(10px); z-index: 100;
+        }
+        .pos-brand { display: flex; align-items: center; gap: 1rem; }
+        .logo-spark { width: 32px; height: 32px; background: var(--pos-accent); border-radius: 8px; box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+        .pos-brand h1 { margin: 0; font-size: 1.1rem; letter-spacing: 0.05em; color: var(--pos-accent); }
+        .pos-status { font-size: 0.7rem; color: var(--pos-text-mute); }
+
+        .pos-search { width: 400px; position: relative; }
+        .pos-search input { 
+          width: 100%; padding: 0.75rem 1.25rem; 
+          background: var(--pos-bg); border: 1px solid var(--pos-border); 
+          border-radius: 12px; color: white; font-size: 0.9rem;
+          transition: border-color 0.2s;
+        }
+        .pos-search input:focus { border-color: var(--pos-accent); outline: none; }
+        .kb-hint { position: absolute; right: 12px; top: 10px; font-size: 0.65rem; background: var(--pos-border); padding: 2px 6px; border-radius: 4px; }
+
+        .pos-header-actions { display: flex; align-items: center; gap: 1.5rem; }
+        .btn-lang-toggle { font-size: 0.85rem; border: 1px solid var(--pos-border); padding: 0.5rem 1rem; border-radius: 8px; }
+        .user-profile { display: flex; align-items: center; gap: 0.75rem; }
+        .avatar { width: 32px; height: 32px; background: var(--pos-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+
+        /* Layout */
+        .pos-layout { display: grid; grid-template-columns: 240px 1fr 380px; flex: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .pos-sidebar { background: var(--pos-surface); border-inline-end: 1px solid var(--pos-border); padding: 1.5rem; }
+        .sidebar-group h3 { font-size: 0.85rem; color: var(--pos-text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; }
+        .cat-list { display: flex; flex-direction: column; gap: 0.35rem; }
+        .cat-btn { 
+          display: flex; align-items: center; gap: 0.75rem;
+          padding: 0.85rem 1rem; border-radius: 10px; text-align: start; 
+          transition: all 0.2s; color: var(--pos-text-mute);
+        }
+        .cat-btn:hover { background: var(--pos-border); color: white; }
+        .cat-btn.active { background: rgba(56, 189, 248, 0.1); color: var(--pos-accent); font-weight: bold; }
+        .cat-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        /* Main Grid */
+        .pos-main { padding: 2rem; background: var(--pos-bg); overflow-y: auto; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1.5rem; }
+        .product-card { 
+          background: var(--pos-surface); border-radius: 20px; border: 1px solid var(--pos-border);
+          overflow: hidden; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .product-card:hover { transform: translateY(-5px); border-color: var(--pos-accent); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
+        .product-img-wrapper { height: 160px; position: relative; background: #1a2333; overflow: hidden; }
+        .product-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .product-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; background: linear-gradient(135deg, #1e293b, #0f172a); color: var(--pos-accent); opacity: 0.5; }
+        .product-overlay { position: absolute; inset: 0; background: rgba(56, 189, 248, 0.2); opacity: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+        .product-card:hover .product-overlay { opacity: 1; }
+        .add-icon { width: 40px; height: 40px; background: var(--pos-accent); border-radius: 50%; color: #0f172a; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+
+        .product-details { padding: 1rem; }
+        .product-category { font-size: 0.65rem; color: var(--pos-accent); text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px; }
+        .product-name { font-size: 0.95rem; font-weight: 600; display: block; margin-bottom: 12px; height: 1.2em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .product-footer { display: flex; justify-content: space-between; align-items: baseline; }
+        .product-sku { font-size: 0.7rem; color: var(--pos-text-mute); font-family: monospace; }
+        .product-price { font-size: 1.1rem; font-weight: 800; color: white; }
+
+        /* Sidebar Checkout */
+        .pos-checkout-sidebar { background: var(--pos-surface); border-inline-start: 1px solid var(--pos-border); }
+        .cart-container { height: 100%; display: flex; flex-direction: column; }
+        .cart-header { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--pos-border); }
+        .btn-clear-cart { font-size: 0.8rem; color: #ef4444; }
+
+        .cart-scroll-area { flex: 1; overflow-y: auto; padding: 1rem; }
+        .cart-empty-state { text-align: center; margin-top: 100px; color: var(--pos-text-mute); }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.1; }
+
+        .cart-row { background: var(--pos-bg); padding: 1rem; border-radius: 12px; margin-bottom: 0.75rem; border: 1px solid var(--pos-border); }
+        .cart-row-main { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .cart-row-name { font-size: 0.85rem; font-weight: 600; }
+        .cart-row-price { font-size: 0.9rem; color: var(--pos-accent); font-weight: bold; }
+        .cart-row-controls { display: flex; align-items: center; justify-content: space-between; }
+        .qty-stepper { display: flex; align-items: center; background: var(--pos-surface); border-radius: 6px; padding: 2px; }
+        .qty-stepper button { width: 28px; height: 28px; border-radius: 4px; font-size: 1.1rem; }
+        .qty-val { width: 30px; text-align: center; font-size: 0.9rem; font-family: monospace; }
+        .btn-remove-item { color: #ef4444; font-size: 1.2rem; }
+
+        .cart-checkout-section { padding: 1.5rem; background: var(--pos-surface); border-top: 2px solid var(--pos-border); }
+        .pos-customer-form { display: grid; gap: 0.75rem; margin-bottom: 1.5rem; }
+        .form-field label { font-size: 0.75rem; color: var(--pos-text-mute); margin-bottom: 4px; display: block; }
+        .form-field input { width: 100%; background: var(--pos-bg); border: 1px solid var(--pos-border); padding: 0.75rem; border-radius: 8px; color: white; }
+        
+        .pos-bill-summary { margin-bottom: 1.5rem; }
+        .bill-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .bill-val { font-size: 1.6rem; font-weight: 900; color: var(--pos-accent); }
+        .bill-notice { font-size: 0.7rem; color: #22c55e; text-align: end; font-weight: bold; text-transform: uppercase; }
+
+        .btn-pay-now { width: 100%; padding: 1.25rem; background: var(--pos-accent); color: #0f172a; border-radius: 15px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.2); }
+        .btn-pay-now:disabled { opacity: 0.5; filter: grayscale(1); }
+
+        /* Modals */
+        .pos-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .pos-modal { background: var(--pos-surface); width: 100%; max-width: 580px; border-radius: 24px; border: 1px solid var(--pos-border); overflow: hidden; animation: modalFadeIn 0.3s ease-out; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
+        .modal-header { padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--pos-border); }
+        .modal-close { font-size: 2rem; color: var(--pos-text-mute); }
+        .modal-content { padding: 2rem; }
+
+        .payment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 2rem; }
+        .pay-method { background: var(--pos-bg); border: 2px solid var(--pos-border); border-radius: 16px; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.2s; }
+        .pay-icon { font-size: 2rem; }
+        .pay-method.selected { border-color: var(--pos-accent); background: rgba(56, 189, 248, 0.05); }
+
+        .checkout-summary { background: var(--pos-bg); padding: 1.5rem; border-radius: 16px; border: 1px dashed var(--pos-border); }
+        .summary-row { display: flex; justify-content: space-between; align-items: center; }
+        .summary-row.large { font-size: 1.5rem; margin-bottom: 8px; }
+        .summary-row.small { font-size: 0.8rem; color: var(--pos-text-mute); }
+
+        .modal-footer { padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; background: rgba(0,0,0,0.2); }
+        .btn-cancel-modal { padding: 1.25rem; border-radius: 12px; background: var(--pos-bg); font-weight: bold; }
+        .btn-confirm-pay { padding: 1.25rem; border-radius: 12px; background: var(--pos-accent); color: #0f172a; font-weight: 800; font-size: 1.1rem; }
+
+        .pos-loader-container { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: var(--pos-text-mute); }
+        .pos-spinner { width: 40px; height: 40px; border: 3px solid var(--pos-border); border-top-color: var(--pos-accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}} />
+    </div>
+  );
+};
+
+export default POS;

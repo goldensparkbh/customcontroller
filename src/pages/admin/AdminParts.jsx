@@ -71,6 +71,9 @@ const AdminParts = () => {
     const [subInventoryDetails, setSubInventoryDetails] = useState([]);
     const [subType, setSubType] = useState('color');
     const [subColorHex, setSubColorHex] = useState('#ffffff');
+    const [subDisablesColors, setSubDisablesColors] = useState(false);
+    const [subIncompatibleWith, setSubIncompatibleWith] = useState(''); // Comma-separated list of IDs
+    const [subPriority, setSubPriority] = useState(1);
     const [subImageFile, setSubImageFile] = useState(null);
     const [subImagePreview, setSubImagePreview] = useState('');
     const [subSecondImageFile, setSubSecondImageFile] = useState(null);
@@ -230,6 +233,8 @@ const AdminParts = () => {
         setSubImageFile(null);
         setSubSecondImageFile(null);
         setSubIconFile(null);
+        setSubIncompatibleWith('');
+        setSubPriority(1);
         setSubActive(true);
         setShowOptionFormModal(true);
     };
@@ -305,7 +310,10 @@ const AdminParts = () => {
                 active: subActive,
                 image: imageUrl,
                 secondImage: secondImageUrl,
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                disablesColors: subDisablesColors,
+                incompatibleWith: subIncompatibleWith.split(',').map(id => id.trim()).filter(id => id.length > 0),
+                priority: Number(subPriority || 1)
             };
 
             if (subType === 'color') {
@@ -747,6 +755,63 @@ const AdminParts = () => {
                                     description="Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."
                                 />
                             </div>
+
+                            {subType === 'gamemode' && (
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                    <h3 style={{ marginTop: 0, color: '#fff', fontSize: '1.1rem', marginBottom: '1rem' }}>Gamemode Dependencies & Rules</h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    id="subAllowsMultiple" 
+                                                    checked={subAllowsMultiple} 
+                                                    onChange={e => setSubAllowsMultiple(e.target.checked)} 
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                />
+                                                <label htmlFor="subAllowsMultiple" style={{ color: '#c9d1d9', cursor: 'pointer' }}>Allow Multiple Selections</label>
+                                            </div>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#8b949e' }}>If enabled, this option won't automatically deselect other gamemodes unless they share the same group.</p>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    id="subDisablesColors" 
+                                                    checked={subDisablesColors} 
+                                                    onChange={e => setSubDisablesColors(e.target.checked)} 
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                />
+                                                <label htmlFor="subDisablesColors" style={{ color: '#c9d1d9', cursor: 'pointer' }}>Disable Color Customization</label>
+                                            </div>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#8b949e' }}>If enabled, selecting this option will hide the color palettes for this part.</p>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Exclusive Group Name:</label>
+                                            <input 
+                                                value={subExclusiveGroup} 
+                                                onChange={e => setSubExclusiveGroup(e.target.value)} 
+                                                placeholder="e.g. TriggerMechanism"
+                                                style={{ ...fieldStyle }} 
+                                            />
+                                            <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#8b949e' }}>Options in the same group are mutually exclusive (Standard radio button behavior).</p>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Incompatible with (IDs):</label>
+                                            <input 
+                                                value={subIncompatibleWith} 
+                                                onChange={e => setSubIncompatibleWith(e.target.value)} 
+                                                placeholder="e.g. opt_123, opt_456"
+                                                style={{ ...fieldStyle }} 
+                                            />
+                                            <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#8b949e' }}>Comma-separated list of option IDs that are incompatible with this one.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ background: '#0d1117', padding: '1rem', borderRadius: '8px', border: '1px solid #30363d', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                                 <div style={{ flex: 1, minWidth: '250px' }}>
