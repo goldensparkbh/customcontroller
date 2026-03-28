@@ -39,15 +39,6 @@ const configuratorMarkup = `
 </span>
 </button>
 </div>
-    <div class="mobile-panel-switch" id="mobilePanelSwitch" aria-label="تبديل لوحة الأجزاء والألوان">
-      <button class="panel-switch-btn active" data-panel="options" type="button" aria-pressed="true">
-        <span data-i18n="partsOptionsHeading">الخيارات</span>
-      </button>
-      <button class="panel-switch-btn" data-panel="colors" type="button" aria-pressed="false">
-        <span data-i18n="partsColorsHeading">الألوان</span>
-      </button>
-    </div>
-    <div class="mobile-options-grid horizontal-scroll" id="mobileOptionsGrid"></div>
   </div>
 </div>
 <!-- COLORS COLUMN (MIDDLE) -->

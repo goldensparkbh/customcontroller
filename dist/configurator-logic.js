@@ -1478,20 +1478,29 @@
     }
 
     function updatePartsUI() {
-        Object.keys(partsRowsById).forEach(id => {
-            const row = partsRowsById[id];
-            row.classList.toggle("active", id === selectedPartId);
+        // Use Live DOM Search for increased reliability instead of stale map references
+        const allItems = document.querySelectorAll(".parts-item");
+        
+        allItems.forEach(row => {
+            const id = row.dataset.id;
+            const isActive = (id === selectedPartId);
+            
+            row.classList.toggle("active", isActive);
 
             const status = row.querySelector(".part-status");
             if (status) {
                 const color = configState[id];
                 const option = optionState[id];
                 let statusText = "";
-                if (option && option !== "standard") statusText = t("option_" + option);
-                else if (color) {
+                // If it's an array (gamemodes), potentially show multiple or just primary
+                const currentOptions = Array.isArray(option) ? option : (option ? [option] : []);
+                
+                if (currentOptions.length > 0) {
+                    statusText = currentOptions.map(o => t("option_" + o)).join(", ");
+                } else if (color) {
                     const colObj = (dynamicColorsByPart[id] || []).find(c => c.key === color);
                     if (colObj) {
-                        if (colObj.hex.startsWith("#")) statusText = colObj.hex;
+                        if (colObj.hex && colObj.hex.startsWith("#")) statusText = colObj.hex;
                         else statusText = t("color_" + colObj.key);
                     }
                 }
@@ -1519,9 +1528,9 @@
     }
 
     function resetColorPanel() {
-        colorPanelHeaderBottom.style.display = "none";
-        colorPanelGrid.style.display = "none";
-        colorEmptyState.style.display = "flex";
+        if (colorPanelHeaderBottom) colorPanelHeaderBottom.style.display = "none";
+        if (colorPanelGrid) colorPanelGrid.style.display = "none";
+        if (colorEmptyState) colorEmptyState.style.display = "flex";
     }
     function resetOptionsPanel() {
         if (optionsPanelGrid) optionsPanelGrid.innerHTML = "";

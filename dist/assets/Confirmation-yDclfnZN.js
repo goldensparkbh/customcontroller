@@ -1,6 +1,24 @@
-import{r as t,j as n}from"./index-BLE4v1ez.js";const a=`
+import{r as t,j as a}from"./index-TgFMQ3_S.js";const n=`
 <canvas id="bgCanvas"></canvas>
-<div class="top-nav" style="display:none;"></div>
+<div class="top-nav">
+  <div class="nav-logo">
+    <a class="nav-left" href="index.html">
+      <div class="nav-logo-mark"></div>
+      <div class="nav-page-title" data-i18n="confirmationTitle">تأكيد الدفع</div>
+    </a>
+  </div>
+  <button class="nav-menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <div class="nav-right">
+    <a class="nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
+    <a class="nav-cta" href="/configurator" data-i18n="navBuildCta">صمّم ذراعك الآن</a>
+    <button class="nav-link nav-lang" id="langToggle" type="button">EN</button>
+    <button class="nav-link nav-theme" id="themeToggle" type="button">فاتح</button>
+  </div>
+</div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
   <a class="mobile-nav-link" href="/#premadeSection" data-i18n="navPremade">تصاميم جاهزة</a>
@@ -10,10 +28,9 @@ import{r as t,j as n}from"./index-BLE4v1ez.js";const a=`
 </aside>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="card" style="max-width:480px; width:100%; text-align:center;">
-    <div class="card-title" data-i18n="orderSuccessTitle">تم استلام الطلب</div>
-    <div style="font-size:3rem; margin:20px 0;">✅</div>
-    <div id="contactMsg" data-i18n="orderContactMessage" style="font-size:1.1rem; margin:10px 0; line-height: 1.5;">شكراً لك! تم استلام طلبك بنجاح.<br>سنتواصل معك قريباً لتأكيد التفاصيل.</div>
-    <button id="homeBtn" class="place-order-btn" style="margin-top: 20px;" data-i18n="orderOkBtn">تم</button>
+    <div class="card-title" data-i18n="confirmationTitle">تأكيد الدفع</div>
+    <div id="confirmStatus" data-i18n="confirmationStatus" style="font-size:1rem; margin:10px 0;">تم تأكيد الدفع</div>
+    <button class="place-order-btn" id="goSummaryBtn" type="button" data-i18n="confirmationCta">الانتقال إلى ملخص الطلب</button>
   </div>
 </div>
 `,l=`
@@ -26,7 +43,6 @@ import{r as t,j as n}from"./index-BLE4v1ez.js";const a=`
   const navMenuBtn = document.querySelector(".nav-menu-btn");
   const mobileNavOverlay = document.getElementById("mobileNavOverlay");
   const mobileNavDrawer = document.getElementById("mobileNavDrawer");
-  
   function t(key) {
     return (i18n[navLang] && i18n[navLang][key]) || key;
   }
@@ -83,7 +99,6 @@ import{r as t,j as n}from"./index-BLE4v1ez.js";const a=`
   applyTheme();
   updateThemeLabel();
   applyTranslations();
-  
   if (navLangToggle) navLangToggle.addEventListener("click", toggleNavLang);
   if (mobileLangToggle) mobileLangToggle.addEventListener("click", toggleNavLang);
   if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
@@ -110,11 +125,8 @@ import{r as t,j as n}from"./index-BLE4v1ez.js";const a=`
     });
   }
 
-  // Handle Home Button
-  const homeBtn = document.getElementById("homeBtn");
-  if (homeBtn) {
-    homeBtn.addEventListener("click", () => {
-      window.location.href = "/";
-    });
-  }
-`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>{document.body.contains(e)&&document.body.removeChild(e)}},[]),n.jsx("div",{dangerouslySetInnerHTML:{__html:a}})}export{i as default};
+  const btn = document.getElementById("goSummaryBtn");
+  const statusEl = document.getElementById("confirmStatus");
+  btn.addEventListener("click", () => window.location.href = "/order-summary");
+  statusEl.textContent = t("confirmationStatus");
+`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>document.body.removeChild(e)},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};

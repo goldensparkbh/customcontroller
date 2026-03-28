@@ -2688,13 +2688,13 @@ body.theme-light .flip-toggle {
 
 .parts-item.active,
 .parts-list .parts-item.active {
-  border-color: #1f6feb !important;
+  border: 3px solid #1f6feb !important;
   background: rgba(31, 111, 235, 0.1) !important;
   box-shadow: 
-    0 0 15px rgba(31, 111, 235, 0.4),
+    0 0 15px rgba(31, 111, 235, 0.5),
     inset 0 0 10px rgba(31, 111, 235, 0.2);
   transform: scale(1.04);
-  z-index: 10;
+  z-index: 20 !important;
 }
 
 .parts-thumb {
@@ -4600,30 +4600,58 @@ textarea {
     display: flex;
     margin-top: 6px;
   }
-
   body.configurator-page-active .main-layout {
-    height: 100%;
-    grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+    height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 76px;
     grid-template-rows: auto 1fr;
     grid-template-areas:
-      "controller controller"
-      "parts colors";
-    gap: 10px;
-    align-items: start;
-    overflow-y: auto;
+      "controller parts"
+      "colors parts";
+    gap: 0;
+    align-items: stretch;
+    overflow: hidden;
   }
 
+  html[dir="rtl"] body.configurator-page-active .main-layout {
+    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-areas:
+      "parts controller"
+      "parts colors";
+  }
 
-
-  body.configurator-page-active .parts-column {
-    grid-area: parts;
-    margin-top: 0;
+  body.configurator-page-active .controller-column {
+    grid-area: controller;
+    height: 42vh;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: radial-gradient(circle at center, rgba(31, 111, 235, 0.05), transparent);
+    z-index: 2;
   }
 
   body.configurator-page-active .colors-column {
     grid-area: colors;
-    margin-top: 0;
+    height: calc(58vh - 60px);
+    overflow-y: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(13, 17, 23, 0.4);
+    backdrop-filter: blur(10px);
+    z-index: 2;
   }
+
+  body.configurator-page-active .parts-column {
+    grid-area: parts;
+    width: 76px;
+    height: calc(100vh - 60px);
+    background: rgba(13, 17, 23, 0.6);
+    backdrop-filter: blur(15px);
+    border-inline-start: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+  }
+
 }
 
 @media (min-width: 901px) {
@@ -4750,34 +4778,10 @@ textarea {
   body.configurator-page-active .parts-panel,
   body.configurator-page-active .color-panel {
     width: 100%;
-    height: 100vh;
-    min-height: 100vh;
-    max-height: 100vh !important;
+    height: 100%;
     overflow-y: auto;
-    overflow-x: hidden;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  body.configurator-page-active .color-panel {
-    border-inline-start: 1px solid rgba(255, 255, 255, 0.12);
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.12);
-    height: calc(100vh - 60px);
-    min-height: calc(100vh - 60px);
-    max-height: calc(100vh - 60px) !important;
-    padding-top: 6px;
-  }
-
-  body.configurator-page-active .parts-panel {
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.12);
-    padding-inline: 2px;
-    height: calc(100vh - 60px);
-    min-height: calc(100vh - 60px);
-    max-height: calc(100vh - 60px) !important;
-    padding-top: 6px;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
+    border: none;
+    background: transparent;
   }
 
   body.configurator-page-active .parts-accordion {
@@ -4815,14 +4819,13 @@ textarea {
   body.configurator-page-active .parts-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
     justify-content: flex-start;
-    padding-inline: 0;
+    padding-block: 10px;
     max-height: none !important;
     overflow-y: visible !important;
     overflow-x: hidden !important;
-    scroll-snap-type: none;
   }
 
   body.configurator-page-active .parts-item {
@@ -4830,23 +4833,25 @@ textarea {
     justify-content: center;
     align-items: center;
     gap: 0;
-    width: 72px;
-    max-width: 100%;
-    margin-bottom: 0;
+    width: 60px;
+    height: 60px;
+    margin-bottom: 6px;
     margin-inline: auto;
-    padding: 8px !important;
-    border-radius: 8px;
+    padding: 0 !important;
+    border-radius: 12px;
     text-align: center;
     border: 2px solid transparent;
     transition: all 0.2s ease-in-out;
+    background: rgba(255, 255, 255, 0.03);
   }
 
   body.configurator-page-active .parts-item:hover,
   body.configurator-page-active .parts-item.active {
-    border-color: #1f6feb !important;
-    background: rgba(31, 111, 235, 0.15) !important;
-    box-shadow: 0 0 18px rgba(31, 111, 235, 0.5) !important;
+    border: 3px solid #1f6feb !important;
+    background: rgba(31, 111, 235, 0.18) !important;
+    box-shadow: 0 0 20px rgba(31, 111, 235, 0.6) !important;
     transform: scale(1.04);
+    z-index: 20 !important;
   }
 
   body.configurator-page-active .parts-item .parts-thumb {
@@ -4860,6 +4865,20 @@ textarea {
   body.configurator-page-active .parts-item .parts-thumb img {
     max-width: 100% !important;
     max-height: 100% !important;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+
+  /* Optimized Color Swatches for Mobile Stack */
+  body.configurator-page-active .cd-cell,
+  body.configurator-page-active .cd-cell-op {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  body.configurator-page-active .cd-swatch,
+  body.configurator-page-active .cd-swatch-op {
+    width: 44px !important;
+    height: 44px !important;
   }
 
   body.configurator-page-active .parts-item .parts-name {

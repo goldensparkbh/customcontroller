@@ -83,6 +83,7 @@ const AdminParts = () => {
     const [subActive, setSubActive] = useState(true);
     const [subAllowsMultiple, setSubAllowsMultiple] = useState(false);
     const [subExclusiveGroup, setSubExclusiveGroup] = useState('');
+    const [subFilterQuery, setSubFilterQuery] = useState('');
 
     const fetchParts = async () => {
         setLoading(true);
