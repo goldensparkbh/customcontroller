@@ -655,16 +655,11 @@
 
             ensurePartStateDefaults();
             recomputeAvailableParts();
-            warmSelectedOverlayImages();
             restorePersistedSelections();
             buildPartsList();
 
-            const restoredPartId = selectedPartId && availablePartsSet.has(selectedPartId)
-                ? selectedPartId
-                : null;
-            selectedPartId = null;
-
-            const initialPartId = restoredPartId || getFirstShownPartId();
+            // Always select the first part on initial load as per user requirement.
+            const initialPartId = getFirstShownPartId();
             if (initialPartId) {
                 selectPart(initialPartId, { silent: true });
             } else {
@@ -672,6 +667,13 @@
                 resetColorPanel();
                 resetOptionsPanel();
             }
+
+            // --- 5. Global Sync After Restoration ---
+            // Ensure visual layers, prices, and summary are fully updated for ALL parts.
+            updatePartsUI(); 
+            updateSummary();
+            saveConfigToStorage();
+
             scheduleGlobalOverlayWarmup(initialPartId);
         } catch (err) {
             console.error("[Firebase Config] Bootstrap failed:", err);
@@ -1092,57 +1094,58 @@
     }
 
     function syncPartVisualState(partId) {
-        const colorObj = findColorSelection(partId, configState[partId]);
-        const optionObj = findOptionSelection(partId, optionState[partId]);
+        const palette = getPaletteForPart(partId);
+        const options = getOptionsForPart(partId);
 
-        if (!colorObj) configState[partId] = null;
-        if (!optionObj) optionState[partId] = null;
+        // 1. Color Persistence/Mapping
+        const colorKey = configState[partId];
+        const colorObj = findColorSelection(partId, colorKey);
+        if (colorKey && !colorObj) configState[partId] = null;
+        selectedPriceByPart[partId] = (colorObj && colorObj.price != null) ? Number(colorObj.price) : 0;
 
-        selectedPriceByPart[partId] = colorObj && colorObj.price != null ? Number(colorObj.price) : 0;
-        selectedOptionPriceByPart[partId] = optionObj && optionObj.price != null ? Number(optionObj.price) : 0;
+        // 2. Option Persistence/Mapping (Handle Array)
+        if (!Array.isArray(optionState[partId])) optionState[partId] = [];
+        const currentOptions = optionState[partId];
+        
+        // Sum up prices for all valid selected options
+        let totalOptPrice = 0;
+        const activeEntries = [];
 
+        // Add color if exists (base priority)
+        if (colorObj) activeEntries.push({ ...colorObj, priority: 0 });
+
+        currentOptions.forEach(k => {
+            const opt = options.find(o => o.key === k);
+            if (opt && !isEntryOutOfStock(opt)) {
+                totalOptPrice += (opt.price || 0);
+                activeEntries.push(opt);
+            }
+        });
+        selectedOptionPriceByPart[partId] = totalOptPrice;
+
+        // 3. Visual Layer Stacking (Priority-based)
         const targetLayers = layers[partId] || [];
-        targetLayers.forEach((obj) => {
-            if (optionObj) {
-                if (optionObj.image) {
-                    obj.main.src = optionObj.image;
-                    obj.main.style.display = "block";
-                } else {
-                    obj.main.removeAttribute("src");
-                    obj.main.style.display = "none";
-                }
-                if (optionObj.secondImage) {
-                    obj.opp.src = optionObj.secondImage;
-                    obj.opp.style.display = "block";
-                } else {
-                    obj.opp.removeAttribute("src");
-                    obj.opp.style.display = "none";
-                }
-                return;
+        activeEntries.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+
+        const mainImg = [...activeEntries].reverse().find(e => e.image);
+        const oppImg = [...activeEntries].reverse().find(e => e.secondImage);
+
+        targetLayers.forEach(obj => {
+            if (mainImg) {
+                obj.main.src = mainImg.image;
+                obj.main.style.display = "block";
+            } else {
+                obj.main.removeAttribute("src");
+                obj.main.style.display = "none";
             }
 
-            if (colorObj) {
-                if (colorObj.image) {
-                    obj.main.src = colorObj.image;
-                    obj.main.style.display = "block";
-                } else {
-                    obj.main.removeAttribute("src");
-                    obj.main.style.display = "none";
-                }
-                if (colorObj.secondImage) {
-                    obj.opp.src = colorObj.secondImage;
-                    obj.opp.style.display = "block";
-                } else {
-                    obj.opp.removeAttribute("src");
-                    obj.opp.style.display = "none";
-                }
-                return;
+            if (oppImg) {
+                obj.opp.src = oppImg.secondImage;
+                obj.opp.style.display = "block";
+            } else {
+                obj.opp.removeAttribute("src");
+                obj.opp.style.display = "none";
             }
-
-            obj.main.removeAttribute("src");
-            obj.main.style.display = "none";
-            obj.opp.removeAttribute("src");
-            obj.opp.style.display = "none";
         });
 
         const targetGloss = glossLayers[partId] || [];

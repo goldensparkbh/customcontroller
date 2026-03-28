@@ -236,6 +236,9 @@ const AdminParts = () => {
         setSubSecondImageFile(null);
         setSubIconFile(null);
         setSubIncompatibleWith([]);
+        setSubFilterQuery('');
+        setSubFilterActive('all');
+        setSubFilterType('all');
         setSubPriority(1);
         setSubActive(true);
         setSubAllowsMultiple(false);
@@ -634,17 +637,83 @@ const AdminParts = () => {
                                     <span style={{ color: '#8b949e', fontSize: '0.9rem' }}>Side: {selectedPart.side} | ID: {selectedPart.id}</span>
                                 </div>
                             </div>
-                            <button
-                                onClick={handleOpenAddOption}
-                                style={{ padding: '0.6rem 1.2rem', background: '#1f6feb', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-                            >
-                                + Add New Option
-                            </button>
                         </div>
 
-                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-                                {subitems.map(sub => (
+                        <div style={{ marginTop: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.4rem', fontWeight: 600 }}>Options ({subitems.length})</h3>
+                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    {/* --- Search Filter --- */}
+                                    <div style={{ position: 'relative' }}>
+                                        <input 
+                                            value={subFilterQuery}
+                                            onChange={e => setSubFilterQuery(e.target.value)}
+                                            placeholder="Search name, barcode, item #"
+                                            style={{ 
+                                                background: '#0d1117', 
+                                                border: '1px solid #30363d', 
+                                                color: '#e6edf3', 
+                                                padding: '0.5rem 0.75rem', 
+                                                borderRadius: '6px', 
+                                                fontSize: '0.85rem',
+                                                minWidth: '220px'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* --- Type Filter --- */}
+                                    <select 
+                                        value={subFilterType}
+                                        onChange={e => setSubFilterType(e.target.value)}
+                                        style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3', padding: '0.45rem', borderRadius: '6px', fontSize: '0.85rem' }}
+                                    >
+                                        <option value="all">All Types</option>
+                                        <option value="color">Colors Only</option>
+                                        <option value="gamemode">Gamemodes Only</option>
+                                    </select>
+
+                                    {/* --- Active Status Filter --- */}
+                                    <select 
+                                        value={subFilterActive}
+                                        onChange={e => setSubFilterActive(e.target.value)}
+                                        style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3', padding: '0.45rem', borderRadius: '6px', fontSize: '0.85rem' }}
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="active">Active Only</option>
+                                        <option value="inactive">Inactive Only</option>
+                                    </select>
+
+                                    <button
+                                        onClick={handleOpenAddOption}
+                                        style={{ padding: '0.5rem 1rem', background: '#238636', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                                    >
+                                        + Add Option
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                                {subitems
+                                    .filter(sub => {
+                                        // 1. Search Query (Name, Barcode, ItemNumber)
+                                        const nName = (sub.name || '').toLowerCase();
+                                        const nBarcode = (sub.barcode || '').toLowerCase();
+                                        const nItemNum = (sub.itemNumber || '').toString().toLowerCase();
+                                        const query = subFilterQuery.toLowerCase();
+                                        const matchesQuery = nName.includes(query) || nBarcode.includes(query) || nItemNum.includes(query);
+
+                                        // 2. Active Status
+                                        const isActive = sub.active !== false;
+                                        const matchesActive = subFilterActive === 'all' 
+                                            || (subFilterActive === 'active' && isActive)
+                                            || (subFilterActive === 'inactive' && !isActive);
+
+                                        // 3. Type
+                                        const matchesType = subFilterType === 'all' || sub.type === subFilterType;
+
+                                        return matchesQuery && matchesActive && matchesType;
+                                    })
+                                    .map((sub) => (
                                     <div key={sub.id} style={{ background: '#21262d', padding: '1rem', borderRadius: '8px', border: '1px solid #30363d', display: 'flex', flexDirection: 'column' }}>
 
                                         <div style={{ flex: 1 }}>
