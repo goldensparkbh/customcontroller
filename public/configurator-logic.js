@@ -1647,7 +1647,9 @@
             } else {
                 isSelected = (configState[partId] === entry.key) || (entry.isNullOption && !configState[partId]);
             }
-            cell.classList.toggle("active", isSelected);
+            if (!entry.isNullOption) {
+                cell.classList.toggle("active", isSelected);
+            }
 
             const swatch = document.createElement("div");
             swatch.className = isOption ? "cd-swatch-op" : "cd-swatch";
@@ -2028,13 +2030,15 @@
 
         // Hide all layers
         Object.keys(layers).forEach(pid => {
-            (layers[pid] || []).forEach(layer => {
-                layer.style.display = "none";
+            (layers[pid] || []).forEach(layerObj => {
+                if (layerObj.main) layerObj.main.style.display = "none";
+                if (layerObj.opp) layerObj.opp.style.display = "none";
             });
         });
         Object.keys(glossLayers).forEach(pid => {
-            (glossLayers[pid] || []).forEach(gloss => {
-                gloss.style.opacity = "0";
+            (glossLayers[pid] || []).forEach(glossObj => {
+                if (glossObj.main) glossObj.main.style.opacity = "0";
+                if (glossObj.opp) glossObj.opp.style.opacity = "0";
             });
         });
 

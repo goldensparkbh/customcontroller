@@ -389,7 +389,7 @@ const AdminParts = () => {
                     <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>This is the initial price of the controller before any customizations are applied.</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 600 }}>$</span>
+                    <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 600 }}>BHD</span>
                     <input 
                         type="number" 
                         min="0" 
