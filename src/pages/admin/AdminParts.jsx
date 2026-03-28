@@ -81,6 +81,8 @@ const AdminParts = () => {
     const [subIconFile, setSubIconFile] = useState(null);
     const [subIconPreview, setSubIconPreview] = useState('');
     const [subActive, setSubActive] = useState(true);
+    const [subAllowsMultiple, setSubAllowsMultiple] = useState(false);
+    const [subExclusiveGroup, setSubExclusiveGroup] = useState('');
 
     const fetchParts = async () => {
         setLoading(true);
@@ -236,6 +238,8 @@ const AdminParts = () => {
         setSubIncompatibleWith('');
         setSubPriority(1);
         setSubActive(true);
+        setSubAllowsMultiple(false);
+        setSubExclusiveGroup('');
         setShowOptionFormModal(true);
     };
 
@@ -256,6 +260,11 @@ const AdminParts = () => {
         setSubSecondImageFile(null);
         setSubIconFile(null);
         setSubActive(sub.active !== false); // default to true if undefined
+        setSubAllowsMultiple(!!sub.allowsMultiple);
+        setSubExclusiveGroup(sub.exclusiveGroup || '');
+        setSubDisablesColors(!!sub.disablesColors);
+        setSubIncompatibleWith(Array.isArray(sub.incompatibleWith) ? sub.incompatibleWith.join(', ') : '');
+        setSubPriority(sub.priority || 1);
         setShowOptionFormModal(true);
     };
 
@@ -312,6 +321,8 @@ const AdminParts = () => {
                 secondImage: secondImageUrl,
                 updatedAt: new Date(),
                 disablesColors: subDisablesColors,
+                allowsMultiple: subAllowsMultiple,
+                exclusiveGroup: subExclusiveGroup,
                 incompatibleWith: subIncompatibleWith.split(',').map(id => id.trim()).filter(id => id.length > 0),
                 priority: Number(subPriority || 1)
             };

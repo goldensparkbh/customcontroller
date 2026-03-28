@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import Navbar from './components/Navbar.jsx';
 import LoadingState from './components/LoadingState.jsx';
@@ -46,9 +46,13 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const location = useLocation();
+  const hideNavbarOn = ['/pos'];
+  const shouldHideNavbar = hideNavbarOn.includes(location.pathname);
+
   return (
     <>
-      <Navbar />
+      {!shouldHideNavbar && <Navbar />}
       <Suspense fallback={<LoadingState message="Loading..." fullScreen />}>
         <Routes>
           <Route path="/" element={<HomePage />} />

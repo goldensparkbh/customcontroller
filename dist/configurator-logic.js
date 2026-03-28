@@ -1639,6 +1639,18 @@
     }
 
     function renderSection(target, entries, title, isOption) {
+        const partId = selectedPartId;
+        const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
+        const partOptions = getOptionsForPart(partId);
+        
+        // Check if any selected option disables colors
+        const colorDisabled = currentOptions.some(k => {
+            const opt = partOptions.find(o => o.key === k);
+            return opt && opt.disablesColors;
+        });
+
+        if (!isOption && colorDisabled) return; // Hide color section if disabled
+
         if (title) {
             const header = document.createElement("div");
             header.className = isMobileLayout() ? "mobile-group-title" : "color-group-title";
@@ -1646,7 +1658,6 @@
             target.appendChild(header);
         }
 
-        const partId = selectedPartId;
         entries.forEach(entry => {
             const cell = document.createElement("div");
             cell.className = isOption ? "cd-cell-op" : "cd-cell";
@@ -1883,14 +1894,16 @@
             }
 
             // 2. Handle Incompatibilities (Newest wins)
-            if (requestedOption.incompatibleWith && requestedOption.incompatibleWith.length > 0) {
-                currentSelections = currentSelections.filter(k => !requestedOption.incompatibleWith.includes(k));
+            const incompatibleList = Array.isArray(requestedOption.incompatibleWith) ? requestedOption.incompatibleWith : [];
+            if (incompatibleList.length > 0) {
+                currentSelections = currentSelections.filter(k => !incompatibleList.includes(k));
             }
 
             // Also check if any existing item is incompatible with this new one
             currentSelections = currentSelections.filter(k => {
                 const opt = options.find(o => o.key === k);
-                return !opt || !opt.incompatibleWith || !opt.incompatibleWith.includes(optionKey);
+                const list = (opt && Array.isArray(opt.incompatibleWith)) ? opt.incompatibleWith : [];
+                return !opt || !list.includes(optionKey);
             });
 
             // 3. Handle Simple Radio Behavior (if not allowing multiple)

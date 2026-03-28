@@ -1,4 +1,4 @@
-import{r as t,j as n}from"./index-DtA6XjXn.js";const a=`
+import{r as t,j as a}from"./index-nD_B62kp.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav" style="display:none;"></div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
@@ -10,10 +10,10 @@ import{r as t,j as n}from"./index-DtA6XjXn.js";const a=`
 </aside>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="card" style="max-width:480px; width:100%; text-align:center;">
-    <div class="card-title" data-i18n="orderSuccessTitle">تم استلام الطلب</div>
-    <div style="font-size:3rem; margin:20px 0;">✅</div>
-    <div id="contactMsg" data-i18n="orderContactMessage" style="font-size:1.1rem; margin:10px 0; line-height: 1.5;">شكراً لك! تم استلام طلبك بنجاح.<br>سنتواصل معك قريباً لتأكيد التفاصيل.</div>
-    <button id="homeBtn" class="place-order-btn" style="margin-top: 20px;" data-i18n="orderOkBtn">تم</button>
+    <div class="card-title" data-i18n="paymentFailedTitle" style="color: #ff4d4d;">فشل الدفع</div>
+    <div style="font-size:3rem; margin:20px 0;">❌</div>
+    <div id="failMessage" data-i18n="paymentFailedMessage" style="font-size:1rem; margin:10px 0;">لم تكتمل عملية الدفع بنجاح.</div>
+    <div id="redirectMsg" data-i18n="redirectingCart" style="font-size:0.9rem; margin-top:10px; opacity:0.7;">جاري التحويل للسلة...</div>
   </div>
 </div>
 `,l=`
@@ -110,11 +110,9 @@ import{r as t,j as n}from"./index-DtA6XjXn.js";const a=`
     });
   }
 
-  // Handle Home Button
-  const homeBtn = document.getElementById("homeBtn");
-  if (homeBtn) {
-    homeBtn.addEventListener("click", () => {
-      window.location.href = "/";
-    });
-  }
-`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>{document.body.contains(e)&&document.body.removeChild(e)}},[]),n.jsx("div",{dangerouslySetInnerHTML:{__html:a}})}export{i as default};
+  // --- FAILURE LOGIC ---
+  // Redirect to cart after 5 seconds
+  setTimeout(() => {
+    window.location.href = "/cart";
+  }, 5000);
+`;function i(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=l,document.body.appendChild(e),()=>{document.body.contains(e)&&document.body.removeChild(e)}},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{i as default};
