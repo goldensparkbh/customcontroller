@@ -640,6 +640,10 @@
                     } else {
                         addVariantToMap(dynamicColorsByPart, partId, entry);
                     }
+
+                    // Ensure config/option state is initialized to null for this part
+                    if (!(partId in configState)) configState[partId] = null;
+                    if (!(partId in optionState)) optionState[partId] = null;
                 });
             });
 
@@ -1642,14 +1646,17 @@
                 cell.title = t("outOfStock") || "Out of Stock";
             }
             let isSelected = false;
-            if (isOption) {
-                isSelected = (optionState[partId] === entry.key) || (entry.isNullOption && !optionState[partId]);
+            const currentVal = isOption ? optionState[partId] : configState[partId];
+            
+            if (entry.isNullOption) {
+                // Null option is selected if the state is exactly null or undefined
+                isSelected = (currentVal === null || currentVal === undefined);
             } else {
-                isSelected = (configState[partId] === entry.key) || (entry.isNullOption && !configState[partId]);
+                // Regular option is selected if it matches the state
+                isSelected = (entry.key != null && currentVal === entry.key);
             }
-            if (!entry.isNullOption) {
-                cell.classList.toggle("active", isSelected);
-            }
+
+            cell.classList.toggle("active", isSelected);
 
             const swatch = document.createElement("div");
             swatch.className = isOption ? "cd-swatch-op" : "cd-swatch";
@@ -1729,8 +1736,8 @@
     }
 
     function applyColor(partId, colorKey) {
-        if (configState[partId] === colorKey && colorKey !== null) {
-            // Do not toggle off. Just return.
+        // Exclusive selection: clicking the same thing does nothing (no toggle off)
+        if (configState[partId] === colorKey) {
             return;
         }
 
@@ -1812,15 +1819,13 @@
 
         playClick2();
 
-        // Toggle Logic
-        const defaultKey = null;
-
+        // Simplified selection logic: no toggle-off.
         if (optionKey === "standard") {
-            optionState[partId] = defaultKey;
+            optionState[partId] = null;
             selectedOptionPriceByPart[partId] = 0;
         } else if (optionState[partId] === optionKey) {
-            optionState[partId] = defaultKey;
-            selectedOptionPriceByPart[partId] = 0;
+            // Do nothing if already selected
+            return;
         } else {
             optionState[partId] = optionKey;
             setPartPrice(partId, optionKey, true);
