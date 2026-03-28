@@ -506,7 +506,9 @@ body.theme-light .parts-item {
 
 body.theme-light .parts-item:hover,
 body.theme-light .parts-item.active {
-  border-color: var(--color-text);
+  border-color: #1f6feb;
+  background: rgba(31, 111, 235, 0.05);
+  box-shadow: 0 0 10px rgba(31, 111, 235, 0.15);
 }
 
 body.theme-light .add-to-cart-btn,
@@ -2685,12 +2687,13 @@ body.theme-light .flip-toggle {
 }
 
 .parts-item.active {
-  border-color: #1f6feb;
+  border-color: #1f6feb !important;
   background: rgba(31, 111, 235, 0.1);
   box-shadow: 
     0 0 15px rgba(31, 111, 235, 0.3),
     inset 0 0 10px rgba(31, 111, 235, 0.2);
   transform: scale(1.02);
+  z-index: 5;
 }
 
 .parts-thumb {
@@ -4833,6 +4836,15 @@ textarea {
     padding: 8px !important;
     border-radius: 8px;
     text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.2s ease-in-out;
+  }
+
+  body.configurator-page-active .parts-item:hover,
+  body.configurator-page-active .parts-item.active {
+    border-color: #1f6feb !important;
+    background: rgba(31, 111, 235, 0.12) !important;
+    box-shadow: 0 0 12px rgba(31, 111, 235, 0.4) !important;
   }
 
   body.configurator-page-active .parts-item .parts-thumb {
