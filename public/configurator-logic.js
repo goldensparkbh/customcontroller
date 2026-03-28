@@ -1737,13 +1737,27 @@
 
         if (!optionHasOverrides) {
             const targetLayers = layers[partId] || [];
-            targetLayers.forEach(layer => {
-                if (colObj && colObj.image) {
-                    layer.src = colObj.image;
-                    layer.style.display = "block";
+            targetLayers.forEach(obj => {
+                if (colObj) {
+                    if (colObj.image) {
+                        obj.main.src = colObj.image;
+                        obj.main.style.display = "block";
+                    } else {
+                        obj.main.removeAttribute("src");
+                        obj.main.style.display = "none";
+                    }
+                    if (colObj.secondImage) {
+                        obj.opp.src = colObj.secondImage;
+                        obj.opp.style.display = "block";
+                    } else {
+                        obj.opp.removeAttribute("src");
+                        obj.opp.style.display = "none";
+                    }
                 } else {
-                    layer.removeAttribute("src");
-                    layer.style.display = "none";
+                    obj.main.removeAttribute("src");
+                    obj.main.style.display = "none";
+                    obj.opp.removeAttribute("src");
+                    obj.opp.style.display = "none";
                 }
             });
         }
@@ -1791,21 +1805,62 @@
         }
 
         const targetLayers = layers[partId] || [];
-        targetLayers.forEach(layer => {
-            if (optObj && optObj.image) {
-                layer.src = optObj.image;
-                layer.style.display = "block";
+        targetLayers.forEach(obj => {
+            if (optObj) {
+                if (optObj.image) {
+                    obj.main.src = optObj.image;
+                    obj.main.style.display = "block";
+                } else {
+                    const currentColorKey = configState[partId];
+                    const palette = getPaletteForPart(partId);
+                    const colObj = palette.find(c => c.key === currentColorKey);
+                    if (colObj && colObj.image) {
+                        obj.main.src = colObj.image;
+                        obj.main.style.display = "block";
+                    } else {
+                        obj.main.removeAttribute("src");
+                        obj.main.style.display = "none";
+                    }
+                }
+                if (optObj.secondImage) {
+                    obj.opp.src = optObj.secondImage;
+                    obj.opp.style.display = "block";
+                } else {
+                    const currentColorKey = configState[partId];
+                    const palette = getPaletteForPart(partId);
+                    const colObj = palette.find(c => c.key === currentColorKey);
+                    if (colObj && colObj.secondImage) {
+                        obj.opp.src = colObj.secondImage;
+                        obj.opp.style.display = "block";
+                    } else {
+                        obj.opp.removeAttribute("src");
+                        obj.opp.style.display = "none";
+                    }
+                }
             } else {
-                // Fallback to currently selected color immediately
                 const currentColorKey = configState[partId];
                 const palette = getPaletteForPart(partId);
                 const colObj = palette.find(c => c.key === currentColorKey);
-                if (colObj && colObj.image) {
-                    layer.src = colObj.image;
-                    layer.style.display = "block";
+                if (colObj) {
+                    if (colObj.image) {
+                        obj.main.src = colObj.image;
+                        obj.main.style.display = "block";
+                    } else {
+                        obj.main.removeAttribute("src");
+                        obj.main.style.display = "none";
+                    }
+                    if (colObj.secondImage) {
+                        obj.opp.src = colObj.secondImage;
+                        obj.opp.style.display = "block";
+                    } else {
+                        obj.opp.removeAttribute("src");
+                        obj.opp.style.display = "none";
+                    }
                 } else {
-                    layer.removeAttribute("src");
-                    layer.style.display = "none";
+                    obj.main.removeAttribute("src");
+                    obj.main.style.display = "none";
+                    obj.opp.removeAttribute("src");
+                    obj.opp.style.display = "none";
                 }
             }
         });
@@ -1817,8 +1872,9 @@
         });
 
         if (partId === "backShellMain") {
-            (layers["backShellMain"] || []).forEach(l => {
-                if (l.getAttribute("src")) l.style.display = "block";
+            (layers["backShellMain"] || []).forEach(obj => {
+                if (obj.main.getAttribute("src")) obj.main.style.display = "block";
+                if (obj.opp.getAttribute("src")) obj.opp.style.display = "block";
             });
         }
 
