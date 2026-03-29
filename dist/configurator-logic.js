@@ -2294,8 +2294,8 @@
                 return;
             }
 
-            up.style.opacity = scrollTop > 10 ? "1" : "0";
-            down.style.opacity = scrollTop < maxScroll - 10 ? "1" : "0";
+            up.style.opacity = scrollTop > 5 ? "1" : "0";
+            down.style.opacity = scrollTop < maxScroll - 5 ? "1" : "0";
         }
 
         function showOnInteraction() {
