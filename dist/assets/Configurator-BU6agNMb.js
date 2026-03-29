@@ -1,4 +1,4 @@
-import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./index-BjZLmW23.js";import{b as y}from"./inventoryPricing-Jg4kc6rV.js";const w=`
+import{r as n,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./index-MOkEfMC1.js";import{b as w}from"./inventoryPricing-Jg4kc6rV.js";const y=`
 <canvas id="bgCanvas"></canvas>
 <div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
 <div class="zoho-loading-card">
@@ -83,28 +83,6 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
 </div>
 </div>
 <div class="configurator-controls" id="configuratorControls" aria-label="Configurator controls">
-<button class="control-btn control-colors" data-panel="colors" type="button" aria-label="الألوان">
-<span class="control-icon" aria-hidden="true">
-<svg viewBox="0 0 24 24" role="img" aria-hidden="true">
-<circle cx="7" cy="9" r="3.2" fill="#ff5c7a"/>
-<circle cx="16.5" cy="8.5" r="3" fill="#42a5ff"/>
-<circle cx="13" cy="16" r="4" fill="#f6d743"/>
-</svg>
-</span>
-<span class="control-label" data-i18n="partsColorsHeading">الألوان</span>
-</button>
-<button class="control-btn control-options active" data-panel="options" type="button" aria-label="الخيارات">
-<span class="control-icon" aria-hidden="true">
-<svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-<path d="M4 7h10"/>
-<path d="M4 12h16"/>
-<path d="M4 17h8"/>
-<circle cx="17" cy="7" r="2.2" fill="currentColor"/>
-<circle cx="9" cy="17" r="2.2" fill="currentColor"/>
-</svg>
-</span>
-<span class="control-label" data-i18n="partsOptionsHeading">الخيارات</span>
-</button>
 <button class="control-btn control-flip" id="flipControlBtn" data-action="flip" type="button" aria-label="الأمام">
 <span class="flip-preview" aria-hidden="true">
 <img class="flip-preview-front" alt="" src="/assets/controller.png"/>
@@ -159,4 +137,4 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
 </div>
 </div>
 <div class="part-tooltip" id="partTooltip"></div>
-`,x=()=>{const[s,f]=c.useState(!0);if(c.useEffect(()=>{(async()=>{try{const n=(await v(g(u,"configurator_parts"))).docs.map(i=>({id:i.id,...i.data()}));for(const i of n){const b=await v(g(u,`configurator_parts/${i.id}/options`));i.options=b.docs.map(l=>{const t=l.data();return{id:l.id,...t,...y(t.inventoryDetails,{purchasePrice:t.purchasePrice??0,sellPrice:t.sellPrice??t.price??0},{quantity:t.quantity??0})}}).filter(l=>l.active!==!1)}const a=await m(A(u,"configurator_settings","general"));let e=0;a.exists()&&(e=Number(a.data().basePrice)||0),window.__CONFIG_FIREBASE_DATA__=n,window.__CONFIG_DATA__={i18n:p,baseControllerPrice:e}}catch(r){console.error("Firebase fetch error:",r)}finally{f(!1)}})()},[]),c.useEffect(()=>{if(s)return;document.body.classList.add("configurator-page-active");const o=window.requestAnimationFrame(()=>{document.body.classList.add("configurator-intro-active")}),r=window.setTimeout(()=>{document.body.classList.remove("configurator-intro-active")},1350);if(!document.getElementById("ez-configurator-logic-script")){const a=document.createElement("script");a.id="ez-configurator-logic-script",a.src="/configurator-logic.js?v="+Date.now(),a.async=!0,document.body.appendChild(a)}return()=>{if(typeof window.__EZ_CONFIGURATOR_CLEANUP__=="function")try{window.__EZ_CONFIGURATOR_CLEANUP__()}catch(e){console.warn("Configurator cleanup failed",e)}document.body.classList.remove("configurator-page-active"),document.body.classList.remove("configurator-intro-active"),window.cancelAnimationFrame(o),window.clearTimeout(r);const a=document.getElementById("ez-configurator-logic-script");a&&document.body.contains(a)&&document.body.removeChild(a)}},[s]),s){const o=localStorage.getItem("ez_lang")||"ar";return d.jsx(h,{message:p[o]&&p[o].loadingConfigurator||"Loading configurator...",fullScreen:!0})}return d.jsx("div",{className:"configurator-page",children:d.jsx("div",{dangerouslySetInnerHTML:{__html:w}})})};export{x as default};
+`,L=()=>{const[c,f]=n.useState(!0);if(n.useEffect(()=>{(async()=>{try{const l=(await v(g(u,"configurator_parts"))).docs.map(i=>({id:i.id,...i.data()}));for(const i of l){const b=await v(g(u,`configurator_parts/${i.id}/options`));i.options=b.docs.map(s=>{const t=s.data();return{id:s.id,...t,...w(t.inventoryDetails,{purchasePrice:t.purchasePrice??0,sellPrice:t.sellPrice??t.price??0},{quantity:t.quantity??0})}}).filter(s=>s.active!==!1)}const a=await m(A(u,"configurator_settings","general"));let e=0;a.exists()&&(e=Number(a.data().basePrice)||0),window.__CONFIG_FIREBASE_DATA__=l,window.__CONFIG_DATA__={i18n:p,baseControllerPrice:e}}catch(r){console.error("Firebase fetch error:",r)}finally{f(!1)}})()},[]),n.useEffect(()=>{if(c)return;document.body.classList.add("configurator-page-active");const o=window.requestAnimationFrame(()=>{document.body.classList.add("configurator-intro-active")}),r=window.setTimeout(()=>{document.body.classList.remove("configurator-intro-active")},1350);if(!document.getElementById("ez-configurator-logic-script")){const a=document.createElement("script");a.id="ez-configurator-logic-script",a.src="/configurator-logic.js?v="+Date.now(),a.async=!0,document.body.appendChild(a)}return()=>{if(typeof window.__EZ_CONFIGURATOR_CLEANUP__=="function")try{window.__EZ_CONFIGURATOR_CLEANUP__()}catch(e){console.warn("Configurator cleanup failed",e)}document.body.classList.remove("configurator-page-active"),document.body.classList.remove("configurator-intro-active"),window.cancelAnimationFrame(o),window.clearTimeout(r);const a=document.getElementById("ez-configurator-logic-script");a&&document.body.contains(a)&&document.body.removeChild(a)}},[c]),c){const o=localStorage.getItem("ez_lang")||"ar";return d.jsx(h,{message:p[o]&&p[o].loadingConfigurator||"Loading configurator...",fullScreen:!0})}return d.jsx("div",{className:"configurator-page",children:d.jsx("div",{dangerouslySetInnerHTML:{__html:y}})})};export{L as default};

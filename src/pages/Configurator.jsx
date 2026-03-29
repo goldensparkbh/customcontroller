@@ -89,28 +89,6 @@ const configuratorMarkup = `
 </div>
 </div>
 <div class="configurator-controls" id="configuratorControls" aria-label="Configurator controls">
-<button class="control-btn control-colors" data-panel="colors" type="button" aria-label="الألوان">
-<span class="control-icon" aria-hidden="true">
-<svg viewBox="0 0 24 24" role="img" aria-hidden="true">
-<circle cx="7" cy="9" r="3.2" fill="#ff5c7a"/>
-<circle cx="16.5" cy="8.5" r="3" fill="#42a5ff"/>
-<circle cx="13" cy="16" r="4" fill="#f6d743"/>
-</svg>
-</span>
-<span class="control-label" data-i18n="partsColorsHeading">الألوان</span>
-</button>
-<button class="control-btn control-options active" data-panel="options" type="button" aria-label="الخيارات">
-<span class="control-icon" aria-hidden="true">
-<svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-<path d="M4 7h10"/>
-<path d="M4 12h16"/>
-<path d="M4 17h8"/>
-<circle cx="17" cy="7" r="2.2" fill="currentColor"/>
-<circle cx="9" cy="17" r="2.2" fill="currentColor"/>
-</svg>
-</span>
-<span class="control-label" data-i18n="partsOptionsHeading">الخيارات</span>
-</button>
 <button class="control-btn control-flip" id="flipControlBtn" data-action="flip" type="button" aria-label="الأمام">
 <span class="flip-preview" aria-hidden="true">
 <img class="flip-preview-front" alt="" src="/assets/controller.png"/>
@@ -196,7 +174,7 @@ const ConfiguratorPage = () => {
         const basePriceDoc = await getDoc(doc(db, 'configurator_settings', 'general'));
         let basePrice = 0;
         if (basePriceDoc.exists()) {
-            basePrice = Number(basePriceDoc.data().basePrice) || 0;
+          basePrice = Number(basePriceDoc.data().basePrice) || 0;
         }
 
         window.__CONFIG_FIREBASE_DATA__ = partsList;
