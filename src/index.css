@@ -5634,46 +5634,42 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
 
   body.configurator-page-active {
     --mobile-controller-top-gap: 8px;
-    --mobile-controller-height: 24vh;
-    --mobile-controller-min-height: 180px;
-    --mobile-controller-max-width: 430px;
-    --mobile-controller-bottom-space: 44px;
-    --mobile-controller-reserved-space: calc(var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + 12px);
+    --mobile-controller-height: 23vh;
+    --mobile-controller-min-height: 168px;
+    --mobile-controller-max-width: 420px;
+    --mobile-controller-bottom-space: 42px;
+    --mobile-parts-strip-height: 106px;
+    --mobile-content-side-padding: 10px;
+    --mobile-bottom-bar-height: calc(78px + env(safe-area-inset-bottom));
+    --mobile-fixed-top-offset: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + var(--mobile-parts-strip-height));
     overflow: hidden;
   }
 
   body.configurator-page-active .page-content {
     height: calc(100vh - 60px);
-    padding-top: 6px;
-    padding-bottom: 92px;
-    overflow: hidden;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
   }
 
   body.configurator-page-active .main-layout {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto minmax(0, 1fr) !important;
-    grid-template-areas:
-      "parts"
-      "colors" !important;
-    gap: 6px !important;
+    display: block !important;
     height: 100% !important;
     min-height: 0 !important;
-    padding: calc(var(--mobile-controller-reserved-space) + var(--mobile-controller-top-gap)) 10px 8px !important;
+    padding: 0 !important;
     overflow: hidden !important;
-    align-items: start !important;
   }
 
   body.configurator-page-active .controller-column {
-    grid-area: controller !important;
     position: fixed !important;
     top: calc(60px + var(--mobile-controller-top-gap)) !important;
-    left: 10px !important;
-    right: 10px !important;
+    left: var(--mobile-content-side-padding) !important;
+    right: var(--mobile-content-side-padding) !important;
     width: auto !important;
-    z-index: 30 !important;
-    min-height: 0;
+    z-index: 40 !important;
+    min-height: 0 !important;
     padding: 0 !important;
+    margin: 0 !important;
     pointer-events: none;
   }
 
@@ -5681,7 +5677,7 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     position: relative;
     width: 100%;
     padding-bottom: var(--mobile-controller-bottom-space) !important;
-    margin-bottom: 0 !important;
+    margin: 0 !important;
     pointer-events: auto;
   }
 
@@ -5692,8 +5688,8 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     height: var(--mobile-controller-height) !important;
     margin-inline: auto !important;
     overflow: visible !important;
-    transform: scale(0.94);
-    transform-origin: center top;
+    transform: scale(0.92) !important;
+    transform-origin: center top !important;
   }
 
   body.configurator-page-active .controller-flip,
@@ -5706,7 +5702,7 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;
-    bottom: 4px !important;
+    bottom: 2px !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
@@ -5716,16 +5712,50 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   }
 
   body.configurator-page-active .parts-column {
-    grid-area: parts !important;
-    min-height: 0;
-    margin-top: 0 !important;
+    position: fixed !important;
+    top: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space)) !important;
+    left: var(--mobile-content-side-padding) !important;
+    right: var(--mobile-content-side-padding) !important;
+    z-index: 35 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  body.configurator-page-active .parts-panel,
+  body.configurator-page-active .parts-panel {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
   body.configurator-page-active .parts-accordion,
   body.configurator-page-active .accordion-content,
   body.configurator-page-active .accordion-body {
     overflow: visible !important;
+  }
+
+  body.configurator-page-active .accordion-item {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body.configurator-page-active .accordion-header {
+    display: none !important;
+  }
+
+  body.configurator-page-active .accordion-content {
+    max-height: none !important;
+  }
+
+  body.configurator-page-active .accordion-body {
+    padding: 0 !important;
   }
 
   body.configurator-page-active .parts-list {
@@ -5736,7 +5766,8 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     gap: 8px !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    padding: 2px 2px 6px !important;
+    padding: 4px 2px 6px !important;
+    max-height: none !important;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none !important;
@@ -5757,21 +5788,30 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   }
 
   body.configurator-page-active .colors-column {
-    grid-area: colors !important;
+    position: fixed !important;
+    top: var(--mobile-fixed-top-offset) !important;
+    left: var(--mobile-content-side-padding) !important;
+    right: var(--mobile-content-side-padding) !important;
+    bottom: var(--mobile-bottom-bar-height) !important;
+    z-index: 10 !important;
     min-height: 0 !important;
-    height: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
     padding: 0 !important;
+    overflow: hidden !important;
   }
 
   body.configurator-page-active .color-panel {
+    width: 100% !important;
     height: 100% !important;
     max-height: none !important;
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 10px 8px 18px !important;
+    padding: 10px 8px 14px !important;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    box-sizing: border-box !important;
   }
 
   body.configurator-page-active .color-panel-grid,
@@ -5790,6 +5830,7 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     align-items: center !important;
     justify-content: space-between !important;
     gap: 12px !important;
+    min-height: 78px !important;
     padding: 10px 14px calc(10px + env(safe-area-inset-bottom)) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
     background: radial-gradient(circle at top, rgba(18, 22, 32, 0.96), rgba(6, 8, 14, 0.98)) !important;
