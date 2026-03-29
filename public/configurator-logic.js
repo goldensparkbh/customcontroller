@@ -7,7 +7,7 @@
 
     const isMobile =
         new RegExp("Mobi|Android|iPhone|iPad|iPod", "i").test(navigator.userAgent) ||
-        window.innerWidth < 700;
+        window.innerWidth <= 900;
 
     const sfxClickEl = document.getElementById("sfxClick");
     const sfxClick2El = document.getElementById("sfxClick2");
@@ -1263,7 +1263,7 @@
     }
 
     function isMobileLayout() {
-        return false;
+        return window.innerWidth <= 900;
     }
 
     function disableMobilePanels() {
@@ -1296,7 +1296,7 @@
 
     // Initial panel setup
     disableMobilePanels();
-    setMobileActionBar(false);
+    setMobileActionBar(isMobileLayout());
 
     function applyTranslations() {
         const dict = i18n[currentLang];
