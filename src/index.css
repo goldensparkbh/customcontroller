@@ -4610,12 +4610,21 @@ textarea {
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 320px) minmax(88px, 108px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) minmax(92px, 112px);
     grid-template-areas: "controller colors parts";
     gap: 0;
     align-items: stretch;
     height: 100vh;
     overflow: hidden;
+  }
+
+  body.configurator-page-active .color-panel-grid,
+  body.configurator-page-active .color-panel-grid2 {
+     display: grid;
+     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+     gap: 12px 6px;
+     justify-items: center;
+     margin-bottom: 20px;
   }
 
   body.configurator-page-active .controller-column {
@@ -4791,17 +4800,26 @@ textarea {
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   }
 
-  /* Optimized Color Swatches for Mobile Stack */
+  /* Optimized UI Swatches: Universal sizing and circle-protection */
   body.configurator-page-active .cd-cell,
   body.configurator-page-active .cd-cell-op {
-    width: 52px !important;
-    height: 52px !important;
+    width: auto !important; /* Allow growing for labels */
+    height: auto !important;
+    min-width: 68px;
+    min-height: 84px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
   body.configurator-page-active .cd-swatch,
   body.configurator-page-active .cd-swatch-op {
-    width: 44px !important;
-    height: 44px !important;
+    width: 62px !important;
+    height: 62px !important;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
+    border-radius: 50%;
   }
 
   body.configurator-page-active .parts-item .parts-name {
@@ -5187,8 +5205,9 @@ body.configurator-page-active .cd-cell-op {
 
   .cd-swatch,
   .cd-swatch-op {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
+    aspect-ratio: 1 / 1;
   }
 
   .cd-color-name {
