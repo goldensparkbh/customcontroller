@@ -5592,7 +5592,7 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
 
   body.configurator-page-active .cd-swatch,
   body.configurator-page-active .cd-swatch-op {
-    width: 100% !important;
+    /* width: 100% !important; */
     max-width: none !important;
     aspect-ratio: 1 / 1;
     height: auto !important;
@@ -5702,7 +5702,7 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;
-    bottom: 2px !important;
+    bottom: 25px !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
