@@ -5633,12 +5633,12 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   }
 
   body.configurator-page-active {
-    --mobile-controller-top-gap: 8px;
+    --mobile-controller-top-gap: 16px;
     --mobile-controller-height: 23vh;
     --mobile-controller-min-height: 168px;
     --mobile-controller-max-width: 420px;
-    --mobile-controller-bottom-space: 42px;
-    --mobile-parts-strip-height: 106px;
+    --mobile-controller-bottom-space: 46px;
+    --mobile-parts-strip-height: 108px;
     --mobile-content-side-padding: 10px;
     --mobile-bottom-bar-height: calc(78px + env(safe-area-inset-bottom));
     --mobile-fixed-top-offset: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + var(--mobile-parts-strip-height));
@@ -5727,20 +5727,42 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     height: auto !important;
     max-height: none !important;
     min-height: 0 !important;
-    padding: 0 !important;
+    padding: 0 0 2px !important;
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
-    overflow: hidden !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
 
-  body.configurator-page-active .parts-accordion,
+  body.configurator-page-active .parts-panel::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  body.configurator-page-active .parts-accordion {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    min-width: max-content !important;
+    overflow: visible !important;
+  }
+
+  body.configurator-page-active .accordion-item,
   body.configurator-page-active .accordion-content,
-  body.configurator-page-active .accordion-body {
+  body.configurator-page-active .accordion-body,
+  body.configurator-page-active .parts-list {
     overflow: visible !important;
   }
 
   body.configurator-page-active .accordion-item {
+    display: flex !important;
+    flex: 0 0 auto !important;
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
@@ -5751,10 +5773,12 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   }
 
   body.configurator-page-active .accordion-content {
+    display: flex !important;
     max-height: none !important;
   }
 
   body.configurator-page-active .accordion-body {
+    display: flex !important;
     padding: 0 !important;
   }
 
@@ -5764,27 +5788,17 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     flex-wrap: nowrap !important;
     white-space: nowrap;
     gap: 8px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
+    overflow: visible !important;
     padding: 4px 2px 6px !important;
     max-height: none !important;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-  }
-
-  body.configurator-page-active .parts-list::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+    margin: 0 !important;
+    scroll-snap-type: none !important;
   }
 
   body.configurator-page-active .parts-item,
   body.configurator-page-active .part-row {
     flex: 0 0 auto !important;
     min-width: 72px !important;
-    scroll-snap-align: start;
   }
 
   body.configurator-page-active .colors-column {
@@ -5866,5 +5880,155 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
 
   body.configurator-page-active .configurator-controls {
     display: none !important;
+  }
+}
+
+
+/* =========================================================
+   FINAL MOBILE OVERRIDES v3
+   - keeps all parts inside one horizontal strip
+   - keeps options + colors inside one vertical scrolling panel
+   - prevents the parts strip from covering the options section
+   ========================================================= */
+@media (max-width: 900px) {
+  body.configurator-page-active {
+    --mobile-controller-top-gap: 24px;
+    --mobile-controller-height: 22vh;
+    --mobile-controller-min-height: 168px;
+    --mobile-controller-max-width: 420px;
+    --mobile-controller-bottom-space: 52px;
+    --mobile-parts-strip-height: 118px;
+    --mobile-content-side-padding: 10px;
+    --mobile-bottom-bar-height: calc(78px + env(safe-area-inset-bottom));
+    --mobile-fixed-top-offset: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + var(--mobile-parts-strip-height) + 10px);
+  }
+
+  body.configurator-page-active .controller-column {
+    top: calc(60px + var(--mobile-controller-top-gap)) !important;
+  }
+
+  body.configurator-page-active .controller-area {
+    transform: scale(0.9) !important;
+    margin-top: 4px !important;
+  }
+
+  body.configurator-page-active .parts-column {
+    position: fixed !important;
+    top: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space)) !important;
+    left: var(--mobile-content-side-padding) !important;
+    right: var(--mobile-content-side-padding) !important;
+    height: var(--mobile-parts-strip-height) !important;
+    min-height: var(--mobile-parts-strip-height) !important;
+    max-height: var(--mobile-parts-strip-height) !important;
+    overflow: hidden !important;
+    z-index: 35 !important;
+  }
+
+  body.configurator-page-active .parts-panel {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 !important;
+  }
+
+  body.configurator-page-active .parts-accordion {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    min-width: max-content !important;
+    height: 100% !important;
+  }
+
+  body.configurator-page-active .accordion-item,
+  body.configurator-page-active .accordion-content,
+  body.configurator-page-active .accordion-body {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body.configurator-page-active .parts-list {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    overflow-x: visible !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    padding: 4px 2px 6px !important;
+    margin: 0 !important;
+    max-height: 100% !important;
+  }
+
+  body.configurator-page-active .parts-item,
+  body.configurator-page-active .part-row {
+    flex: 0 0 auto !important;
+    min-width: 72px !important;
+    max-width: 92px !important;
+  }
+
+  body.configurator-page-active .colors-column {
+    position: fixed !important;
+    top: var(--mobile-fixed-top-offset) !important;
+    left: var(--mobile-content-side-padding) !important;
+    right: var(--mobile-content-side-padding) !important;
+    bottom: var(--mobile-bottom-bar-height) !important;
+    overflow: hidden !important;
+    z-index: 10 !important;
+  }
+
+  body.configurator-page-active .color-panel {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 10px 8px 18px !important;
+    box-sizing: border-box !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  body.configurator-page-active #optionsPanelGrid,
+  body.configurator-page-active #colorPanelGrid {
+    display: grid !important;
+    width: 100% !important;
+    align-items: start !important;
+  }
+
+  body.configurator-page-active #optionsPanelGrid {
+    margin-top: 0 !important;
+    margin-bottom: 14px !important;
+  }
+
+  body.configurator-page-active #colorPanelGrid {
+    margin-top: 0 !important;
+  }
+
+  body.configurator-page-active .color-panel-grid,
+  body.configurator-page-active .color-panel-grid2,
+  body.configurator-page-active #optionsPanelGrid,
+  body.configurator-page-active #colorPanelGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px 6px !important;
+  }
+
+  body.configurator-page-active .mobile-group-title,
+  body.configurator-page-active .color-group-title {
+    grid-column: 1 / -1 !important;
   }
 }
