@@ -670,7 +670,7 @@
 
             // --- 5. Global Sync After Restoration ---
             // Ensure visual layers, prices, and summary are fully updated for ALL parts.
-            updatePartsUI(); 
+            updatePartsUI();
             updateSummary();
             saveConfigToStorage();
 
@@ -1106,7 +1106,7 @@
         // 2. Option Persistence/Mapping (Handle Array)
         if (!Array.isArray(optionState[partId])) optionState[partId] = [];
         const currentOptions = optionState[partId];
-        
+
         // Sum up prices for all valid selected options
         let totalOptPrice = 0;
         const activeEntries = [];
@@ -1441,11 +1441,11 @@
     function _updateSidebarIcons() {
         // Use Live DOM Search for increased reliability instead of stale map references
         const allItems = document.querySelectorAll(".parts-item");
-        
+
         allItems.forEach(row => {
             const id = row.dataset.id;
             const isActive = (id === selectedPartId);
-            
+
             row.classList.toggle("active", isActive);
 
             const status = row.querySelector(".part-status");
@@ -1455,7 +1455,7 @@
                 let statusText = "";
                 // If it's an array (gamemodes), potentially show multiple or just primary
                 const currentOptions = Array.isArray(option) ? option : (option ? [option] : []);
-                
+
                 if (currentOptions.length > 0) {
                     statusText = currentOptions.map(o => t("option_" + o)).join(", ");
                 } else if (color) {
@@ -1509,7 +1509,7 @@
 
         const palette = getPaletteForPart(partId);
         const options = getOptionsForPart(partId);
-        
+
         // Check if color customization is currently disabled by a selected gamemode
         const currentSelectedOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
         const isColorDisabled = currentSelectedOptions.some(k => {
@@ -1577,7 +1577,7 @@
         const partId = selectedPartId;
         const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
         const partOptions = getOptionsForPart(partId);
-        
+
         // Check if any selected option disables colors
         const colorDisabled = currentOptions.some(k => {
             const opt = partOptions.find(o => o.key === k);
@@ -1608,27 +1608,27 @@
             let isSelected = false;
             let isIncompatible = false;
             const currentVal = isOption ? optionState[partId] : configState[partId];
-            
+
             if (isOption) {
-                 const currentSelectedKeys = Array.isArray(currentVal) ? currentVal : [];
-                 isSelected = currentSelectedKeys.includes(entry.key);
-                 
-                 // Check incompatibility: 
-                 // If any currently selected item has this item in its incompatibleWith list, or reverse.
-                 if (!isSelected && entry.key !== "standard") {
-                     isIncompatible = currentSelectedKeys.some(k => {
-                         const other = entries.find(o => o.key === k);
-                         if (other && other.incompatibleWith && other.incompatibleWith.includes(entry.key)) return true;
-                         if (entry.incompatibleWith && entry.incompatibleWith.includes(k)) return true;
-                         return false;
-                     });
-                 }
+                const currentSelectedKeys = Array.isArray(currentVal) ? currentVal : [];
+                isSelected = currentSelectedKeys.includes(entry.key);
+
+                // Check incompatibility: 
+                // If any currently selected item has this item in its incompatibleWith list, or reverse.
+                if (!isSelected && entry.key !== "standard") {
+                    isIncompatible = currentSelectedKeys.some(k => {
+                        const other = entries.find(o => o.key === k);
+                        if (other && other.incompatibleWith && other.incompatibleWith.includes(entry.key)) return true;
+                        if (entry.incompatibleWith && entry.incompatibleWith.includes(k)) return true;
+                        return false;
+                    });
+                }
             } else {
-                 if (entry.isNullOption) {
-                     isSelected = (currentVal === null || currentVal === undefined);
-                 } else {
-                     isSelected = (entry.key != null && currentVal === entry.key);
-                 }
+                if (entry.isNullOption) {
+                    isSelected = (currentVal === null || currentVal === undefined);
+                } else {
+                    isSelected = (entry.key != null && currentVal === entry.key);
+                }
             }
 
             if (isIncompatible) cell.classList.add("is-incompatible");
@@ -1637,7 +1637,7 @@
 
             const swatch = document.createElement("div");
             swatch.className = isOption ? "cd-swatch-op" : "cd-swatch";
-            
+
             if (entry.isNullOption) {
                 swatch.style.display = "flex";
                 swatch.style.alignItems = "center";
@@ -1856,7 +1856,7 @@
         }
 
         optionState[partId] = currentSelections;
-        
+
         // --- 4. Handle Color-Disabling Cleanup & Price Reset ---
         const colorDisabled = currentSelections.some(k => {
             const opt = options.find(o => o.key === k);
@@ -2218,9 +2218,9 @@
             // Show loading state
             const origText = addToCartBtn.innerHTML;
             addToCartBtn.innerHTML = t("loadingPreview") || '<div class="zoho-loading-spinner" style="width:20px;height:20px;"></div>';
-        addToCartBtn.disabled = true;
+            addToCartBtn.disabled = true;
 
-        try {
+            try {
                 const previewFrontLayers = collectVisibleFaceLayers("front");
                 const previewBackLayers = collectVisibleFaceLayers("back");
                 const previewFront = await buildPreviewImage(snapshot, "front");
@@ -2260,7 +2260,67 @@
         });
     }
 
+
+    /* ===================== ADDED MOBILE GIZMO ===================== */
+    function initMobileOptionsGizmo() {
+        const isMobile = window.innerWidth <= 900;
+        if (!isMobile) return;
+
+        const container = document.querySelector(".colors-column .color-panel");
+        if (!container) return;
+        if (container.querySelector(".scroll-gizmo")) return;
+
+        const up = document.createElement("div");
+        const down = document.createElement("div");
+
+        up.className = "scroll-gizmo scroll-gizmo-up";
+        down.className = "scroll-gizmo scroll-gizmo-down";
+
+        up.innerHTML = "▲";
+        down.innerHTML = "▼";
+
+        container.appendChild(up);
+        container.appendChild(down);
+
+        let userInteracted = false;
+
+        function updateGizmos() {
+            const scrollTop = container.scrollTop;
+            const maxScroll = container.scrollHeight - container.clientHeight;
+
+            if (!userInteracted || maxScroll <= 5) {
+                up.style.opacity = "0";
+                down.style.opacity = "0";
+                return;
+            }
+
+            up.style.opacity = scrollTop > 10 ? "1" : "0";
+            down.style.opacity = scrollTop < maxScroll - 10 ? "1" : "0";
+        }
+
+        function showOnInteraction() {
+            userInteracted = true;
+            updateGizmos();
+        }
+
+        container.addEventListener("scroll", updateGizmos);
+        container.addEventListener("touchstart", showOnInteraction);
+        container.addEventListener("mousedown", showOnInteraction);
+
+        up.addEventListener("click", () => {
+            container.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        down.addEventListener("click", () => {
+            container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+        });
+
+        setTimeout(updateGizmos, 300);
+    }
+    /* ============================================================= */
+
     bootstrapConfigurator();
+    initMobileOptionsGizmo();
     applyLanguage();
     syncBaseImages();
     setPanel(currentPanel);
