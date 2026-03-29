@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-CGluFpin.js";const n=`
+import{r as t,j as a}from"./index-DR_6gcI2.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav">
   <div class="nav-logo">
