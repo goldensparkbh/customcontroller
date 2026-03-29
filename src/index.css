@@ -4610,7 +4610,7 @@ textarea {
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px) minmax(92px, 112px);
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 480px) minmax(92px, 112px);
     grid-template-areas: "controller colors parts";
     gap: 0;
     align-items: stretch;
@@ -4981,10 +4981,10 @@ body.configurator-page-active .cd-swatch-op {
   height: 62px;
 }
 
-body.configurator-page-active .cd-cell,
-body.configurator-page-active .cd-cell-op {
-  font-size: 0.68rem;
-}
+  body.configurator-page-active .cd-cell,
+  body.configurator-page-active .cd-cell-op {
+    font-size: 0.72rem;
+  }
 
 @media (max-width: 600px) {
   .configurator-controls {
