@@ -5899,6 +5899,10 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     --mobile-controller-bottom-space: 52px;
     --mobile-parts-strip-height: 118px;
     --mobile-content-side-padding: 10px;
+    --mobile-parts-gap: 8px;
+    --mobile-parts-inline-padding: 4px;
+    --mobile-parts-visible-full: 4;
+    --mobile-parts-peek-width: 0.5;
     --mobile-bottom-bar-height: calc(78px + env(safe-area-inset-bottom));
     --mobile-fixed-top-offset: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + var(--mobile-parts-strip-height) + 10px);
   }
@@ -5963,20 +5967,20 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: stretch !important;
-    gap: 8px !important;
+    gap: var(--mobile-parts-gap) !important;
     overflow-x: visible !important;
     overflow-y: hidden !important;
     white-space: nowrap !important;
-    padding: 4px 2px 6px !important;
+    padding: var(--mobile-parts-inline-padding) 2px 6px !important;
     margin: 0 !important;
     max-height: 100% !important;
   }
 
   body.configurator-page-active .parts-item,
   body.configurator-page-active .part-row {
-    flex: 0 0 auto !important;
-    min-width: 72px !important;
-    max-width: 92px !important;
+    flex: 0 0 calc((100vw - (var(--mobile-content-side-padding) * 2) - (var(--mobile-parts-inline-padding) * 2) - (var(--mobile-parts-gap) * var(--mobile-parts-visible-full))) / (var(--mobile-parts-visible-full) + var(--mobile-parts-peek-width))) !important;
+    min-width: calc((100vw - (var(--mobile-content-side-padding) * 2) - (var(--mobile-parts-inline-padding) * 2) - (var(--mobile-parts-gap) * var(--mobile-parts-visible-full))) / (var(--mobile-parts-visible-full) + var(--mobile-parts-peek-width))) !important;
+    max-width: calc((100vw - (var(--mobile-content-side-padding) * 2) - (var(--mobile-parts-inline-padding) * 2) - (var(--mobile-parts-gap) * var(--mobile-parts-visible-full))) / (var(--mobile-parts-visible-full) + var(--mobile-parts-peek-width))) !important;
   }
 
   body.configurator-page-active .colors-column {
@@ -6002,6 +6006,7 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
     overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
   }
+
 
   body.configurator-page-active #optionsPanelGrid,
   body.configurator-page-active #colorPanelGrid {
@@ -6030,5 +6035,117 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   body.configurator-page-active .mobile-group-title,
   body.configurator-page-active .color-group-title {
     grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 680px) {
+  body.configurator-page-active {
+    --mobile-parts-visible-full: 3;
+  }
+}
+
+@media (max-width: 420px) {
+  body.configurator-page-active {
+    --mobile-parts-visible-full: 2;
+  }
+}
+
+
+/* =========================================================
+   MOBILE OPTIONS SCROLL GIZMOS
+   ========================================================= */
+@media (max-width: 900px) {
+  body.configurator-page-active .colors-column {
+    position: fixed;
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo {
+    position: absolute;
+    inset-inline-end: 10px;
+    z-index: 25;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 24, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0) scale(0.94);
+    transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo.is-visible {
+    opacity: 0.96;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo:hover,
+  body.configurator-page-active .mobile-scroll-gizmo:active {
+    background: rgba(18, 28, 46, 0.94);
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo.gizmo-up {
+    top: 8px;
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo.gizmo-down {
+    bottom: 8px;
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  body.configurator-page-active .mobile-scroll-gizmo.gizmo-up svg {
+    transform: rotate(180deg);
+  }
+
+  body.configurator-page-active .colors-column.has-scroll-up::before,
+  body.configurator-page-active .colors-column.has-scroll-down::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    height: 26px;
+    pointer-events: none;
+    z-index: 18;
+  }
+
+  body.configurator-page-active .colors-column.has-scroll-up::before {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(8, 12, 20, 0.32), rgba(8, 12, 20, 0));
+  }
+
+  body.configurator-page-active .colors-column.has-scroll-down::after {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(8, 12, 20, 0.32), rgba(8, 12, 20, 0));
+  }
+
+  body.theme-light.configurator-page-active .mobile-scroll-gizmo {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(15, 23, 42, 0.14);
+    color: rgba(15, 23, 42, 0.9);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  body.theme-light.configurator-page-active .mobile-scroll-gizmo:hover,
+  body.theme-light.configurator-page-active .mobile-scroll-gizmo:active {
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  body.theme-light.configurator-page-active .colors-column.has-scroll-up::before {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+  }
+
+  body.theme-light.configurator-page-active .colors-column.has-scroll-down::after {
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
   }
 }
