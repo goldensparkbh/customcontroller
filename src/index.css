@@ -5633,6 +5633,12 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   }
 
   body.configurator-page-active {
+    --mobile-controller-top-gap: 8px;
+    --mobile-controller-height: 24vh;
+    --mobile-controller-min-height: 180px;
+    --mobile-controller-max-width: 430px;
+    --mobile-controller-bottom-space: 44px;
+    --mobile-controller-reserved-space: calc(var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + 12px);
     overflow: hidden;
   }
 
@@ -5646,39 +5652,44 @@ body.theme-light.configurator-page-active .color-panel::-webkit-scrollbar-track 
   body.configurator-page-active .main-layout {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto auto minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
     grid-template-areas:
-      "controller"
       "parts"
       "colors" !important;
     gap: 6px !important;
     height: 100% !important;
     min-height: 0 !important;
-    padding: 6px 10px 8px !important;
+    padding: calc(var(--mobile-controller-reserved-space) + var(--mobile-controller-top-gap)) 10px 8px !important;
     overflow: hidden !important;
     align-items: start !important;
   }
 
   body.configurator-page-active .controller-column {
     grid-area: controller !important;
-    position: relative;
-    z-index: 3;
+    position: fixed !important;
+    top: calc(60px + var(--mobile-controller-top-gap)) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    z-index: 30 !important;
     min-height: 0;
     padding: 0 !important;
+    pointer-events: none;
   }
 
   body.configurator-page-active .controller-wrapper {
     position: relative;
     width: 100%;
-    padding-bottom: 44px !important;
+    padding-bottom: var(--mobile-controller-bottom-space) !important;
     margin-bottom: 0 !important;
+    pointer-events: auto;
   }
 
   body.configurator-page-active .controller-area {
-    width: min(100%, 430px) !important;
-    max-width: 430px !important;
-    min-height: 180px !important;
-    height: 24vh !important;
+    width: min(100%, var(--mobile-controller-max-width)) !important;
+    max-width: var(--mobile-controller-max-width) !important;
+    min-height: var(--mobile-controller-min-height) !important;
+    height: var(--mobile-controller-height) !important;
     margin-inline: auto !important;
     overflow: visible !important;
     transform: scale(0.94);
