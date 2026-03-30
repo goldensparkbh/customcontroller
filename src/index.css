@@ -6003,7 +6003,6 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
     gap: 8px !important;
     min-width: max-content !important;
     height: 100% !important;
-    padding: 0 38vw !important;
   }
 
   body.configurator-page-active .accordion-item,
