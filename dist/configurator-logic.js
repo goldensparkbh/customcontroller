@@ -1973,19 +1973,20 @@
             if (controllerWrapper) controllerWrapper.classList.remove("is-back");
         }
 
-        if (controllerFlip) {
-            controllerFlip.classList.toggle("flipped", side === "back");
-        }
-        if (controllerFlipBtn) {
-            controllerFlipBtn.classList.toggle("flipped", side === "back");
+        const flipBtns = document.querySelectorAll(".flip-toggle");
+        if (flipBtns) {
+            flipBtns.forEach((btn) => btn.classList.toggle("flipped", side === "back"));
         }
         saveConfigToStorage();
     }
 
-    if (controllerFlipBtn) {
-        controllerFlipBtn.addEventListener("click", () => {
-            setSide(currentSide === "front" ? "back" : "front");
-            playClick();
+    const flipBtns = document.querySelectorAll(".flip-toggle");
+    if (flipBtns) {
+        flipBtns.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                setSide(currentSide === "front" ? "back" : "front");
+                playClick();
+            });
         });
     }
 
@@ -2216,8 +2217,8 @@
             }
 
             // Show loading state
-            const origText = addToCartBtn.innerHTML;
-            addToCartBtn.innerHTML = t("loadingPreview") || '<div class="zoho-loading-spinner" style="width:20px;height:20px;"></div>';
+            // Show loading state
+            setZohoLoading(true);
             addToCartBtn.disabled = true;
 
             try {
@@ -2243,6 +2244,8 @@
                 window.location.href = "/cart";
             } catch (err) {
                 console.error("Cart Preview Generation Error:", err);
+                setZohoLoading(false);
+                addToCartBtn.disabled = false;
                 // Fallback if canvas fails
                 const cartItem = {
                     id: Date.now(),

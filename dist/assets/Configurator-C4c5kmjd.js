@@ -1,4 +1,4 @@
-import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./index-Ct2aqlA6.js";import{b as w}from"./inventoryPricing-Jg4kc6rV.js";const y=`
+import{r as c,j as d,L as h,i as p,g,c as v,d as u,a as m,b as A}from"./index-xgGP6hds.js";import{b as w}from"./inventoryPricing-Jg4kc6rV.js";const y=`
 <canvas id="bgCanvas"></canvas>
 <div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
 <div class="zoho-loading-card">
@@ -133,15 +133,6 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
 <div class="nav-amount-value" id="summaryAmount">د.ب 0.00</div>
 </div>
 <div class="controller-action-buttons">
-<button class="add-to-cart-btn" id="addToCartBtn" aria-label="Add to Cart">
-        <span class="cart-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-            <circle cx="9" cy="20" r="1.8"></circle>
-            <circle cx="18" cy="20" r="1.8"></circle>
-            <path d="M3 4h2l2.2 10.5a2 2 0 0 0 2 1.5h8.5a2 2 0 0 0 2-1.5l1.6-7.5H6.2"></path>
-          </svg>
-        </span>
-      </button>
 <button class="clear-selection-btn" id="clearSelectionBtn" type="button" aria-label="Clear selections" title="Clear selections">
         <span class="clear-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -153,8 +144,23 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
           </svg>
         </span>
       </button>
+<button class="flip-toggle bottom-flip-btn" id="controllerFlipBtnBottom" type="button" aria-label="Flip">
+<span class="flip-toggle-preview" aria-hidden="true">
+<img class="flip-toggle-front" alt="" src="/assets/controller.png"/>
+<img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
+</span>
+</button>
+<button class="add-to-cart-btn" id="addToCartBtn" aria-label="Add to Cart">
+        <span class="cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="9" cy="20" r="1.8"></circle>
+            <circle cx="18" cy="20" r="1.8"></circle>
+            <path d="M3 4h2l2.2 10.5a2 2 0 0 0 2 1.5h8.5a2 2 0 0 0 2-1.5l1.6-7.5H6.2"></path>
+          </svg>
+        </span>
+      </button>
 </div>
 </div>
 </div>
 <div class="part-tooltip" id="partTooltip"></div>
-`,_=()=>{const[s,b]=c.useState(!0);if(c.useEffect(()=>{(async()=>{try{const n=(await v(g(u,"configurator_parts"))).docs.map(i=>({id:i.id,...i.data()}));for(const i of n){const f=await v(g(u,`configurator_parts/${i.id}/options`));i.options=f.docs.map(l=>{const o=l.data();return{id:l.id,...o,...w(o.inventoryDetails,{purchasePrice:o.purchasePrice??0,sellPrice:o.sellPrice??o.price??0},{quantity:o.quantity??0})}}).filter(l=>l.active!==!1)}const t=await m(A(u,"configurator_settings","general"));let e=0;t.exists()&&(e=Number(t.data().basePrice)||0),window.__CONFIG_FIREBASE_DATA__=n,window.__CONFIG_DATA__={i18n:p,baseControllerPrice:e}}catch(r){console.error("Firebase fetch error:",r)}finally{b(!1)}})()},[]),c.useEffect(()=>{if(s)return;document.body.classList.add("configurator-page-active");const a=window.requestAnimationFrame(()=>{document.body.classList.add("configurator-intro-active")}),r=window.setTimeout(()=>{document.body.classList.remove("configurator-intro-active")},1350);if(!document.getElementById("ez-configurator-logic-script")){const t=document.createElement("script");t.id="ez-configurator-logic-script",t.src="/configurator-logic.js?v="+Date.now(),t.async=!0,document.body.appendChild(t)}return()=>{if(typeof window.__EZ_CONFIGURATOR_CLEANUP__=="function")try{window.__EZ_CONFIGURATOR_CLEANUP__()}catch(e){console.warn("Configurator cleanup failed",e)}document.body.classList.remove("configurator-page-active"),document.body.classList.remove("configurator-intro-active"),window.cancelAnimationFrame(a),window.clearTimeout(r);const t=document.getElementById("ez-configurator-logic-script");t&&document.body.contains(t)&&document.body.removeChild(t)}},[s]),s){const a=localStorage.getItem("ez_lang")||"ar";return d.jsx(h,{message:p[a]&&p[a].loadingConfigurator||"Loading configurator...",fullScreen:!0})}return d.jsx("div",{className:"configurator-page",children:d.jsx("div",{dangerouslySetInnerHTML:{__html:y}})})};export{_ as default};
+`,_=()=>{const[s,b]=c.useState(!0);if(c.useEffect(()=>{(async()=>{try{const n=(await g(v(u,"configurator_parts"))).docs.map(i=>({id:i.id,...i.data()}));for(const i of n){const f=await g(v(u,`configurator_parts/${i.id}/options`));i.options=f.docs.map(e=>{const o=e.data();return{id:e.id,...o,...w(o.inventoryDetails,{purchasePrice:o.purchasePrice??0,sellPrice:o.sellPrice??o.price??0},{quantity:o.quantity??0})}}).filter(e=>e.active!==!1)}const t=await m(A(u,"configurator_settings","general"));let r=0;t.exists()&&(r=Number(t.data().basePrice)||0),window.__CONFIG_FIREBASE_DATA__=n,window.__CONFIG_DATA__={i18n:p,baseControllerPrice:r}}catch(l){console.error("Firebase fetch error:",l)}finally{b(!1)}})()},[]),c.useEffect(()=>{if(s)return;document.body.classList.add("configurator-page-active");const a=window.requestAnimationFrame(()=>{document.body.classList.add("configurator-intro-active")}),l=window.setTimeout(()=>{document.body.classList.remove("configurator-intro-active")},1350);if(!document.getElementById("ez-configurator-logic-script")){const t=document.createElement("script");t.id="ez-configurator-logic-script",t.src="/configurator-logic.js?v="+Date.now(),t.async=!0,document.body.appendChild(t)}return()=>{if(typeof window.__EZ_CONFIGURATOR_CLEANUP__=="function")try{window.__EZ_CONFIGURATOR_CLEANUP__()}catch(r){console.warn("Configurator cleanup failed",r)}document.body.classList.remove("configurator-page-active"),document.body.classList.remove("configurator-intro-active"),window.cancelAnimationFrame(a),window.clearTimeout(l);const t=document.getElementById("ez-configurator-logic-script");t&&document.body.contains(t)&&document.body.removeChild(t)}},[s]),s){const a=localStorage.getItem("ez_lang")||"ar";return d.jsx(h,{message:p[a]&&p[a].loadingConfigurator||"Loading configurator...",fullScreen:!0})}return d.jsx("div",{className:"configurator-page",children:d.jsx("div",{dangerouslySetInnerHTML:{__html:y}})})};export{_ as default};

@@ -139,15 +139,6 @@ const configuratorMarkup = `
 <div class="nav-amount-value" id="summaryAmount">د.ب 0.00</div>
 </div>
 <div class="controller-action-buttons">
-<button class="add-to-cart-btn" id="addToCartBtn" aria-label="Add to Cart">
-        <span class="cart-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-            <circle cx="9" cy="20" r="1.8"></circle>
-            <circle cx="18" cy="20" r="1.8"></circle>
-            <path d="M3 4h2l2.2 10.5a2 2 0 0 0 2 1.5h8.5a2 2 0 0 0 2-1.5l1.6-7.5H6.2"></path>
-          </svg>
-        </span>
-      </button>
 <button class="clear-selection-btn" id="clearSelectionBtn" type="button" aria-label="Clear selections" title="Clear selections">
         <span class="clear-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -156,6 +147,21 @@ const configuratorMarkup = `
             <path d="M18 6l-1 13.2A2 2 0 0 1 15.01 21H8.99a2 2 0 0 1-1.99-1.8L6 6"></path>
             <path d="M10 10.2v6"></path>
             <path d="M14 10.2v6"></path>
+          </svg>
+        </span>
+      </button>
+<button class="flip-toggle bottom-flip-btn" id="controllerFlipBtnBottom" type="button" aria-label="Flip">
+<span class="flip-toggle-preview" aria-hidden="true">
+<img class="flip-toggle-front" alt="" src="/assets/controller.png"/>
+<img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
+</span>
+</button>
+<button class="add-to-cart-btn" id="addToCartBtn" aria-label="Add to Cart">
+        <span class="cart-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="9" cy="20" r="1.8"></circle>
+            <circle cx="18" cy="20" r="1.8"></circle>
+            <path d="M3 4h2l2.2 10.5a2 2 0 0 0 2 1.5h8.5a2 2 0 0 0 2-1.5l1.6-7.5H6.2"></path>
           </svg>
         </span>
       </button>
