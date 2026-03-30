@@ -2266,15 +2266,14 @@
         const isMobile = window.innerWidth <= 900;
         if (!isMobile) return;
 
-        const container = document.querySelector(".colors-column .color-panel");
+        const colorContainer = document.querySelector(".colors-column .color-panel");
         const scrollUpBtn = document.getElementById("mobileScrollUp");
         const scrollDownBtn = document.getElementById("mobileScrollDown");
 
-        if (!container || !scrollUpBtn || !scrollDownBtn) return;
-
-        function updateButtons() {
-            const scrollTop = container.scrollTop;
-            const maxScroll = container.scrollHeight - container.clientHeight;
+        function updateColorButtons() {
+            if (!colorContainer || !scrollUpBtn || !scrollDownBtn) return;
+            const scrollTop = colorContainer.scrollTop;
+            const maxScroll = colorContainer.scrollHeight - colorContainer.clientHeight;
 
             if (maxScroll <= 5) {
                 scrollUpBtn.classList.remove("visible");
@@ -2295,24 +2294,77 @@
             }
         }
 
-        container.addEventListener("scroll", updateButtons, { passive: true });
-        window.addEventListener("resize", updateButtons, { passive: true });
+        if (colorContainer && scrollUpBtn && scrollDownBtn) {
+            colorContainer.addEventListener("scroll", updateColorButtons, { passive: true });
+            scrollUpBtn.addEventListener("click", () => {
+                 const scrollAmount = colorContainer.clientHeight * 0.8;
+                 colorContainer.scrollBy({ top: -scrollAmount, behavior: "smooth" });
+            });
+            scrollDownBtn.addEventListener("click", () => {
+                 const scrollAmount = colorContainer.clientHeight * 0.8;
+                 colorContainer.scrollBy({ top: scrollAmount, behavior: "smooth" });
+            });
+        }
 
-        // Scroll by ~80% of the visible container height when clicked
-        scrollUpBtn.addEventListener("click", () => {
-             const scrollAmount = container.clientHeight * 0.8;
-             container.scrollBy({ top: -scrollAmount, behavior: "smooth" });
-        });
+        const partsContainer = document.querySelector(".parts-column .parts-panel");
+        const scrollLeftBtn = document.getElementById("mobileScrollLeftBtn");
+        const scrollRightBtn = document.getElementById("mobileScrollRightBtn");
 
-        scrollDownBtn.addEventListener("click", () => {
-             const scrollAmount = container.clientHeight * 0.8;
-             container.scrollBy({ top: scrollAmount, behavior: "smooth" });
-        });
+        function updatePartsButtons() {
+            if (!partsContainer || !scrollLeftBtn || !scrollRightBtn) return;
+            const scrollLeftAbs = Math.abs(partsContainer.scrollLeft);
+            const maxScroll = partsContainer.scrollWidth - partsContainer.clientWidth;
+
+            if (maxScroll <= 5) {
+                scrollLeftBtn.classList.remove("visible");
+                scrollRightBtn.classList.remove("visible");
+                return;
+            }
+
+            const isRtl = getComputedStyle(partsContainer).direction === 'rtl';
+            const canScrollBack = scrollLeftAbs > 10;
+            const canScrollForward = scrollLeftAbs < maxScroll - 10;
+
+            if (isRtl) {
+                 if (canScrollBack) scrollRightBtn.classList.add("visible");
+                 else scrollRightBtn.classList.remove("visible");
+
+                 if (canScrollForward) scrollLeftBtn.classList.add("visible");
+                 else scrollLeftBtn.classList.remove("visible");
+            } else {
+                 if (canScrollBack) scrollLeftBtn.classList.add("visible");
+                 else scrollLeftBtn.classList.remove("visible");
+
+                 if (canScrollForward) scrollRightBtn.classList.add("visible");
+                 else scrollRightBtn.classList.remove("visible");
+            }
+        }
+
+        if (partsContainer && scrollLeftBtn && scrollRightBtn) {
+            partsContainer.addEventListener("scroll", updatePartsButtons, { passive: true });
+            
+            scrollLeftBtn.addEventListener("click", () => {
+                 const scrollAmount = partsContainer.clientWidth * 0.8;
+                 const dirMultiplier = getComputedStyle(partsContainer).direction === 'rtl' ? 1 : -1;
+                 partsContainer.scrollBy({ left: dirMultiplier * scrollAmount, behavior: "smooth" });
+            });
+            scrollRightBtn.addEventListener("click", () => {
+                 const scrollAmount = partsContainer.clientWidth * 0.8;
+                 const dirMultiplier = getComputedStyle(partsContainer).direction === 'rtl' ? -1 : 1;
+                 partsContainer.scrollBy({ left: dirMultiplier * scrollAmount, behavior: "smooth" });
+            });
+        }
+
+        function updateAllButtons() {
+            updateColorButtons();
+            updatePartsButtons();
+        }
+
+        window.addEventListener("resize", updateAllButtons, { passive: true });
 
         // Initial check
-        setTimeout(updateButtons, 300);
-        // Sometimes parts rendering delays proper scrollHeight calculation
-        setTimeout(updateButtons, 1200);
+        setTimeout(updateAllButtons, 300);
+        setTimeout(updateAllButtons, 1200);
     }
     /* ============================================================= */
 

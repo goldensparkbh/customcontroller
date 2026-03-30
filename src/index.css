@@ -2808,7 +2808,7 @@ body.theme-light.configurator-page-active .parts-item.active .parts-thumb img {
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 10px;
+  gap: 6px;
   padding-right: 2px;
   flex: 0 0 auto;
   /* Grows naturally */
@@ -2818,7 +2818,7 @@ body.theme-light.configurator-page-active .parts-item.active .parts-thumb img {
   margin-top: 20px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 10px;
+  gap: 6px;
   padding-right: 2px;
   padding-top: 6px;
   flex: 0 0 auto;
@@ -5407,6 +5407,34 @@ body.configurator-page-active .mobile-scroll-down {
   bottom: 12px;
 }
 
+body.configurator-page-active .mobile-scroll-left {
+  left: 8px;
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+}
+
+body.configurator-page-active .mobile-scroll-left svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.configurator-page-active .mobile-scroll-right {
+  left: auto;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+}
+
+body.configurator-page-active .mobile-scroll-right svg {
+  width: 18px;
+  height: 18px;
+}
+
 body.theme-light.configurator-page-active .mobile-scroll-btn {
   background: rgba(255, 255, 255, 0.85);
   color: #121212;
@@ -5947,12 +5975,12 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
    ========================================================= */
 @media (max-width: 900px) {
   body.configurator-page-active {
-    --mobile-controller-top-gap: 24px;
-    --mobile-controller-height: 22vh;
-    --mobile-controller-min-height: 168px;
+    --mobile-controller-top-gap: 16px;
+    --mobile-controller-height: 16vh;
+    --mobile-controller-min-height: 130px;
     --mobile-controller-max-width: 420px;
-    --mobile-controller-bottom-space: 52px;
-    --mobile-parts-strip-height: 118px;
+    --mobile-controller-bottom-space: 24px;
+    --mobile-parts-strip-height: 105px;
     --mobile-content-side-padding: 10px;
     --mobile-parts-gap: 8px;
     --mobile-parts-inline-padding: 4px;
@@ -6088,7 +6116,7 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
   body.configurator-page-active #optionsPanelGrid,
   body.configurator-page-active #colorPanelGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 8px 6px !important;
+    gap: 4px 4px !important;
   }
 
   body.configurator-page-active .mobile-group-title,
