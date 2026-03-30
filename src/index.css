@@ -2468,7 +2468,7 @@ body.theme-light .clear-selection-btn:hover {
 
   .add-to-cart-btn,
   .clear-selection-btn,
-  .bottom-flip-btn {
+  .flip-toggle {
     width: 46px !important;
     height: 46px !important;
     min-width: 46px !important;
@@ -2483,7 +2483,7 @@ body.theme-light .clear-selection-btn:hover {
 
   .add-to-cart-btn svg,
   .clear-selection-btn svg,
-  .bottom-flip-btn .flip-toggle-preview {
+  .flip-toggle .flip-toggle-preview {
     width: 24px !important;
     height: 24px !important;
     flex-shrink: 0 !important;
@@ -6067,8 +6067,17 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
   }
 
   body.configurator-page-active .controller-buttons-stack {
-    display: none !important;
+    display: flex !important;
+    position: absolute !important;
+    top: auto !important;
+    bottom: -15px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 50 !important;
+    margin: 0 !important;
   }
+
+
 
   body.configurator-page-active .parts-column {
     position: fixed !important;

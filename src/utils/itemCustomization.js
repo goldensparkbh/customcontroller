@@ -52,13 +52,17 @@ export const getItemCustomizationGroups = (item, partLabels = {}) => {
           });
         }
 
-        if (partState?.option?.key && partState.option.key !== 'standard') {
-          options.push({
-            partId,
-            partLabel: getPartDisplayLabel(partId, partLabels),
-            value: getVariantDisplayLabel(partState.option)
-          });
-        }
+        const selectedOptions = Array.isArray(partState?.options) ? partState.options : (partState?.option ? [partState.option] : []);
+        
+        selectedOptions.forEach(opt => {
+          if (opt && opt.key && opt.key !== 'standard') {
+            options.push({
+              partId,
+              partLabel: getPartDisplayLabel(partId, partLabels),
+              value: getVariantDisplayLabel(opt)
+            });
+          }
+        });
       });
   }
 

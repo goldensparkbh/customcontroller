@@ -649,7 +649,7 @@
 
                     // Ensure config/option state is initialized to null for this part
                     if (!(partId in configState)) configState[partId] = null;
-                    if (!(partId in optionState)) optionState[partId] = []; // Always use array for options now to support gamemodes
+                    if (!(partId in optionState)) optionState[partId] = [];
                 });
             });
 
@@ -841,7 +841,7 @@
     function ensurePartStateDefaults() {
         ALL_PARTS.forEach(p => {
             if (!(p.id in configState)) configState[p.id] = null;
-            if (!(p.id in optionState)) optionState[p.id] = null;
+            if (!(p.id in optionState)) optionState[p.id] = [];
             if (!(p.id in selectedTransparencyByPart)) selectedTransparencyByPart[p.id] = false;
             if (!(p.id in lastApplySeqByPart)) lastApplySeqByPart[p.id] = 0;
             if (!(p.id in selectedPriceByPart)) selectedPriceByPart[p.id] = 0;
@@ -903,7 +903,12 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (parsed.configState) Object.assign(configState, parsed.configState);
-                if (parsed.optionState) Object.assign(optionState, parsed.optionState);
+                if (parsed.optionState) {
+                    Object.keys(parsed.optionState).forEach(pid => {
+                        const val = parsed.optionState[pid];
+                        optionState[pid] = Array.isArray(val) ? val : (val ? [val] : []);
+                    });
+                }
                 if (Object.prototype.hasOwnProperty.call(parsed, "selectedPartId")) {
                     selectedPartId = parsed.selectedPartId || null;
                 }
@@ -2062,7 +2067,7 @@
         await animateCurrentViewClear();
         ALL_PARTS.forEach(p => {
             configState[p.id] = null;
-            optionState[p.id] = null;
+            optionState[p.id] = [];
             selectedPriceByPart[p.id] = 0;
             selectedOptionPriceByPart[p.id] = 0;
         });
@@ -2130,22 +2135,19 @@
                 }
             }
 
-            let optionObj = options.find(o => o.key === optionKey);
-            if (!optionObj && ID_MAPPING[pid]) {
-                for (const oldId of ID_MAPPING[pid]) {
-                    const oldKey = optionState[oldId];
-                    if (oldKey) {
-                        optionObj = options.find(o => o.key === oldKey);
-                        if (optionObj) break;
-                    }
-                }
-            }
+            const currentOptions = Array.isArray(optionState[pid]) ? optionState[pid] : [];
+            const selectedOptions = [];
+            currentOptions.forEach(okey => {
+                const o = options.find(opt => opt.key === okey);
+                if (o) selectedOptions.push(JSON.parse(JSON.stringify(o)));
+            });
 
             const isTrans = (pid !== "allButtons") && (colorObj && colorObj.isTransparent);
 
             snapshot.parts[pid] = {
                 color: colorObj ? JSON.parse(JSON.stringify(colorObj)) : null,
-                option: optionObj ? JSON.parse(JSON.stringify(optionObj)) : null,
+                option: selectedOptions[0] || null, // Keep legacy field for compat
+                options: selectedOptions, // New field for all selected options
                 renderImage: getRenderedLayerImage(pid),
                 transparency: !!isTrans
             };

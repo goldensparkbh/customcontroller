@@ -150,12 +150,7 @@ const configuratorMarkup = `
           </svg>
         </span>
       </button>
-<button class="flip-toggle bottom-flip-btn" id="controllerFlipBtnBottom" type="button" aria-label="Flip">
-<span class="flip-toggle-preview" aria-hidden="true">
-<img class="flip-toggle-front" alt="" src="/assets/controller.png"/>
-<img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
-</span>
-</button>
+
 <button class="add-to-cart-btn" id="addToCartBtn" aria-label="Add to Cart">
         <span class="cart-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" role="img" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
