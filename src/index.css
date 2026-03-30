@@ -2395,6 +2395,40 @@ body.theme-light .flip-toggle {
   opacity: 0;
 }
 
+/* ---------- BOTTOM BAR BUTTONS (CLEAR / FLIP) ---------- */
+
+.clear-selection-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+  width: 44px;
+  height: 44px;
+}
+
+body.theme-light .clear-selection-btn {
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(235, 239, 248, 0.95)) padding-box, var(--button-primary-bg) border-box;
+  border: 2px solid transparent;
+  color: #1a1f36;
+}
+
+.clear-selection-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-light .clear-selection-btn:hover {
+  background: #fff padding-box, var(--button-primary-bg) border-box;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
 /* ---------- FIXED BOTTOM BAR (TOTAL + ADD TO CART) ---------- */
 
 .controller-bottom-bar {
@@ -2432,24 +2466,27 @@ body.theme-light .flip-toggle {
     font-size: 1rem;
   }
 
-  .add-to-cart-btn {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-
+  .add-to-cart-btn,
+  .clear-selection-btn,
   .bottom-flip-btn {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
     padding: 0 !important;
     margin: 0 !important;
-    border-width: 1px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: 50% !important;
   }
 
+  .add-to-cart-btn svg,
+  .clear-selection-btn svg,
   .bottom-flip-btn .flip-toggle-preview {
     width: 24px !important;
     height: 24px !important;
+    flex-shrink: 0 !important;
   }
 }
 
@@ -5971,20 +6008,24 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
   }
 
   body.configurator-page-active .controller-bottom-bar .nav-amount-block {
-    display: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    min-width: 0;
+    flex: 0 0 auto !important;
   }
 
   body.configurator-page-active .controller-bottom-bar .nav-amount-value {
-    font-size: 1rem !important;
+    font-size: 1.1rem !important;
     line-height: 1.1;
   }
 
   body.configurator-page-active .controller-bottom-bar .controller-action-buttons {
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
-    gap: 16px !important;
-    flex: 1 1 auto;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    flex: 0 0 auto !important;
   }
 
   body.configurator-page-active .configurator-controls {
