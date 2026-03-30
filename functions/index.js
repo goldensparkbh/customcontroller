@@ -599,14 +599,15 @@ function collectConfiguratorInventoryAdjustments(items) {
     if (!parts || typeof parts !== "object") return;
 
     Object.entries(parts).forEach(([partId, partState]) => {
-      if (partState && partState.color && partState.color.key) {
+      // Process Color selection
+      if (partState.color && partState.color.key) {
         addAdjustment(`configurator_parts/${partId}/options/${partState.color.key}`, qty);
       }
 
-      // Options: both legacy singular and new plural array
+      // Process Performance Options: supports both legacy singular and new plural array
       const optionsArray = Array.isArray(partState.options) ? partState.options : (partState.option ? [partState.option] : []);
       optionsArray.forEach(o => {
-        if (o && o.key && o.key !== "standard") {
+        if (o && o.key) {
           addAdjustment(`configurator_parts/${partId}/options/${o.key}`, qty);
         }
       });
