@@ -401,7 +401,7 @@ const AdminInventoryMaster = () => {
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField label="Purchase Price" value={formatInventoryMoney(selectedRecord.purchasePrice)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Current Quantity" value={String(selectedRecord.quantity ?? 0)} />
+                                    <DetailField label="Inventory in Hand" value={String(selectedRecord.quantity ?? 0)} />
                                 </div>
                             </div>
 
@@ -442,7 +442,7 @@ const AdminInventoryMaster = () => {
                                             <DetailField label="Reason" value={getInventoryReasonLabel(row.reason)} />
                                             <DetailField label="Date" value={formatInventoryDate(row.date)} />
                                             <DetailField label="Quantity" value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
-                                            <DetailField label="Source" value={row.source || 'manual'} />
+                                            <DetailField label="Note / Source" value={row.note || row.source || 'manual'} />
                                         </div>
                                     ))}
                                     {(!formState.inventoryDetails || formState.inventoryDetails.length === 0) && (

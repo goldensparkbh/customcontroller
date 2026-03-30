@@ -143,6 +143,11 @@ const InventoryPricingEditor = ({
                                     <div style={{ fontSize: '0.78rem', color: '#8b949e' }}>
                                         {formatInventoryDate(row.date)}{row.source === 'system' ? ' · System' : ''}
                                     </div>
+                                    {row.note && (
+                                        <div style={{ fontSize: '0.78rem', color: '#8b949e', fontStyle: 'italic', marginTop: '0.15rem' }}>
+                                            {row.note}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
