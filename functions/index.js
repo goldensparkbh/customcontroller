@@ -603,9 +603,13 @@ function collectConfiguratorInventoryAdjustments(items) {
         addAdjustment(`configurator_parts/${partId}/options/${partState.color.key}`, qty);
       }
 
-      if (partState && partState.option && partState.option.key && partState.option.key !== "standard") {
-        addAdjustment(`configurator_parts/${partId}/options/${partState.option.key}`, qty);
-      }
+      // Options: both legacy singular and new plural array
+      const optionsArray = Array.isArray(partState.options) ? partState.options : (partState.option ? [partState.option] : []);
+      optionsArray.forEach(o => {
+        if (o && o.key && o.key !== "standard") {
+          addAdjustment(`configurator_parts/${partId}/options/${o.key}`, qty);
+        }
+      });
     });
   });
 
@@ -954,9 +958,12 @@ function getItemCustomizationLines(item) {
         lines.push(`${getPartEmailLabel(partId)} color: ${getVariantEmailLabel(partState.color)}`);
       }
 
-      if (partState?.option?.key && partState.option.key !== "standard") {
-        lines.push(`${getPartEmailLabel(partId)} option: ${getVariantEmailLabel(partState.option)}`);
-      }
+      const selectedOptions = Array.isArray(partState?.options) ? partState.options : (partState?.option ? [partState.option] : []);
+      selectedOptions.forEach(opt => {
+        if (opt && opt.key && opt.key !== 'standard') {
+          lines.push(`${getPartEmailLabel(partId)} Option: ${getVariantEmailLabel(opt)}`);
+        }
+      });
     });
   }
 

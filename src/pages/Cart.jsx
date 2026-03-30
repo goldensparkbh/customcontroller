@@ -135,11 +135,60 @@ const CartPage = () => {
   };
 
   const handleQuantityChange = (index, delta) => {
-    const newCart = [...cartItems];
-    let qty = newCart[index].quantity || 1;
-    qty += delta;
-    if (qty < 1) qty = 1;
-    newCart[index].quantity = qty;
+    if (delta <= 0 && (cartItems[index].quantity || 1) <= 1) return;
+
+    const newCart = JSON.parse(JSON.stringify(cartItems));
+    const targetItem = newCart[index];
+    const newQty = (targetItem.quantity || 1) + delta;
+
+    if (delta > 0) {
+      // 1. Aggregate required stock across all items in the cart
+      const stockUsage = new Map();
+      newCart.forEach((item, idx) => {
+        const itemQty = idx === index ? newQty : (item.quantity || 1);
+        if (!item.parts) return;
+
+        Object.entries(item.parts).forEach(([partId, partState]) => {
+          // Color
+          if (partState.color?.id || partState.color?.key) {
+            const key = `configurator_parts/${partId}/options/${partState.color.id || partState.color.key}`;
+            const stock = partState.color.qty != null ? partState.color.qty : 999;
+            const name = partState.color.valName || partState.color.name || partId;
+            const existing = stockUsage.get(key) || { used: 0, stock, name };
+            existing.used += itemQty;
+            stockUsage.set(key, existing);
+          }
+          // Options (plural array and legacy singular)
+          const opts = Array.isArray(partState.options) ? partState.options : (partState.option ? [partState.option] : []);
+          opts.forEach((o) => {
+             const key = `configurator_parts/${partId}/options/${o.id || o.key}`;
+             const stock = o.qty != null ? o.qty : 999;
+             const name = o.valName || o.name || partId;
+             const existing = stockUsage.get(key) || { used: 0, stock, name };
+             existing.used += itemQty;
+             stockUsage.set(key, existing);
+          });
+        });
+      });
+
+      // 2. Validate against available stock
+      const limitedItems = [];
+      for (const [key, info] of stockUsage.entries()) {
+        if (info.used > info.stock) {
+          limitedItems.push(`${info.name} (${info.stock} available)`);
+        }
+      }
+
+      if (limitedItems.length > 0) {
+        const msg = (lang === 'ar')
+          ? `عذرًا ، لا يمكن إضافة المزيد من هذا المنتج. هناك كمية محدودة متاحة للمواد التالية:\n- ${limitedItems.join('\n- ')}`
+          : `Sorry, you cannot increase the quantity. The following items have limited availability:\n- ${limitedItems.join('\n- ')}`;
+        alert(msg);
+        return;
+      }
+    }
+
+    targetItem.quantity = newQty;
     setCartItems(newCart);
     localStorage.setItem("ezCart", JSON.stringify(newCart));
   };

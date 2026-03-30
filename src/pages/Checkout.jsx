@@ -128,6 +128,49 @@ const CheckoutPage = () => {
       formData.flat ? `Flat ${formData.flat}` : ''
     ].filter(Boolean).join(', ');
 
+    // Final inventory stock validation before proceeding
+    const stockUsage = new Map();
+    cartItems.forEach(item => {
+      const itemQty = item.quantity || 1;
+      if (!item.parts) return;
+      Object.entries(item.parts).forEach(([partId, partState]) => {
+        // Color
+        if (partState.color?.id || partState.color?.key) {
+          const key = `configurator_parts/${partId}/options/${partState.color.id || partState.color.key}`;
+          const stock = partState.color.qty != null ? partState.color.qty : 999;
+          const name = partState.color.valName || partState.color.name || partId;
+          const existing = stockUsage.get(key) || { used: 0, stock, name };
+          existing.used += itemQty;
+          stockUsage.set(key, existing);
+        }
+        // Options
+        const opts = Array.isArray(partState.options) ? partState.options : (partState.option ? [partState.option] : []);
+        opts.forEach(o => {
+          const key = `configurator_parts/${partId}/options/${o.id || o.key}`;
+          const stock = o.qty != null ? o.qty : 999;
+          const name = o.valName || o.name || partId;
+          const existing = stockUsage.get(key) || { used: 0, stock, name };
+          existing.used += itemQty;
+          stockUsage.set(key, existing);
+        });
+      });
+    });
+
+    const limitedItems = [];
+    for (const info of stockUsage.values()) {
+      if (info.used > info.stock) {
+        limitedItems.push(`${info.name} (${info.stock} available)`);
+      }
+    }
+
+    if (limitedItems.length > 0) {
+      const msg = (lang === 'ar')
+        ? `عذرًا ، لا يمكن إكمال الطلب. هناك كمية محدودة متاحة للمواد التالية:\n- ${limitedItems.join('\n- ')}`
+        : `Sorry, cannot complete the order. The following items have limited availability and exceed stock limits:\n- ${limitedItems.join('\n- ')}`;
+      alert(msg);
+      throw new Error("stock_limit_reached");
+    }
+
     const orderData = {
       ...formData,
       subtotal,
@@ -172,7 +215,9 @@ const CheckoutPage = () => {
       navigate('/payment');
     } catch (err) {
       console.error(err);
-      alert(t('paymentStartFailed') || 'Failed to checkout');
+      if (err.message !== "stock_limit_reached") {
+        alert(t('paymentStartFailed') || 'Failed to checkout');
+      }
       setLoadingAction('');
     }
   };
@@ -217,7 +262,9 @@ const CheckoutPage = () => {
       navigate('/order-summary');
     } catch (err) {
       console.error(err);
-      alert((t('testOrderFailed') || 'Failed to create test order.') + ' ' + err.message);
+      if (err.message !== "stock_limit_reached") {
+        alert((t('testOrderFailed') || 'Failed to create test order.') + ' ' + err.message);
+      }
       setLoadingAction('');
     }
   };
