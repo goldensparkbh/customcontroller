@@ -549,18 +549,22 @@ function normalizeInventoryEntries(rawRows, fallbackRecord = {}) {
   return createOpeningBalanceEntries(fallbackRecord);
 }
 
-function applyInventoryDeduction(record, deductionQty, metadata = {}) {
+function applyInventoryDeduction(record, rawDeductionQty, metadata = {}) {
   const inventoryDetails = normalizeInventoryEntries(record.inventoryDetails, record);
   const currentQty = inventoryDetails.reduce((sum, row) => sum + toFiniteNumber(row.quantity, 0), 0);
-  const requestedQty = Math.max(0, toFiniteNumber(deductionQty, 0));
-  const appliedQty = Math.min(currentQty, requestedQty);
-  const nextInventoryDetails = appliedQty > 0 ? [
+  const requestedQty = toFiniteNumber(rawDeductionQty, 0);
+
+  // If requestedQty is positive, we are deducting (capped by what's available)
+  // If negative, we are restocking (no cap, just adds to inventory)
+  const appliedQty = requestedQty > 0 ? Math.min(currentQty, requestedQty) : requestedQty;
+
+  const nextInventoryDetails = appliedQty !== 0 ? [
     ...inventoryDetails,
     {
       id: createInventoryEntryId(),
       quantity: -appliedQty,
       date: normalizeInventoryDate(metadata.date || new Date()),
-      reason: "order_allocation",
+      reason: metadata.reason || (appliedQty > 0 ? "order_allocation" : "order_restock"),
       source: metadata.source || "system",
       note: metadata.note || "",
       createdAt: ""
@@ -585,12 +589,12 @@ function normalizeNumericString(value) {
   return String(value == null ? "" : value).replace(/\D/g, "");
 }
 
-function collectConfiguratorInventoryAdjustments(items) {
+function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
   const adjustments = new Map();
 
   const addAdjustment = (pathKey, quantity) => {
-    if (!pathKey || !(quantity > 0)) return;
-    adjustments.set(pathKey, (adjustments.get(pathKey) || 0) + quantity);
+    if (!pathKey || !(quantity !== 0)) return;
+    adjustments.set(pathKey, (adjustments.get(pathKey) || 0) + (quantity * multiplier));
   };
 
   (Array.isArray(items) ? items : []).forEach((item) => {
@@ -679,7 +683,13 @@ async function resolveNormalItemDocPath(db, item) {
   return "";
 }
 
-async function collectNormalItemInventoryAdjustments(items) {
+async function collectOrderInventoryAdjustments(items, multiplier = 1) {
+  const adjustments = collectConfiguratorInventoryAdjustments(items, multiplier);
+  const normalItemAdjustments = await collectNormalItemInventoryAdjustments(items, multiplier);
+  return mergeAdjustmentMaps(adjustments, normalItemAdjustments);
+}
+
+async function collectNormalItemInventoryAdjustments(items, multiplier = 1) {
   const db = getFirestore();
   const adjustments = new Map();
 
@@ -690,21 +700,15 @@ async function collectNormalItemInventoryAdjustments(items) {
     const docPath = await resolveNormalItemDocPath(db, item);
     if (!docPath) continue;
 
-    adjustments.set(docPath, (adjustments.get(docPath) || 0) + qty);
+    adjustments.set(docPath, (adjustments.get(docPath) || 0) + (qty * multiplier));
   }
 
   return adjustments;
 }
 
-async function collectOrderInventoryAdjustments(items) {
-  const adjustments = collectConfiguratorInventoryAdjustments(items);
-  const normalItemAdjustments = await collectNormalItemInventoryAdjustments(items);
-  return mergeAdjustmentMaps(adjustments, normalItemAdjustments);
-}
-
-async function applyOrderInventoryAdjustments(items, metadata = {}) {
+async function applyOrderInventoryAdjustments(items, metadata = {}, multiplier = 1) {
   const db = getFirestore();
-  const adjustments = await collectOrderInventoryAdjustments(items);
+  const adjustments = await collectOrderInventoryAdjustments(items, multiplier);
   const applied = [];
 
   if (!adjustments.size) return applied;
@@ -719,9 +723,10 @@ async function applyOrderInventoryAdjustments(items, metadata = {}) {
       const nextInventory = applyInventoryDeduction(currentData, quantity, {
         source: "system",
         date: new Date(),
+        reason: metadata.reason || (quantity > 0 ? "order_allocation" : "order_restock"),
         note: metadata.orderNumber ?
-          `Allocated to order #${metadata.orderNumber}` :
-          (metadata.orderId ? `Allocated to order ${metadata.orderId}` : "Allocated to order")
+          `${quantity > 0 ? "Allocated to" : "Restored from"} order #${metadata.orderNumber}` :
+          (metadata.orderId ? `${quantity > 0 ? "Allocated to" : "Restored from"} order ${metadata.orderId}` : (quantity > 0 ? "Allocated to order" : "Restored from order"))
       });
 
       transaction.update(recordRef, {
@@ -745,6 +750,50 @@ async function applyOrderInventoryAdjustments(items, metadata = {}) {
 
   return applied;
 }
+
+exports.onOrderUpdate = functions
+  .firestore.document("orders/{orderId}")
+  .onUpdate(async (change, context) => {
+    const after = change.after.data();
+    const before = change.before.data();
+    const orderId = context.params.orderId;
+
+    if (!after || !before) return null;
+
+    const oldStatus = String(before.status || "Pending").toLowerCase();
+    const newStatus = String(after.status || "Pending").toLowerCase();
+    const isCanceledNow = newStatus === "canceled";
+    const wasCanceledBefore = oldStatus === "canceled";
+
+    // 1. Restock if status changed to Canceled
+    if (isCanceledNow && !wasCanceledBefore) {
+      console.log(`[onOrderUpdate] Restoring inventory for canceled order ${orderId}`);
+      try {
+        await applyOrderInventoryAdjustments(after.items, {
+          orderId,
+          orderNumber: after.orderNumber,
+          reason: "order_canceled"
+        }, -1);
+      } catch (err) {
+        console.error(`[onOrderUpdate] Failed to restock order ${orderId}`, err);
+      }
+    }
+    // 2. Re-deduct if status changed FROM Canceled back to something else
+    else if (!isCanceledNow && wasCanceledBefore) {
+      console.log(`[onOrderUpdate] Re-deducting inventory for un-canceled order ${orderId}`);
+      try {
+        await applyOrderInventoryAdjustments(after.items, {
+          orderId,
+          orderNumber: after.orderNumber,
+          reason: "order_uncanceled"
+        }, 1);
+      } catch (err) {
+        console.error(`[onOrderUpdate] Failed to re-deduct order ${orderId}`, err);
+      }
+    }
+
+    return null;
+  });
 
 async function allocateCounterValue(counterKey, startAt) {
   const db = getFirestore();
