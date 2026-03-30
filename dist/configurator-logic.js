@@ -2261,66 +2261,63 @@
     }
 
 
-    /* ===================== ADDED MOBILE GIZMO ===================== */
-    function initMobileOptionsGizmo() {
+    /* ===================== MOBILE SCROLL BUTTONS ===================== */
+    function initMobileScrollButtons() {
         const isMobile = window.innerWidth <= 900;
         if (!isMobile) return;
 
         const container = document.querySelector(".colors-column .color-panel");
-        if (!container) return;
-        if (container.querySelector(".scroll-gizmo")) return;
+        const scrollUpBtn = document.getElementById("mobileScrollUp");
+        const scrollDownBtn = document.getElementById("mobileScrollDown");
 
-        const up = document.createElement("div");
-        const down = document.createElement("div");
+        if (!container || !scrollUpBtn || !scrollDownBtn) return;
 
-        up.className = "scroll-gizmo scroll-gizmo-up";
-        down.className = "scroll-gizmo scroll-gizmo-down";
-
-        up.innerHTML = "▲";
-        down.innerHTML = "▼";
-
-        container.appendChild(up);
-        container.appendChild(down);
-
-        let userInteracted = false;
-
-        function updateGizmos() {
+        function updateButtons() {
             const scrollTop = container.scrollTop;
             const maxScroll = container.scrollHeight - container.clientHeight;
 
-            if (!userInteracted || maxScroll <= 5) {
-                up.style.opacity = "0";
-                down.style.opacity = "0";
+            if (maxScroll <= 5) {
+                scrollUpBtn.classList.remove("visible");
+                scrollDownBtn.classList.remove("visible");
                 return;
             }
 
-            up.style.opacity = scrollTop > 5 ? "1" : "0";
-            down.style.opacity = scrollTop < maxScroll - 5 ? "1" : "0";
+            if (scrollTop > 10) {
+                scrollUpBtn.classList.add("visible");
+            } else {
+                scrollUpBtn.classList.remove("visible");
+            }
+
+            if (scrollTop < maxScroll - 10) {
+                scrollDownBtn.classList.add("visible");
+            } else {
+                scrollDownBtn.classList.remove("visible");
+            }
         }
 
-        function showOnInteraction() {
-            userInteracted = true;
-            updateGizmos();
-        }
+        container.addEventListener("scroll", updateButtons, { passive: true });
+        window.addEventListener("resize", updateButtons, { passive: true });
 
-        container.addEventListener("scroll", updateGizmos);
-        container.addEventListener("touchstart", showOnInteraction);
-        container.addEventListener("mousedown", showOnInteraction);
-
-        up.addEventListener("click", () => {
-            container.scrollTo({ top: 0, behavior: "smooth" });
+        // Scroll by ~80% of the visible container height when clicked
+        scrollUpBtn.addEventListener("click", () => {
+             const scrollAmount = container.clientHeight * 0.8;
+             container.scrollBy({ top: -scrollAmount, behavior: "smooth" });
         });
 
-        down.addEventListener("click", () => {
-            container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+        scrollDownBtn.addEventListener("click", () => {
+             const scrollAmount = container.clientHeight * 0.8;
+             container.scrollBy({ top: scrollAmount, behavior: "smooth" });
         });
 
-        setTimeout(updateGizmos, 300);
+        // Initial check
+        setTimeout(updateButtons, 300);
+        // Sometimes parts rendering delays proper scrollHeight calculation
+        setTimeout(updateButtons, 1200);
     }
     /* ============================================================= */
 
     bootstrapConfigurator();
-    initMobileOptionsGizmo();
+    initMobileScrollButtons();
     applyLanguage();
     syncBaseImages();
     setPanel(currentPanel);

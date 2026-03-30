@@ -43,6 +43,11 @@ const configuratorMarkup = `
 </div>
 <!-- COLORS COLUMN (MIDDLE) -->
 <div class="colors-column" id="colors-column">
+  <button class="mobile-scroll-btn mobile-scroll-up" id="mobileScrollUp" type="button" aria-label="Scroll Up">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 15l-6-6-6 6"/>
+    </svg>
+  </button>
 <div class="color-panel">
 <!-- Options grid (stick type ...) -->
 <div class="color-panel-grid" id="optionsPanelGrid"></div>
@@ -54,6 +59,11 @@ const configuratorMarkup = `
 <img alt="Select a part" src="/assets/icons/shells.png"/>
 </div>
 </div>
+  <button class="mobile-scroll-btn mobile-scroll-down" id="mobileScrollDown" type="button" aria-label="Scroll Down">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9l6 6 6-6"/>
+    </svg>
+  </button>
 </div>
 <!-- PARTS COLUMN (RIGHT) -->
 <div class="parts-column">
