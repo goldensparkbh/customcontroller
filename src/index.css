@@ -5987,7 +5987,7 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
     --mobile-parts-visible-full: 4;
     --mobile-parts-peek-width: 0.5;
     --mobile-bottom-bar-height: calc(78px + env(safe-area-inset-bottom));
-    --mobile-fixed-top-offset: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + var(--mobile-parts-strip-height) + 10px);
+    --mobile-fixed-top-offset: calc(60px + var(--mobile-controller-top-gap) + var(--mobile-controller-height) + var(--mobile-controller-bottom-space) + var(--mobile-parts-strip-height) + 4px);
   }
 
   body.configurator-page-active .controller-column {
@@ -6075,6 +6075,8 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
     top: var(--mobile-fixed-top-offset) !important;
     left: var(--mobile-content-side-padding) !important;
     right: var(--mobile-content-side-padding) !important;
+    width: auto !important;
+    margin: 0 !important;
     bottom: var(--mobile-bottom-bar-height) !important;
     overflow: hidden !important;
     z-index: 10 !important;
