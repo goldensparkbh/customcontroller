@@ -6070,7 +6070,7 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
     display: flex !important;
     position: absolute !important;
     top: auto !important;
-    bottom: -15px !important;
+    bottom: 8px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 50 !important;
