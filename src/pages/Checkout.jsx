@@ -134,12 +134,15 @@ const CheckoutPage = () => {
       const itemQty = item.quantity || 1;
       if (!item.parts) return;
       Object.entries(item.parts).forEach(([partId, partState]) => {
+        const partLabel = (i18n[lang]?.parts && i18n[lang].parts[partId]) || partId;
+
         // Color
         if (partState.color?.id || partState.color?.key) {
           const key = `configurator_parts/${partId}/options/${partState.color.id || partState.color.key}`;
           const stock = partState.color.qty != null ? partState.color.qty : 999;
-          const name = partState.color.valName || partState.color.name || partId;
-          const existing = stockUsage.get(key) || { used: 0, stock, name };
+          const optionName = partState.color.valName || partState.color.name || "";
+          const displayName = `${partLabel}: ${optionName}`;
+          const existing = stockUsage.get(key) || { used: 0, stock, displayName };
           existing.used += itemQty;
           stockUsage.set(key, existing);
         }
@@ -148,8 +151,9 @@ const CheckoutPage = () => {
         opts.forEach(o => {
           const key = `configurator_parts/${partId}/options/${o.id || o.key}`;
           const stock = o.qty != null ? o.qty : 999;
-          const name = o.valName || o.name || partId;
-          const existing = stockUsage.get(key) || { used: 0, stock, name };
+          const optionName = o.valName || o.name || "";
+          const displayName = `${partLabel} (${optionName})`;
+          const existing = stockUsage.get(key) || { used: 0, stock, displayName };
           existing.used += itemQty;
           stockUsage.set(key, existing);
         });
@@ -159,7 +163,7 @@ const CheckoutPage = () => {
     const limitedItems = [];
     for (const info of stockUsage.values()) {
       if (info.used > info.stock) {
-        limitedItems.push(`${info.name} (${info.stock} available)`);
+        limitedItems.push(`${info.displayName} [${info.stock} available]`);
       }
     }
 
