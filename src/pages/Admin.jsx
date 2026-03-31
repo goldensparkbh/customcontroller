@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { i18n } from '../i18n';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';

@@ -3,13 +3,26 @@ import { auth } from '../../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { LoadingInline } from '../../components/LoadingState.jsx';
+import { i18n } from '../../i18n.js';
 
 const AdminLogin = () => {
+    const [lang] = useState(localStorage.getItem('ez_lang') || 'ar');
+    const isAr = lang === 'ar';
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    const t = (path) => {
+        const keys = path.split('.');
+        let result = i18n[lang];
+        for (const key of keys) {
+            if (!result) return path;
+            result = result[key];
+        }
+        return result || path;
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -20,7 +33,7 @@ const AdminLogin = () => {
             navigate('/admin');
         } catch (err) {
             console.error("Login error:", err);
-            setError("Invalid email or password");
+            setError(t('admin.login.error'));
         } finally {
             setLoading(false);
         }
@@ -34,7 +47,8 @@ const AdminLogin = () => {
             justifyContent: 'center',
             background: '#0e1117',
             color: '#fff',
-            fontFamily: 'Cairo, sans-serif'
+            fontFamily: 'Cairo, sans-serif',
+            direction: isAr ? 'rtl' : 'ltr'
         }}>
             <form onSubmit={handleLogin} style={{
                 background: '#161b22',
@@ -43,9 +57,10 @@ const AdminLogin = () => {
                 border: '1px solid #30363d',
                 width: '100%',
                 maxWidth: '400px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                textAlign: isAr ? 'right' : 'left'
             }}>
-                <h1 style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '24px' }}>Admin Login</h1>
+                <h1 style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '24px' }}>{t('admin.login.title')}</h1>
                 
                 {error && (
                     <div style={{
@@ -63,7 +78,7 @@ const AdminLogin = () => {
                 )}
 
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8b949e' }}>Email Address</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8b949e' }}>{t('admin.login.email')}</label>
                     <input
                         type="email"
                         value={email}
@@ -76,13 +91,15 @@ const AdminLogin = () => {
                             border: '1px solid #30363d',
                             borderRadius: '6px',
                             color: '#fff',
-                            outline: 'none'
+                            outline: 'none',
+                            textAlign: 'left',
+                            direction: 'ltr'
                         }}
                     />
                 </div>
 
                 <div style={{ marginBottom: '2rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8b949e' }}>Password</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8b949e' }}>{t('admin.login.password')}</label>
                     <input
                         type="password"
                         value={password}
@@ -95,7 +112,9 @@ const AdminLogin = () => {
                             border: '1px solid #30363d',
                             borderRadius: '6px',
                             color: '#fff',
-                            outline: 'none'
+                            outline: 'none',
+                            textAlign: 'left',
+                            direction: 'ltr'
                         }}
                     />
                 </div>
@@ -115,10 +134,8 @@ const AdminLogin = () => {
                         cursor: loading ? 'not-allowed' : 'pointer',
                         transition: 'background 0.2s'
                     }}
-                    onMouseOver={(e) => { if(!loading) e.currentTarget.style.background = '#2ea043'; }}
-                    onMouseOut={(e) => { if(!loading) e.currentTarget.style.background = '#238636'; }}
                 >
-                    {loading ? <LoadingInline label="Signing in..." /> : 'Sign In'}
+                    {loading ? <LoadingInline label={t('admin.login.signingIn')} /> : t('admin.login.submit')}
                 </button>
             </form>
         </div>
