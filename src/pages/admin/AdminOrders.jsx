@@ -34,6 +34,9 @@ const getPaymentReference = (order) =>
     '';
 const getOrderNumberLabel = (order) => `#${padNumericString(getOrderNumber(order), 6)}`;
 const getTrackingNumber = (order) => order?.shipping?.trackingNumber || '';
+const getInventorySyncStatus = (order) => String(order?.inventorySyncStatus || '').trim();
+const getInventorySyncError = (order) => String(order?.inventorySyncError || '').trim();
+const getInventoryAdjustments = (order) => Array.isArray(order?.inventoryAdjustments) ? order.inventoryAdjustments : [];
 const normalizeWhatsAppPhone = (phone) => String(phone || '').replace(/\D/g, '');
 const normalizeOrderUrgency = (urgency) => {
     const normalized = String(urgency || '').trim().toLowerCase();
@@ -170,6 +173,40 @@ const getStatusBadgeStyle = (status) => ({
                     normalizeOrderStatus(status) === 'Canceled' ? '#ef4444' : '#f97316',
     color: '#081018'
 });
+
+const getInventorySyncBadgeStyle = (status) => {
+    const normalized = String(status || '').trim().toLowerCase();
+    const palette = {
+        completed: { background: 'rgba(34,197,94,0.18)', border: '1px solid rgba(34,197,94,0.35)', color: '#86efac' },
+        failed: { background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5' },
+        skipped_unpaid: { background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.28)', color: '#cbd5e1' },
+        not_required: { background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.28)', color: '#cbd5e1' },
+        not_required_lower: { background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.28)', color: '#cbd5e1' }
+    };
+    const key = normalized === 'not required' ? 'not_required' : normalized;
+    const theme = palette[key] || { background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.28)', color: '#fdba74' };
+    return {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0.28rem 0.55rem',
+        borderRadius: '999px',
+        fontSize: '0.76rem',
+        fontWeight: 800,
+        letterSpacing: '0.03em',
+        ...theme
+    };
+};
+
+const getInventorySyncLabel = (status, isAr) => {
+    const normalized = String(status || '').trim();
+    if (!normalized) return isAr ? 'غير معروف' : 'Unknown';
+    if (normalized === 'completed') return isAr ? 'تم الخصم' : 'Deducted';
+    if (normalized === 'failed') return isAr ? 'فشل الخصم' : 'Failed';
+    if (normalized === 'skipped_unpaid') return isAr ? 'لم يتم (غير مدفوع)' : 'Skipped (Unpaid)';
+    if (normalized === 'not_required') return isAr ? 'لا حاجة' : 'Not required';
+    return normalized;
+};
 
 const sectionCardStyle = {
     background: '#161b22',
@@ -922,6 +959,101 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         label={isAr ? "الأهمية" : "Urgency"}
                                         value={getUrgencyLabelText(selectedOrder.urgency)}
                                     />
+                                </div>
+                            </div>
+
+                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <div style={{ fontWeight: 800, color: '#e6edf3' }}>
+                                        {isAr ? 'المخزون (خصم العناصر)' : 'Inventory (Stock Deduction)'}
+                                    </div>
+                                    <span style={getInventorySyncBadgeStyle(getInventorySyncStatus(selectedOrder))}>
+                                        {getInventorySyncLabel(getInventorySyncStatus(selectedOrder), isAr)}
+                                    </span>
+                                </div>
+
+                                <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.75rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
+                                        <div style={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.9rem' }}>
+                                            <DetailField
+                                                label={isAr ? 'حالة المزامنة' : 'Sync Status'}
+                                                value={getInventorySyncStatus(selectedOrder) || (isAr ? 'غير متوفر' : 'N/A')}
+                                            />
+                                            <div style={{ height: '0.6rem' }} />
+                                            <DetailField
+                                                label={isAr ? 'عدد الحركات' : 'Adjustments'}
+                                                value={String(getInventoryAdjustments(selectedOrder).length)}
+                                            />
+                                        </div>
+                                        <div style={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.9rem' }}>
+                                            <DetailField
+                                                label={isAr ? 'ملاحظة / خطأ' : 'Note / Error'}
+                                                value={getInventorySyncError(selectedOrder) || (isAr ? 'لا يوجد' : 'None')}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {getInventoryAdjustments(selectedOrder).length > 0 && (
+                                        <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', overflow: 'hidden' }}>
+                                            <div
+                                                style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'minmax(220px, 2.2fr) 0.7fr 0.7fr 0.9fr',
+                                                    gap: '0.75rem',
+                                                    padding: '0.75rem 0.9rem',
+                                                    background: '#0b1220',
+                                                    color: '#8b949e',
+                                                    fontSize: '0.72rem',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.08em'
+                                                }}
+                                            >
+                                                <div>{isAr ? 'المسار / الصنف' : 'Path / Item'}</div>
+                                                <div>{isAr ? 'الطلب' : 'Requested'}</div>
+                                                <div>{isAr ? 'الخصم' : 'Deducted'}</div>
+                                                <div>{isAr ? 'المتبقي' : 'Remaining'}</div>
+                                            </div>
+                                            <div style={{ display: 'grid' }}>
+                                                {getInventoryAdjustments(selectedOrder).map((row, idx) => (
+                                                    <div
+                                                        key={`${row?.path || 'inv'}-${idx}`}
+                                                        style={{
+                                                            display: 'grid',
+                                                            gridTemplateColumns: 'minmax(220px, 2.2fr) 0.7fr 0.7fr 0.9fr',
+                                                            gap: '0.75rem',
+                                                            padding: '0.8rem 0.9rem',
+                                                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                                                            background: 'transparent',
+                                                            color: '#e6edf3',
+                                                            fontFamily: 'inherit'
+                                                        }}
+                                                    >
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                {row?.path || 'N/A'}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                                                {row?.sourceType || ''}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ fontFamily: 'Consolas, monospace' }}>{String(row?.quantity ?? '')}</div>
+                                                        <div style={{ fontFamily: 'Consolas, monospace', color: Number(row?.deducted || 0) > 0 ? '#86efac' : '#cbd5e1' }}>
+                                                            {String(row?.deducted ?? '')}
+                                                        </div>
+                                                        <div style={{ fontFamily: 'Consolas, monospace' }}>{String(row?.remaining ?? '')}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {getInventoryAdjustments(selectedOrder).length === 0 && (
+                                        <div style={{ color: '#8b949e' }}>
+                                            {isAr
+                                                ? 'لا توجد حركات مخزون مسجلة لهذا الطلب.'
+                                                : 'No inventory movements recorded for this order.'}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

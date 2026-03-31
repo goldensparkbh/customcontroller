@@ -773,9 +773,17 @@ exports.onOrderUpdate = functions
     const newStatus = String(after.status || "Pending").toLowerCase();
     const isCanceledNow = newStatus === "canceled";
     const wasCanceledBefore = oldStatus === "canceled";
+    const wasInventoryDeducted =
+      after?.inventorySyncStatus === "completed" ||
+      (Array.isArray(after?.inventoryAdjustments) && after.inventoryAdjustments.length > 0);
+    const isPaid = String(after?.paymentStatus || "") === "Paid";
 
     // 1. Restock if status changed to Canceled
     if (isCanceledNow && !wasCanceledBefore) {
+      if (!wasInventoryDeducted) {
+        console.log(`[onOrderUpdate] Skip restock for canceled order ${orderId} (no inventory deduction recorded)`);
+        return null;
+      }
       console.log(`[onOrderUpdate] Restoring inventory for canceled order ${orderId}`);
       try {
         await applyOrderInventoryAdjustments(after.items, {
@@ -789,6 +797,10 @@ exports.onOrderUpdate = functions
     }
     // 2. Re-deduct if status changed FROM Canceled back to something else
     else if (!isCanceledNow && wasCanceledBefore) {
+      if (!isPaid) {
+        console.log(`[onOrderUpdate] Skip re-deduct for un-canceled order ${orderId} (not paid)`);
+        return null;
+      }
       console.log(`[onOrderUpdate] Re-deducting inventory for un-canceled order ${orderId}`);
       try {
         await applyOrderInventoryAdjustments(after.items, {
@@ -1755,12 +1767,14 @@ exports.orderHandler = functions
       };
 
       try {
-        inventoryAdjustments = await applyOrderInventoryAdjustments(amounts.items, {
-          orderId: docRef.id,
-          orderNumber
-        });
-        if (inventoryAdjustments.length) {
-          inventorySyncStatus = "completed";
+        if (paymentStatus === "Paid") {
+          inventoryAdjustments = await applyOrderInventoryAdjustments(amounts.items, {
+            orderId: docRef.id,
+            orderNumber
+          });
+          inventorySyncStatus = inventoryAdjustments.length ? "completed" : "not_required";
+        } else {
+          inventorySyncStatus = "skipped_unpaid";
         }
       } catch (inventoryError) {
         inventorySyncStatus = "failed";
