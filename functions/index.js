@@ -593,7 +593,7 @@ function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
   const adjustments = new Map();
 
   const addAdjustment = (pathKey, quantity) => {
-    if (!pathKey || !(quantity !== 0)) return;
+    if (!pathKey || quantity === 0) return;
     adjustments.set(pathKey, (adjustments.get(pathKey) || 0) + (quantity * multiplier));
   };
 
@@ -603,16 +603,18 @@ function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
     if (!parts || typeof parts !== "object") return;
 
     Object.entries(parts).forEach(([partId, partState]) => {
-      // Process Color selection
-      if (partState.color && partState.color.key) {
-        addAdjustment(`configurator_parts/${partId}/options/${partState.color.key}`, qty);
+      // Process Color selection (ID is the Firestore document ID, fallback to key)
+      const colorId = partState.color?.id || partState.color?.key;
+      if (colorId) {
+        addAdjustment(`configurator_parts/${partId}/options/${colorId}`, qty);
       }
 
       // Process Performance Options: supports both legacy singular and new plural array
       const optionsArray = Array.isArray(partState.options) ? partState.options : (partState.option ? [partState.option] : []);
       optionsArray.forEach(o => {
-        if (o && o.key) {
-          addAdjustment(`configurator_parts/${partId}/options/${o.key}`, qty);
+        const optionId = o?.id || o?.key;
+        if (optionId) {
+          addAdjustment(`configurator_parts/${partId}/options/${optionId}`, qty);
         }
       });
     });
@@ -623,7 +625,7 @@ function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
 
 function mergeAdjustmentMaps(target, source) {
   for (const [pathKey, quantity] of source.entries()) {
-    if (!pathKey || !(quantity > 0)) continue;
+    if (!pathKey || quantity === 0) continue;
     target.set(pathKey, (target.get(pathKey) || 0) + quantity);
   }
   return target;
@@ -661,8 +663,15 @@ async function resolveNormalItemDocPath(db, item) {
 
   const directCandidates = getNormalItemDirectDocCandidates(item);
   for (const candidate of directCandidates) {
+    // If it's already a full path or just an ID, normalize it
     const normalizedPath = candidate.includes("/") ? candidate.replace(/^\/+/, "") : `items/${candidate}`;
-    if (!normalizedPath.startsWith("items/")) continue;
+
+    // Validate path is supported (either Normal Items or Configurator Options)
+    const isSupported = normalizedPath.startsWith("items/") || 
+                        normalizedPath.startsWith("configurator_parts/") ||
+                        normalizedPath.match(/^configurator_parts\/[^/]+\/options\/[^/]+$/);
+
+    if (!isSupported) continue;
 
     const snapshot = await db.doc(normalizedPath).get();
     if (snapshot.exists) return snapshot.ref.path;
