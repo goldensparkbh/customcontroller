@@ -7,7 +7,11 @@ export const INVENTORY_REASON_OPTIONS = [
     { value: 'stock_correction', label: 'Stock Correction', labelAr: 'تصحيح المخزون' },
     { value: 'manual_adjustment', label: 'Manual Adjustment', labelAr: 'تعديل يدوي' },
     { value: 'opening_balance', label: 'Opening Balance', labelAr: 'الرصيد الافتتاحي' },
-    { value: 'order_allocation', label: 'Order Allocation', labelAr: 'تخصيص لطلب' }
+    { value: 'order_allocation', label: 'Order Allocation', labelAr: 'تخصيص لطلب' },
+    { value: 'order_restock', label: 'Order Restock', labelAr: 'إعادة مخزون (طلب)' },
+    { value: 'order_canceled', label: 'Order Canceled (Restock)', labelAr: 'إلغاء طلب (إرجاع مخزون)' },
+    { value: 'order_uncanceled', label: 'Order Uncanceled (Re-deduct)', labelAr: 'إلغاء الإلغاء (إعادة خصم)' },
+    { value: 'order_deleted', label: 'Order Deleted (Restock)', labelAr: 'حذف طلب (إرجاع مخزون)' }
 ];
 
 const REASON_LABELS = INVENTORY_REASON_OPTIONS.reduce((map, option) => {

@@ -722,11 +722,15 @@ async function applyOrderInventoryAdjustments(items, metadata = {}, multiplier =
 
   if (!adjustments.size) return applied;
 
-  await db.runTransaction(async (transaction) => {
-    for (const [docPath, quantity] of adjustments.entries()) {
+  // One transaction per document: exactly one read then one write each.
+  // Avoids "all reads before all writes" failures that can occur with multi-doc transactions
+  // on the Admin SDK / certain retry paths.
+
+  for (const [docPath, quantity] of adjustments.entries()) {
+    const row = await db.runTransaction(async (transaction) => {
       const recordRef = db.doc(docPath);
       const snapshot = await transaction.get(recordRef);
-      if (!snapshot.exists) continue;
+      if (!snapshot.exists) return null;
 
       const currentData = snapshot.data() || {};
       const nextInventory = applyInventoryDeduction(currentData, quantity, {
@@ -747,15 +751,17 @@ async function applyOrderInventoryAdjustments(items, metadata = {}, multiplier =
         updatedAt: FieldValue.serverTimestamp()
       });
 
-      applied.push({
+      return {
         path: docPath,
         sourceType: docPath.startsWith("configurator_parts/") ? "configurator_option" : "normal_item",
         quantity,
         deducted: nextInventory.deducted,
         remaining: nextInventory.quantity
-      });
-    }
-  });
+      };
+    });
+
+    if (row) applied.push(row);
+  }
 
   return applied;
 }
@@ -813,6 +819,34 @@ exports.onOrderUpdate = functions
       }
     }
 
+    return null;
+  });
+
+exports.onOrderDelete = functions
+  .firestore.document("orders/{orderId}")
+  .onDelete(async (snap, context) => {
+    const orderId = context.params.orderId;
+    const data = snap.data();
+    if (!data) return null;
+
+    const wasInventoryDeducted =
+      data?.inventorySyncStatus === "completed" ||
+      (Array.isArray(data?.inventoryAdjustments) && data.inventoryAdjustments.length > 0);
+    if (!wasInventoryDeducted) {
+      console.log(`[onOrderDelete] Skip restock for deleted order ${orderId} (no inventory deduction recorded)`);
+      return null;
+    }
+
+    console.log(`[onOrderDelete] Restoring inventory after delete of order ${orderId}`);
+    try {
+      await applyOrderInventoryAdjustments(data.items, {
+        orderId,
+        orderNumber: data.orderNumber,
+        reason: "order_deleted"
+      }, -1);
+    } catch (err) {
+      console.error(`[onOrderDelete] Failed to restock after delete ${orderId}`, err);
+    }
     return null;
   });
 
@@ -1928,13 +1962,19 @@ exports.tapPaymentHandler = functions
       if (req.method !== "POST") throw new Error("Method not allowed");
 
       const body = req.body || {};
-      const { amount, currency, customer, redirect_url, post_url } = body;
+      const { amount, currency, customer, redirect_url, post_url, public_key: clientPublicKey } = body;
       const numericAmount = Number(amount);
 
       const TAP_SECRET = process.env.TAP_SECRET_KEY || "";
 
       if (!TAP_SECRET) {
         throw new Error("Missing TAP_SECRET_KEY in backend config");
+      }
+
+      const expectedPublicKey = String(process.env.TAP_PUBLIC_KEY || "").trim();
+      const sentPublicKey = String(clientPublicKey || "").trim();
+      if (expectedPublicKey && sentPublicKey && sentPublicKey !== expectedPublicKey) {
+        return res.status(403).json({ error: "Public key does not match server configuration" });
       }
 
       if (!(numericAmount > 0)) {

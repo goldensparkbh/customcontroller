@@ -115,10 +115,12 @@ const failedScript = `
   }
 
   // --- FAILURE LOGIC ---
-  // Redirect to cart after 5 seconds
+  try {
+    sessionStorage.setItem("ezPaymentFailure", JSON.stringify({ code: "generic" }));
+  } catch (e) {}
   setTimeout(() => {
     window.location.href = "/cart";
-  }, 5000);
+  }, 3000);
 `;
 
 function PaymentFailedPage() {

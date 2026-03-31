@@ -40,6 +40,8 @@ function normalizeOrderDraft(draft) {
   };
 }
 
+const getTapPublicKey = () => String(import.meta.env.VITE_TAP_PUBLIC_KEY || '').trim();
+
 function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [orderDraft, setOrderDraft] = useState(null);
@@ -76,6 +78,13 @@ function PaymentPage() {
     if (isProcessing) return;
     setIsProcessing(true);
     setPaymentStatus("");
+
+    const tapPk = getTapPublicKey();
+    if (!tapPk) {
+      setPaymentStatus(t("tapPublicKeyMissing"));
+      setIsProcessing(false);
+      return;
+    }
 
     const normalizedDraft = normalizeOrderDraft(orderDraft);
     const totalAmount = normalizedDraft.total;
@@ -116,7 +125,8 @@ function PaymentPage() {
           redirect_url: window.location.origin + "/payment/success",
           post_url: window.location.origin.includes("localhost")
             ? "http://localhost:5001/ps5-controller/us-central1/tapWebhook"
-            : undefined // In production, this would be your production webhook URL
+            : undefined,
+          public_key: tapPk
         })
       });
 

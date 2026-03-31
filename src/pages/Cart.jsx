@@ -57,7 +57,32 @@ const CartPage = () => {
   const [lang, setLang] = useState('ar');
   const [cartItems, setCartItems] = useState([]);
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
+  const [paymentBanner, setPaymentBanner] = useState('');
   const previewSignatureRef = useRef('');
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('ezPaymentFailure');
+      if (!raw) return;
+      sessionStorage.removeItem('ezPaymentFailure');
+      const parsed = JSON.parse(raw);
+      const code = parsed && parsed.code ? String(parsed.code) : 'generic';
+      const navLang = localStorage.getItem('ez_lang') || 'ar';
+      const tr = (key) => (i18n[navLang] && i18n[navLang][key]) || (i18n.en && i18n.en[key]) || key;
+      const keyMap = {
+        missing_id: 'paymentFailMissingId',
+        declined: 'paymentFailDeclined',
+        generic: 'paymentFailGeneric'
+      };
+      setPaymentBanner(tr(keyMap[code] || 'paymentFailGeneric'));
+    } catch (e) {
+      try {
+        sessionStorage.removeItem('ezPaymentFailure');
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }, []);
 
   useEffect(() => {
     document.body.classList.add('cart-page-active');
@@ -220,6 +245,43 @@ const CartPage = () => {
         {/* Left: Cart Items */}
         <div className="cart-items-column" style={{ flex: '2 1 600px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h2 style={{ margin: '0 0 1rem 0' }}>{t('cartTitle') || 'Your Cart'}</h2>
+
+          {paymentBanner && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                padding: '1rem 1.1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(248,113,113,0.45)',
+                background: 'rgba(127,29,29,0.28)',
+                color: '#fecaca',
+                lineHeight: 1.5
+              }}
+            >
+              <span style={{ flex: 1 }}>{paymentBanner}</span>
+              <button
+                type="button"
+                onClick={() => setPaymentBanner('')}
+                style={{
+                  flexShrink: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#fecaca',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem',
+                  lineHeight: 1,
+                  padding: '0 0.25rem'
+                }}
+                aria-label={lang === 'ar' ? 'إغلاق' : 'Dismiss'}
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           {cartItems.length === 0 && (
             <div style={{ background: '#1c1f28', padding: '2rem', borderRadius: '8px', textAlign: 'center', color: '#aaa' }}>

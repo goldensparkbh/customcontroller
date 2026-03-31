@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '../../firebase';
-import { collection, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDocs, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 import LoadingState from '../../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.jsx';
 import { i18n } from '../../i18n';
 
 const LIST_COLUMNS = '1.1fr 1.25fr 0.8fr 0.95fr 0.9fr 0.9fr';
+const CHECKBOX_COL_WIDTH = '44px';
+const FIRESTORE_BATCH_DELETE_LIMIT = 450;
 const ORDER_STATUS_OPTIONS = ['Paid', 'On Going', 'Completed', 'Shipped', 'Canceled'];
 const ORDER_URGENCY_OPTIONS = ['Normal', 'Urgent', 'Very Urgent'];
 
@@ -346,6 +348,16 @@ const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }
     </div>
 );
 
+async function deleteOrderDocuments(orderIds) {
+    const ids = [...new Set(orderIds.map(String).filter(Boolean))];
+    for (let i = 0; i < ids.length; i += FIRESTORE_BATCH_DELETE_LIMIT) {
+        const chunk = ids.slice(i, i + FIRESTORE_BATCH_DELETE_LIMIT);
+        const batch = writeBatch(db);
+        chunk.forEach((id) => batch.delete(doc(db, 'orders', id)));
+        await batch.commit();
+    }
+}
+
 const AdminOrders = ({ lang = 'ar' }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -361,6 +373,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
     const [paymentFilter, setPaymentFilter] = useState('all');
     const [urgencyFilter, setUrgencyFilter] = useState('all');
     const [saving, setSaving] = useState(false);
+    const [selectedOrderIds, setSelectedOrderIds] = useState(() => new Set());
+    const [deletingOrders, setDeletingOrders] = useState(false);
+    const selectAllCheckboxRef = useRef(null);
 
     const isAr = lang === 'ar';
     const t = (path) => {
@@ -463,6 +478,15 @@ const AdminOrders = ({ lang = 'ar' }) => {
             return searchableText.includes(queryValue);
         });
     }, [orders, paymentFilter, searchTerm, statusFilter, urgencyFilter]);
+
+    const filteredOrderIds = useMemo(() => filteredOrders.map((o) => o.id), [filteredOrders]);
+    const allFilteredSelected = filteredOrderIds.length > 0 && filteredOrderIds.every((id) => selectedOrderIds.has(id));
+    const someFilteredSelected = filteredOrderIds.some((id) => selectedOrderIds.has(id)) && !allFilteredSelected;
+
+    useEffect(() => {
+        const el = selectAllCheckboxRef.current;
+        if (el) el.indeterminate = someFilteredSelected;
+    }, [someFilteredSelected]);
 
     const customerPhoneDigits = useMemo(
         () => normalizeWhatsAppPhone(selectedOrder?.customer?.phone),
@@ -599,6 +623,84 @@ const AdminOrders = ({ lang = 'ar' }) => {
         setUrgencyFilter('all');
     };
 
+    const toggleOrderSelected = (orderId) => {
+        setSelectedOrderIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(orderId)) next.delete(orderId);
+            else next.add(orderId);
+            return next;
+        });
+    };
+
+    const handleSelectAllFilteredChange = () => {
+        setSelectedOrderIds((prev) => {
+            const next = new Set(prev);
+            const fids = filteredOrderIds;
+            const allSel = fids.length > 0 && fids.every((id) => next.has(id));
+            if (allSel) {
+                fids.forEach((id) => next.delete(id));
+            } else {
+                fids.forEach((id) => next.add(id));
+            }
+            return next;
+        });
+    };
+
+    const clearOrderSelection = () => setSelectedOrderIds(new Set());
+
+    const removeOrdersFromState = (ids) => {
+        const idSet = new Set(ids);
+        setOrders((current) => current.filter((o) => !idSet.has(o.id)));
+        setSelectedOrderIds((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.delete(id));
+            return next;
+        });
+        if (idSet.has(selectedOrderId)) {
+            setSelectedOrderId('');
+            setDetailOpen(false);
+            setWhatsAppOpen(false);
+        }
+    };
+
+    const handleBulkDeleteOrders = async () => {
+        const ids = Array.from(selectedOrderIds).filter((id) => orders.some((o) => o.id === id));
+        if (!ids.length) return;
+        const confirmMsg = isAr
+            ? `حذف ${ids.length} طلب(ات) نهائياً؟ لا يمكن التراجع. سيتم استرجاع المخزون تلقائياً إن وُجد خصم سابق.`
+            : `Permanently delete ${ids.length} order(s)? This cannot be undone. Inventory will be restored automatically for orders that had stock deducted.`;
+        if (!window.confirm(confirmMsg)) return;
+        setDeletingOrders(true);
+        try {
+            await deleteOrderDocuments(ids);
+            removeOrdersFromState(ids);
+        } catch (err) {
+            console.error(err);
+            alert(isAr ? `فشل الحذف: ${err.message}` : `Delete failed: ${err.message}`);
+        } finally {
+            setDeletingOrders(false);
+        }
+    };
+
+    const handleSingleDeleteOrder = async () => {
+        if (!selectedOrder || deletingOrders) return;
+        const id = selectedOrder.id;
+        const confirmMsg = isAr
+            ? `حذف الطلب ${getOrderNumberLabel(selectedOrder)} نهائياً؟ سيتم استرجاع المخزون إن وُجد خصم.`
+            : `Permanently delete order ${getOrderNumberLabel(selectedOrder)}? Inventory will be restored if stock was deducted.`;
+        if (!window.confirm(confirmMsg)) return;
+        setDeletingOrders(true);
+        try {
+            await deleteDoc(doc(db, 'orders', id));
+            removeOrdersFromState([id]);
+        } catch (err) {
+            console.error(err);
+            alert(isAr ? `فشل الحذف: ${err.message}` : `Delete failed: ${err.message}`);
+        } finally {
+            setDeletingOrders(false);
+        }
+    };
+
     if (loading) return <LoadingState message={isAr ? "جاري تحميل الطلبات..." : "Loading orders..."} minHeight="32vh" />;
 
     if (orders.length === 0) {
@@ -721,91 +823,201 @@ const AdminOrders = ({ lang = 'ar' }) => {
                 </button>
             </div>
 
+            {selectedOrderIds.size > 0 && (
+                <div
+                    style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem',
+                        alignItems: 'center',
+                        marginBottom: '0.75rem',
+                        padding: '0.75rem 1rem',
+                        background: '#161b22',
+                        border: '1px solid #30363d',
+                        borderRadius: '10px'
+                    }}
+                >
+                    <span style={{ color: '#e6edf3', fontWeight: 600 }}>
+                        {isAr ? `${selectedOrderIds.size} طلب محدد` : `${selectedOrderIds.size} order(s) selected`}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={handleBulkDeleteOrders}
+                        disabled={deletingOrders}
+                        style={{
+                            padding: '0.55rem 0.95rem',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(239,68,68,0.45)',
+                            background: deletingOrders ? '#1f2937' : 'rgba(127,29,29,0.35)',
+                            color: '#fecaca',
+                            fontWeight: 700,
+                            cursor: deletingOrders ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {deletingOrders
+                            ? (isAr ? 'جاري الحذف...' : 'Deleting...')
+                            : (isAr ? 'حذف المحدد' : 'Delete selected')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={clearOrderSelection}
+                        disabled={deletingOrders}
+                        style={{
+                            padding: '0.55rem 0.85rem',
+                            borderRadius: '8px',
+                            border: '1px solid #3b4452',
+                            background: '#0d1117',
+                            color: '#e6edf3',
+                            cursor: deletingOrders ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {isAr ? 'إلغاء التحديد' : 'Clear selection'}
+                    </button>
+                </div>
+            )}
+
             <section style={sectionCardStyle}>
                 <div
                     style={{
-                        display: 'grid',
-                        gridTemplateColumns: LIST_COLUMNS,
-                        gap: '0.75rem',
-                        padding: '0.85rem 1rem',
-                        background: '#0d1117',
+                        display: 'flex',
+                        alignItems: 'stretch',
                         borderBottom: '1px solid #30363d',
-                        fontSize: '0.72rem',
-                        color: '#8b949e',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em'
+                        background: '#0d1117'
                     }}
                 >
-                    <div style={listCellStyle}>{isAr ? "الطلب" : "Order"}</div>
-                    <div style={listCellStyle}>{isAr ? "العميل" : "Customer"}</div>
-                    <div style={listCellStyle}>{isAr ? "الإجمالي" : "Total"}</div>
-                    <div style={listCellStyle}>{isAr ? "الدفع" : "Payment"}</div>
-                    <div style={listCellStyle}>{isAr ? "الأهمية" : "Urgency"}</div>
-                    <div style={listCellStyle}>{isAr ? "الحالة" : "Status"}</div>
+                    <div
+                        style={{
+                            flex: `0 0 ${CHECKBOX_COL_WIDTH}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.5rem'
+                        }}
+                    >
+                        <input
+                            ref={selectAllCheckboxRef}
+                            type="checkbox"
+                            checked={allFilteredSelected}
+                            onChange={handleSelectAllFilteredChange}
+                            disabled={deletingOrders || filteredOrders.length === 0}
+                            title={isAr ? 'تحديد الكل في القائمة الحالية' : 'Select all in current list'}
+                            aria-label={isAr ? 'تحديد الكل' : 'Select all'}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            flex: 1,
+                            display: 'grid',
+                            gridTemplateColumns: LIST_COLUMNS,
+                            gap: '0.75rem',
+                            padding: '0.85rem 1rem',
+                            fontSize: '0.72rem',
+                            color: '#8b949e',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em'
+                        }}
+                    >
+                        <div style={listCellStyle}>{isAr ? "الطلب" : "Order"}</div>
+                        <div style={listCellStyle}>{isAr ? "العميل" : "Customer"}</div>
+                        <div style={listCellStyle}>{isAr ? "الإجمالي" : "Total"}</div>
+                        <div style={listCellStyle}>{isAr ? "الدفع" : "Payment"}</div>
+                        <div style={listCellStyle}>{isAr ? "الأهمية" : "Urgency"}</div>
+                        <div style={listCellStyle}>{isAr ? "الحالة" : "Status"}</div>
+                    </div>
                 </div>
 
                 <div style={{ display: 'grid' }}>
                     {filteredOrders.map((order) => {
                         const isSelected = detailOpen && order.id === selectedOrderId;
                         return (
-                            <button
+                            <div
                                 key={order.id}
-                                type="button"
-                                onClick={() => openOrderDetails(order.id)}
                                 style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: LIST_COLUMNS,
-                                    gap: '0.75rem',
-                                    padding: '1rem',
-                                    border: 'none',
+                                    display: 'flex',
+                                    alignItems: 'stretch',
                                     borderTop: '1px solid rgba(255,255,255,0.05)',
-                                    background: isSelected ? '#1f2937' : 'transparent',
-                                    color: '#e6edf3',
-                                    textAlign: 'left',
-                                    cursor: 'pointer'
+                                    background: isSelected ? '#1f2937' : 'transparent'
                                 }}
                             >
-                                <div style={listCellStyle}>
-                                    <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.82rem' }}>
-                                        {getOrderNumberLabel(order)}
+                                <div
+                                    style={{
+                                        flex: `0 0 ${CHECKBOX_COL_WIDTH}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => e.stopPropagation()}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedOrderIds.has(order.id)}
+                                        onChange={() => toggleOrderSelected(order.id)}
+                                        disabled={deletingOrders}
+                                        onClick={(e) => e.stopPropagation()}
+                                        aria-label={isAr ? 'تحديد الطلب' : 'Select order'}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => openOrderDetails(order.id)}
+                                    disabled={deletingOrders}
+                                    style={{
+                                        flex: 1,
+                                        display: 'grid',
+                                        gridTemplateColumns: LIST_COLUMNS,
+                                        gap: '0.75rem',
+                                        padding: '1rem',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: '#e6edf3',
+                                        textAlign: 'left',
+                                        cursor: deletingOrders ? 'not-allowed' : 'pointer',
+                                        opacity: deletingOrders ? 0.65 : 1
+                                    }}
+                                >
+                                    <div style={listCellStyle}>
+                                        <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.82rem' }}>
+                                            {getOrderNumberLabel(order)}
+                                        </div>
+                                        <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                            {formatDate(order.createdAt)}
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
-                                        {formatDate(order.createdAt)}
+
+                                    <div style={listCellStyle}>
+                                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {getCustomerName(order)}
+                                        </div>
+                                        <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                            {(order.items || []).length} {isAr ? "عنصر" : "item(s)"}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div style={listCellStyle}>
-                                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {getCustomerName(order)}
+                                    <div style={{ ...listCellStyle, fontWeight: 700 }}>
+                                        {Number(order.total || 0).toFixed(2)} {order.currency || 'BHD'}
                                     </div>
-                                    <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
-                                        {(order.items || []).length} {isAr ? "عنصر" : "item(s)"}
+
+                                    <div style={listCellStyle}>
+                                        <div>{getPaymentMethod(order)}</div>
+                                        <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                            {getPaymentStatus(order)}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div style={{ ...listCellStyle, fontWeight: 700 }}>
-                                    {Number(order.total || 0).toFixed(2)} {order.currency || 'BHD'}
-                                </div>
-
-                                <div style={listCellStyle}>
-                                    <div>{getPaymentMethod(order)}</div>
-                                    <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
-                                        {getPaymentStatus(order)}
+                                    <div style={listCellStyle}>
+                                        <span style={getUrgencyBadgeStyle(order.urgency)}>
+                                            {getUrgencyLabelText(order.urgency)}
+                                        </span>
                                     </div>
-                                </div>
 
-                                <div style={listCellStyle}>
-                                    <span style={getUrgencyBadgeStyle(order.urgency)}>
-                                        {getUrgencyLabelText(order.urgency)}
-                                    </span>
-                                </div>
-
-                                <div style={listCellStyle}>
-                                    <span style={getStatusBadgeStyle(order.status || 'Paid')}>
-                                        {getStatusLabelText(order.status)}
-                                    </span>
-                                </div>
-                            </button>
+                                    <div style={listCellStyle}>
+                                        <span style={getStatusBadgeStyle(order.status || 'Paid')}>
+                                            {getStatusLabelText(order.status)}
+                                        </span>
+                                    </div>
+                                </button>
+                            </div>
                         );
                     })}
 
@@ -881,27 +1093,47 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 <button
                                     type="button"
                                     onClick={fetchOrders}
+                                    disabled={deletingOrders}
                                     style={{
                                         padding: '0.55rem 0.8rem',
                                         borderRadius: '6px',
                                         border: '1px solid #3b4452',
                                         background: '#0d1117',
                                         color: '#e6edf3',
-                                        cursor: 'pointer'
+                                        cursor: deletingOrders ? 'not-allowed' : 'pointer',
+                                        opacity: deletingOrders ? 0.6 : 1
                                     }}
                                 >
                                     {isAr ? "تحديث" : "Refresh"}
                                 </button>
                                 <button
                                     type="button"
+                                    onClick={handleSingleDeleteOrder}
+                                    disabled={deletingOrders}
+                                    style={{
+                                        padding: '0.55rem 0.8rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid rgba(239,68,68,0.45)',
+                                        background: 'rgba(127,29,29,0.25)',
+                                        color: '#fecaca',
+                                        fontWeight: 700,
+                                        cursor: deletingOrders ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    {deletingOrders ? (isAr ? 'جاري الحذف...' : 'Deleting...') : (isAr ? 'حذف الطلب' : 'Delete order')}
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={closeOrderDetails}
+                                    disabled={deletingOrders}
                                     style={{
                                         padding: '0.55rem 0.8rem',
                                         borderRadius: '6px',
                                         border: '1px solid #3b4452',
                                         background: '#0d1117',
                                         color: '#e6edf3',
-                                        cursor: 'pointer'
+                                        cursor: deletingOrders ? 'not-allowed' : 'pointer',
+                                        opacity: deletingOrders ? 0.6 : 1
                                     }}
                                 >
                                     {isAr ? "إغلاق" : "Close"}

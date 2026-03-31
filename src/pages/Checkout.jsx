@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
 import { LoadingInline } from '../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
@@ -42,8 +41,35 @@ async function parseJsonSafe(response) {
   }
 }
 
+const getTapPublicKey = () => String(import.meta.env.VITE_TAP_PUBLIC_KEY || '').trim();
+
+function buildTapChargeBody(orderData, origin) {
+  const customerName = orderData.fullName || 'Guest';
+  const [firstName, ...restName] = customerName.split(/\s+/).filter(Boolean);
+  const lastName = restName.join(' ') || firstName || '.';
+  const postUrl = origin.includes('localhost')
+    ? 'http://localhost:5001/ps5-controller/us-central1/tapWebhook'
+    : undefined;
+
+  return {
+    amount: orderData.total,
+    currency: orderData.currency || 'BHD',
+    customer: {
+      first_name: firstName || 'Customer',
+      last_name: lastName,
+      email: orderData.email || 'customer@example.com',
+      phone: {
+        country_code: orderData.phonePrefix || '973',
+        number: String(orderData.phone || '').replace(/\D/g, '') || '00000000'
+      }
+    },
+    redirect_url: `${origin}/payment/success`,
+    post_url: postUrl,
+    public_key: getTapPublicKey()
+  };
+}
+
 const CheckoutPage = () => {
-  const navigate = useNavigate();
   const formRef = useRef(null);
   const [lang, setLang] = useState('ar');
   const [cartItems, setCartItems] = useState([]);
@@ -205,55 +231,32 @@ const CheckoutPage = () => {
     return orderData;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formRef.current?.reportValidity()) return;
     if (cartItems.length === 0) return alert(t('alertNoItems') || 'Cart is empty');
+
+    const tapPk = getTapPublicKey();
+    if (!tapPk) {
+      alert(t('tapPublicKeyMissing'));
+      return;
+    }
 
     setLoadingAction('payment');
 
     try {
       const orderData = buildOrderData();
-      localStorage.removeItem("ezOrderResult");
-      localStorage.setItem("ezOrderDraft", JSON.stringify(orderData));
-      navigate('/payment');
-    } catch (err) {
-      console.error(err);
-      if (err.message !== "stock_limit_reached") {
-        alert(t('paymentStartFailed') || 'Failed to checkout');
+      localStorage.removeItem('ezOrderResult');
+      localStorage.setItem('ezOrderDraft', JSON.stringify(orderData));
+
+      if (!(Number(orderData.total) > 0)) {
+        throw new Error('Invalid order total');
       }
-      setLoadingAction('');
-    }
-  };
 
-  const handleTestOrder = async () => {
-    if (isLoading) return;
-    if (!formRef.current?.reportValidity()) return;
-    if (cartItems.length === 0) {
-      alert(t('alertNoItems') || 'Cart is empty');
-      return;
-    }
-
-    setLoadingAction('test');
-
-    try {
-      const orderData = buildOrderData();
-      const paidTestOrder = {
-        ...orderData,
-        paymentMethod: 'test',
-        paymentStatus: 'Paid',
-        paymentReference: `TEST-${Date.now()}`,
-        paymentDetails: {
-          status: 'CAPTURED',
-          gateway: 'TEST'
-        }
-      };
-
-      localStorage.setItem("ezOrderDraft", JSON.stringify(paidTestOrder));
-      const response = await fetch('/api/createOrder', {
+      const response = await fetch('/api/tap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paidTestOrder)
+        body: JSON.stringify(buildTapChargeBody(orderData, window.location.origin))
       });
       const result = await parseJsonSafe(response);
 
@@ -261,13 +264,15 @@ const CheckoutPage = () => {
         throw new Error((result && (result.error || result.detail || result.message)) || `HTTP ${response.status}`);
       }
 
-      localStorage.setItem("ezOrderResult", JSON.stringify(result || {}));
-      localStorage.removeItem("ezCart");
-      navigate('/order-summary');
+      if (!result?.transaction?.url) {
+        throw new Error('No payment URL received');
+      }
+
+      window.location.href = result.transaction.url;
     } catch (err) {
       console.error(err);
-      if (err.message !== "stock_limit_reached") {
-        alert((t('testOrderFailed') || 'Failed to create test order.') + ' ' + err.message);
+      if (err.message !== 'stock_limit_reached') {
+        alert(`${t('paymentStartFailed') || 'Failed to start payment'}${err.message ? `: ${err.message}` : ''}`);
       }
       setLoadingAction('');
     }
@@ -413,27 +418,8 @@ const CheckoutPage = () => {
 
             <button type="submit" className="primary-action-btn" disabled={isLoading} style={{ padding: '1rem', fontWeight: 'bold', fontSize: '1.2rem', border: 'none', borderRadius: '8px', cursor: isLoading ? 'not-allowed' : 'pointer', marginTop: '1rem' }}>
               {loadingAction === 'payment'
-                ? <LoadingInline label="Processing..." />
+                ? <LoadingInline label={t('paymentProcessing') || 'Processing...'} />
                 : (t('placeOrderBtn') || 'Place Order')}
-            </button>
-            <button
-              type="button"
-              onClick={handleTestOrder}
-              disabled={isLoading}
-              style={{
-                padding: '0.95rem',
-                fontWeight: 'bold',
-                fontSize: '1rem',
-                borderRadius: '8px',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                border: '1px solid rgba(255,255,255,0.18)',
-                background: '#2a2f3d',
-                color: '#fff'
-              }}
-            >
-              {loadingAction === 'test'
-                ? <LoadingInline label="Processing..." />
-                : (t('testOrderBtn') || 'test')}
             </button>
           </form>
         </div>
