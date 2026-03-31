@@ -4,6 +4,7 @@ import { collection, doc, getDocs, orderBy, query, updateDoc } from 'firebase/fi
 import { getOrderNumber, padNumericString } from './recordNumbers';
 import LoadingState from '../../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.jsx';
+import { i18n } from '../../i18n';
 
 const LIST_COLUMNS = '1.1fr 1.25fr 0.8fr 0.95fr 0.9fr 0.9fr';
 const ORDER_STATUS_OPTIONS = ['Paid', 'On Going', 'Completed', 'Shipped', 'Canceled'];
@@ -898,10 +899,7 @@ const AdminOrders = () => {
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontWeight: 700, color: '#e6edf3' }}>Update Order</div>
-                                        <div style={{ fontSize: '0.82rem', color: '#8b949e', marginTop: '0.2rem' }}>
-                                            Change the operational status for this purchase order.
-                                        </div>
+                                        <div style={{ fontWeight: 700, color: '#e6edf3' }}>{t('admin.orders.save')}</div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -918,7 +916,7 @@ const AdminOrders = () => {
                                             }}
                                         >
                                             {ORDER_STATUS_OPTIONS.map((status) => (
-                                                <option key={status} value={status}>{status}</option>
+                                                <option key={status} value={status}>{isAr ? getStatusLabelText(status) : status}</option>
                                             ))}
                                         </select>
 
@@ -943,7 +941,7 @@ const AdminOrders = () => {
                                             type="text"
                                             value={detailTrackingNumber}
                                             onChange={(event) => setDetailTrackingNumber(event.target.value)}
-                                            placeholder="Shipping number"
+                                            placeholder={t('admin.orders.tracking')}
                                             style={{
                                                 minWidth: '220px',
                                                 padding: '0.6rem 0.7rem',
@@ -969,7 +967,7 @@ const AdminOrders = () => {
                                                 opacity: saving || !hasOrderChanges ? 0.6 : 1
                                             }}
                                         >
-                                            {saving ? 'Saving...' : 'Update Order'}
+                                            {saving ? (isAr ? 'جاري الحفظ...' : 'Saving...') : t('admin.orders.save')}
                                         </button>
                                     </div>
                                 </div>

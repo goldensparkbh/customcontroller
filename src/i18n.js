@@ -67,7 +67,7 @@ export const i18n = {
     side_front: "أمام",
     side_back: "خلف",
     loadingConfigurator: "جاري تحميل الإعدادات...",
-    chooseLanguage: "اختيار اللغة",
+    chooseLanguage: "English",
     currencyPrefix: "د.ب ",
     pricePrefix: "+ ",
     alertNone: "لم يتم اختيار أي تخصيص بعد.",
@@ -99,7 +99,7 @@ export const i18n = {
     color_hotPink_shell: "وردي فاقع",
     color_matteBlack: "أسود مطفي",
     color_black: "أسود",
-    color_lightGray: "رمادي فاتح",
+    color_lightGray: "رمادي فتح",
     color_red: "أحمر",
     color_darkBluePurple: "أزرق بنفسجي داكن",
     color_mintGreen: "أخضر نعناعي",
@@ -147,11 +147,14 @@ export const i18n = {
       allButtons: "طقم الأزرار",
       bumpersTriggers: "الأزرار الخلفية والزناد",
       backShellMain: "هيكل الخلف",
+      backHandles: "مقابض خلفية",
+      backTriggers: "أزرار خلفية (Triggers)"
     },
     checkoutTitle: "إتمام الشراء",
     formTitle: "بيانات العميل والدفع",
     firstNameLabel: "الاسم الأول *",
     lastNameLabel: "الاسم الأخير *",
+    phonePrefixLabel: "الرمز الدولي *",
     phoneLabel: "رقم الهاتف *",
     emailLabel: "البريد الإلكتروني *",
     countryLabel: "الدولة *",
@@ -186,7 +189,7 @@ export const i18n = {
     paymentCod: "الدفع عند الاستلام",
     termsText: "أقر بأن جميع بيانات التخصيص صحيحة، وأوافق على الشروط والأحكام وسياسة الاستبدال.",
     placeOrderBtn: "تأكيد الطلب",
-    testOrderBtn: "test",
+    testOrderBtn: "اختبار",
     summaryEmpty: "لا توجد عناصر في السلة. يرجى العودة إلى صفحة التخصيص.",
     shippingSummaryNote: "سيتم حسابه حسب العنوان وطريقة الشحن",
     totalDueLabel: "الإجمالي",
@@ -198,7 +201,7 @@ export const i18n = {
     paymentProcessing: "جاري معالجة الدفع ...",
     paymentConfirmed: "تم تأكيد الدفع. جارٍ التحويل...",
     paymentStartFailed: "فشل بدء الدفع.",
-    testOrderFailed: "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0637\u0644\u0628 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631.",
+    testOrderFailed: "فشل إنشاء طلب الاختبار.",
     confirmationTitle: "تأكيد الدفع",
     confirmationStatus: "تم تأكيد الدفع",
     paymentFailedTitle: "فشل الدفع",
@@ -257,25 +260,75 @@ export const i18n = {
     footerFollowUs: "تابعنا على",
     instagramLabel: "انستقرام",
     tiktokLabel: "تيك توك",
-    emailLabel: "البريد الإلكتروني",
-    chooseLanguage: "English",
-    loadingConfigurator: "جاري تحميل المخصص...",
-    availableOptions: "تطوير الأداء",
-    availableColors: "شكل الذراع",
-    selectPart: "اختر جزءًا",
-    solidColors: "ألوان صلبة",
-    transparentColors: "ألوان شفافة",
-    front: "الأمام",
-    back: "الخلف",
-    totalLabel: "الإجمالي",
-    addToCart: "إضافة إلى السلة",
-    alertNone: "لا توجد تعديلات لإضافتها!",
-    logo: "Custom Controller",
     orderSuccessTitle: "تم استلام الطلب",
     orderContactMessage: "شكراً لك! تم استلام طلبك بنجاح.<br>سنتواصل معك قريباً لتأكيد التفاصيل.",
     orderOkBtn: "تم",
     processingOrder: "جاري الطلب...",
     orderFailed: "فشل إنشاء الطلب. يرجى المحاولة مرة أخرى.",
+
+    admin: {
+        panelTitle: "لوحة التحكم",
+        sidebar: {
+            operations: "العمليات",
+            inventory: "المخزون",
+            system: "النظام",
+            tabs: {
+                orders: "الطلبات والشحن",
+                invoices: "الفواتير",
+                payments: "المدفوعات",
+                customers: "العملاء",
+                inventoryMaster: "بيانات المخزون",
+                normalItems: "منتجات عادية",
+                configPart: "أجزاء المخصص",
+                settings: "الإعدادات"
+            },
+            logout: "تسجيل الخروج"
+        },
+        login: {
+            title: "دخول المدير",
+            email: "البريد الإلكتروني",
+            password: "كلمة المرور",
+            submit: "دخول",
+            error: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+            signingIn: "جاري الدخول..."
+        },
+        inventory: {
+            inHand: "المتوفر في اليد",
+            history: "سجل التحركات",
+            note: "ملاحظة",
+            reason: "السبب",
+            source: "المصدر",
+            search: "بحث في المخزون...",
+            status: "الحالة",
+            all: "الكل",
+            inStock: "متوفر",
+            outStock: "نفد",
+            columns: {
+                item: "العنصر",
+                source: "المصدر",
+                number: "رقم الصنف",
+                barcode: "الباركود",
+                quantity: "الكمية",
+                price: "السعر",
+                actions: "إجراءات"
+            }
+        },
+        orders: {
+            title: "الطلبات",
+            status: "حالة الطلب",
+            urgency: "الأهمية",
+            customer: "العميل",
+            date: "التاريخ",
+            total: "المجموع",
+            orderNumber: "رقم الطلب",
+            whatsapp: "واتساب",
+            print: "طباعة",
+            viewDetails: "التفاصيل",
+            tracking: "تتبع الشحنة",
+            save: "حفظ",
+            updated: "تم التحديث بنجاح"
+        }
+    },
 
     privacyTitle: "سياسة الخصوصية",
     privacyContent: `
@@ -382,7 +435,7 @@ export const i18n = {
     side_front: "Front",
     side_back: "Back",
     loadingConfigurator: "Loading configurator...",
-    chooseLanguage: "Language",
+    chooseLanguage: "العربية",
     currencyPrefix: "BHD ",
     pricePrefix: "+ ",
     alertNone: "No custom options selected yet.",
@@ -471,6 +524,7 @@ export const i18n = {
     formTitle: "Customer & payment details",
     firstNameLabel: "First name *",
     lastNameLabel: "Last name *",
+    phonePrefixLabel: "Country Code *",
     phoneLabel: "Phone *",
     emailLabel: "Email *",
     countryLabel: "Country *",
@@ -484,7 +538,7 @@ export const i18n = {
     postalCodeLabel: "Postal code (optional)",
     addressLine1Label: "Address *",
     addressLine2Label: "Address line 2 (optional)",
-    saudiUnifiedAddressLabel: "الرجاء وضع العنوان الموحد",
+    saudiUnifiedAddressLabel: "Please enter Saudi Unified Address",
     shippingMethodLabel: "Shipping method",
     shippingBahrainDelivery: "Delivery (2 BHD)",
     shippingBahrainPickup: "Store pickup (Free)",
@@ -576,12 +630,75 @@ export const i18n = {
     footerFollowUs: "Follow Us",
     instagramLabel: "Instagram",
     tiktokLabel: "TikTok",
-    emailLabel: "Email",
     orderSuccessTitle: "Order Received",
     orderContactMessage: "Thank you! We have received your order.<br>We will contact you shortly to confirm details.",
     orderOkBtn: "Ok",
     processingOrder: "Placing order...",
     orderFailed: "Failed to place order. Please try again.",
+
+    admin: {
+        panelTitle: "Admin Panel",
+        sidebar: {
+            operations: "Operations",
+            inventory: "Inventory",
+            system: "System",
+            tabs: {
+                orders: "Orders & Shipping",
+                invoices: "Invoices",
+                payments: "Payments",
+                customers: "Customers",
+                inventoryMaster: "Inventory Master",
+                normalItems: "Normal Items",
+                configPart: "Configurator Parts",
+                settings: "Settings"
+            },
+            logout: "Logout"
+        },
+        login: {
+            title: "Admin Login",
+            email: "Email Address",
+            password: "Password",
+            submit: "Sign In",
+            error: "Invalid email or password",
+            signingIn: "Signing in..."
+        },
+        inventory: {
+            inHand: "Inventory in Hand",
+            history: "Movement History",
+            note: "Note",
+            reason: "Reason",
+            source: "Source",
+            search: "Search inventory...",
+            status: "Status",
+            all: "All",
+            inStock: "In Stock",
+            outStock: "Out of Stock",
+            columns: {
+                item: "Item",
+                source: "Source",
+                number: "Record #",
+                barcode: "Barcode",
+                quantity: "Qty",
+                price: "Price",
+                actions: "Actions"
+            }
+        },
+        orders: {
+            title: "Orders",
+            status: "Order Status",
+            urgency: "Urgency",
+            customer: "Customer",
+            date: "Date",
+            total: "Total",
+            orderNumber: "Order Number",
+            whatsapp: "WhatsApp",
+            print: "Print",
+            viewDetails: "Details",
+            tracking: "Tracking Number",
+            save: "Save",
+            updated: "Order updated successfully"
+        }
+    },
 
     privacyTitle: "Privacy Policy",
     privacyContent: `
@@ -621,7 +738,3 @@ export const i18n = {
     `
   }
 };
-
-
-
-

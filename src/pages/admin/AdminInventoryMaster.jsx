@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { i18n } from '../../i18n';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import {
@@ -76,7 +77,7 @@ const DetailField = ({ label, value }) => (
     </div>
 );
 
-const AdminInventoryMaster = () => {
+const AdminInventoryMaster = ({ lang = 'ar' }) => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -90,6 +91,18 @@ const AdminInventoryMaster = () => {
         showOnline: true
     });
 
+    const t = (path) => {
+        const keys = path.split('.');
+        let result = i18n[lang];
+        for (const key of keys) {
+            if (!result) return path;
+            result = result[key];
+        }
+        return result || path;
+    };
+
+    const isAr = lang === 'ar';
+
     const fetchInventory = async () => {
         setLoading(true);
         try {
@@ -98,29 +111,29 @@ const AdminInventoryMaster = () => {
                 id: snapshot.id,
                 raw: snapshot.data(),
                 sourceType: 'normal',
-                sourceLabel: 'Normal Item'
+                sourceLabel: isAr ? 'منتج عادي' : 'Normal Item'
             }));
 
             const partsSnapshot = await getDocs(collection(db, 'configurator_parts'));
-            const parts = partsSnapshot.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }));
-            const optionsByPart = await Promise.all(parts.map(async (part) => {
+            const partOptionsRecords = [];
+            for (const partDoc of partsSnapshot.docs) {
+                const part = { id: partDoc.id, ...partDoc.data() };
                 const optionsSnapshot = await getDocs(collection(db, `configurator_parts/${part.id}/options`));
-                return optionsSnapshot.docs.map((snapshot) => normalizeMasterRecord({
-                    id: snapshot.id,
-                    raw: snapshot.data(),
-                    sourceType: 'configurator',
-                    sourceLabel: part.title || part.id,
-                    partId: part.id,
-                    partTitle: part.title || part.id
-                }));
-            }));
+                optionsSnapshot.docs.forEach((optDoc) => {
+                    partOptionsRecords.push(normalizeMasterRecord({
+                        id: optDoc.id,
+                        raw: optDoc.data(),
+                        sourceType: 'configurator',
+                        sourceLabel: `${isAr ? 'مخصص' : 'Configurator'} / ${part.title || part.id}`,
+                        partId: part.id,
+                        partTitle: part.title || part.id
+                    }));
+                });
+            }
 
-            const nextRecords = [...itemRecords, ...optionsByPart.flat()]
-                .sort((a, b) => Number(b.itemNumber || 0) - Number(a.itemNumber || 0));
-            setRecords(nextRecords);
-            setSelectedRecordId((current) => (nextRecords.some((record) => record.id === current) ? current : ''));
-        } catch (error) {
-            console.error('Failed to load inventory master', error);
+            setRecords([...itemRecords, ...partOptionsRecords]);
+        } catch (e) {
+            console.error("Error fetching inventory:", e);
         }
         setLoading(false);
     };

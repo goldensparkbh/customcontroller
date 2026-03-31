@@ -461,23 +461,23 @@ const CheckoutPage = () => {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#ccc' }}>
-              <span>{t('itemsCountLabel') || 'Items'}:</span>
+              <span>{t('itemsCountLabel')}:</span>
               <span>{itemsCount}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#ccc' }}>
-              <span>{t('subtotalLabel') || 'Subtotal'}:</span>
-              <span>{subtotal.toFixed(2)} BHD</span>
+              <span>{t('subtotalLabel')}:</span>
+              <span>{subtotal.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#ccc' }}>
-              <span>{t('shippingLabel') || 'Shipping'}:</span>
-              <span>{shippingCost.toFixed(2)} BHD</span>
+              <span>{t('shippingLabel')}:</span>
+              <span>{shippingCost.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
             </div>
 
             <hr style={{ borderColor: '#333', margin: '1rem 0' }} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', color: '#4ade80' }}>
-              <span>{t('totalDueLabel') || 'Total'}:</span>
-              <span>{totalDue.toFixed(2)} BHD</span>
+              <span>{t('totalDueLabel')}:</span>
+              <span>{totalDue.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
             </div>
           </div>
         </div>

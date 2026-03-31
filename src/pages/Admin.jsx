@@ -13,46 +13,69 @@ import AdminSettings from './admin/AdminSettings';
 
 const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
 
-const navigationGroups = [
-    {
-        id: 'operations',
-        label: '',
-        items: [
-            { id: 'orders', label: 'Orders & Shipping' },
-            { id: 'invoices', label: 'Invoices' },
-            { id: 'payments', label: 'Payments' },
-            { id: 'customers', label: 'Customers' }
-        ]
-    },
-    {
-        id: 'inventoryGroup',
-        label: 'Inventory',
-        items: [
-            { id: 'inventory', label: 'Inventory Master' },
-            { id: 'items', label: 'Normal Items' },
-            { id: 'parts', label: 'Configurator Parts' }
-        ]
-    },
-    {
-        id: 'system',
-        label: '',
-        items: [
-            { id: 'settings', label: 'Settings' }
-        ]
-    }
-];
-
-const tabs = navigationGroups.flatMap((group) => group.items);
-
 const Admin = () => {
+    const navigate = useNavigate();
+    const storedLang = window.localStorage.getItem('ez_lang') || 'ar';
+    const [lang, setLang] = useState(storedLang);
+    const isAr = lang === 'ar';
+    
     const [activeTab, setActiveTab] = useState(() => {
         const storedTab = window.localStorage.getItem(ADMIN_ACTIVE_TAB_KEY);
-        return tabs.some((tab) => tab.id === storedTab) ? storedTab : 'orders';
+        const tabs = [
+            'orders', 'invoices', 'payments', 'customers',
+            'inventory', 'items', 'parts', 'settings'
+        ];
+        return tabs.includes(storedTab) ? storedTab : 'orders';
     });
-    const navigate = useNavigate();
-    const lang = localStorage.getItem('ez_lang') || 'ar';
-    const isAr = lang === 'ar';
+
+    const t = (path) => {
+        const keys = path.split('.');
+        let result = i18n[lang];
+        for (const key of keys) {
+            if (!result) return path;
+            result = result[key];
+        }
+        return result || path;
+    };
+
+    const navigationGroups = [
+        {
+            id: 'operations',
+            label: t('admin.sidebar.operations'),
+            items: [
+                { id: 'orders', label: t('admin.sidebar.tabs.orders') },
+                { id: 'invoices', label: t('admin.sidebar.tabs.invoices') },
+                { id: 'payments', label: t('admin.sidebar.tabs.payments') },
+                { id: 'customers', label: t('admin.sidebar.tabs.customers') }
+            ]
+        },
+        {
+            id: 'inventoryGroup',
+            label: t('admin.sidebar.inventory'),
+            items: [
+                { id: 'inventory', label: t('admin.sidebar.tabs.inventoryMaster') },
+                { id: 'items', label: t('admin.sidebar.tabs.normalItems') },
+                { id: 'parts', label: t('admin.sidebar.tabs.configPart') }
+            ]
+        },
+        {
+            id: 'system',
+            label: t('admin.sidebar.system'),
+            items: [
+                { id: 'settings', label: t('admin.sidebar.tabs.settings') }
+            ]
+        }
+    ];
+
     const navButtonActiveBackground = 'var(--button-primary-bg)';
+
+    const toggleLanguage = () => {
+        const newLang = lang === 'ar' ? 'en' : 'ar';
+        setLang(newLang);
+        window.localStorage.setItem('ez_lang', newLang);
+        // Refresh to apply global dir/lang changes to documentElement if needed, 
+        // but since we use useEffect [lang] it's reactive.
+    };
 
     useEffect(() => {
         window.localStorage.setItem(ADMIN_ACTIVE_TAB_KEY, activeTab);
@@ -113,18 +136,35 @@ const Admin = () => {
                     textAlign: isAr ? 'right' : 'left'
                 }}
             >
-                <h2
-                    style={{
-                        fontSize: '18px',
-                        fontWeight: 700,
-                        color: '#8b949e',
-                        marginBottom: '1rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1px'
-                    }}
-                >
-                    Admin Panel
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <h2
+                        style={{
+                            fontSize: '18px',
+                            fontWeight: 700,
+                            color: '#8b949e',
+                            margin: 0,
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px'
+                        }}
+                    >
+                        {t('admin.panelTitle')}
+                    </h2>
+                    <button
+                        onClick={toggleLanguage}
+                        style={{
+                            background: '#21262d',
+                            border: '1px solid #30363d',
+                            color: '#c9d1d9',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                        }}
+                    >
+                        {lang === 'ar' ? 'English' : 'العربية'}
+                    </button>
+                </div>
 
                 {navigationGroups.map((group) => (
                     <div key={group.id} style={{ display: 'grid', gap: '6px' }}>
@@ -214,7 +254,7 @@ const Admin = () => {
                         event.currentTarget.style.background = 'transparent';
                     }}
                 >
-                    <span>Logout</span>
+                    <span>{t('admin.sidebar.logout')}</span>
                 </button>
             </aside>
 
@@ -249,17 +289,17 @@ const Admin = () => {
                             borderBottom: '1px solid #30363d'
                         }}
                     >
-                        {tabs.find((tab) => tab.id === activeTab)?.label}
+                        {navigationGroups.flatMap(g => g.items).find((tab) => tab.id === activeTab)?.label}
                     </h1>
 
-                    {activeTab === 'orders' && <AdminOrders />}
-                    {activeTab === 'invoices' && <AdminInvoices />}
-                    {activeTab === 'payments' && <AdminPayments />}
-                    {activeTab === 'customers' && <AdminCustomers />}
-                    {activeTab === 'inventory' && <AdminInventoryMaster />}
-                    {activeTab === 'items' && <AdminItems />}
-                    {activeTab === 'parts' && <AdminParts />}
-                    {activeTab === 'settings' && <AdminSettings />}
+                    {activeTab === 'orders' && <AdminOrders lang={lang} />}
+                    {activeTab === 'invoices' && <AdminInvoices lang={lang} />}
+                    {activeTab === 'payments' && <AdminPayments lang={lang} />}
+                    {activeTab === 'customers' && <AdminCustomers lang={lang} />}
+                    {activeTab === 'inventory' && <AdminInventoryMaster lang={lang} />}
+                    {activeTab === 'items' && <AdminItems lang={lang} />}
+                    {activeTab === 'parts' && <AdminParts lang={lang} />}
+                    {activeTab === 'settings' && <AdminSettings lang={lang} />}
                 </div>
             </main>
         </div>

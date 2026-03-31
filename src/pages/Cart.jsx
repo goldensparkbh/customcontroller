@@ -281,19 +281,19 @@ const CartPage = () => {
             <h3 style={{ margin: '0 0 1rem 0' }}>{t('summaryTitle') || 'Summary'}</h3>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>{t('itemsCountLabel') || 'Items'}:</span>
+              <span>{t('itemsCountLabel')}:</span>
               <span>{totals.count}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>{t('subtotalLabel') || 'Subtotal'}:</span>
-              <span>{totals.sum.toFixed(2)} BHD</span>
+              <span>{t('subtotalLabel')}:</span>
+              <span>{totals.sum.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
             </div>
 
             <hr style={{ borderColor: '#333', margin: '1rem 0' }} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
-              <span>{t('totalLabelBold') || 'Total'}:</span>
-              <span>{totals.sum.toFixed(2)} BHD</span>
+              <span>{t('totalLabelBold')}:</span>
+              <span>{totals.sum.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
             </div>
 
             <button
@@ -302,7 +302,7 @@ const CartPage = () => {
               disabled={cartItems.length === 0}
               style={{ width: '100%', padding: '1rem', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: cartItems.length > 0 ? 'pointer' : 'not-allowed' }}
             >
-              {t('checkoutCta') || 'Proceed to Checkout'}
+              {t('checkoutCta')}
             </button>
           </div>
         </div>
