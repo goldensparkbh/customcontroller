@@ -39,7 +39,20 @@ const fieldStyle = {
     color: '#e6edf3'
 };
 
-const AdminParts = () => {
+const AdminParts = ({ lang = 'ar' }) => {
+    const isAr = lang === 'ar';
+
+    const t = (path) => {
+        const keys = path.split('.');
+        let result = i18n[lang];
+        if (!result) return path;
+        for (const key of keys) {
+            result = result[key];
+            if (!result) return path;
+        }
+        return result || path;
+    };
+
     const [parts, setParts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPart, setSelectedPart] = useState(null);
@@ -408,12 +421,12 @@ const AdminParts = () => {
     return (
         <div>
             {/* BASE PRICE SETTINGS */}
-            <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '250px' }}>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff' }}>Base Controller Price</h3>
-                    <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>This is the initial price of the controller before any customizations are applied.</p>
+            <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                <div style={{ flex: 1, minWidth: '250px', textAlign: isAr ? 'right' : 'left' }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff' }}>{isAr ? "سعر وحدة التحكم الأساسي" : "Base Controller Price"}</h3>
+                    <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>{isAr ? "هذا هو السعر الأولي لوحدة التحكم قبل تطبيق أي تخصيصات." : "This is the initial price of the controller before any customizations are applied."}</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                     <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 600 }}>BHD</span>
                     <input 
                         type="number" 
@@ -421,23 +434,23 @@ const AdminParts = () => {
                         step="0.01" 
                         value={basePrice} 
                         onChange={e => setBasePrice(e.target.value)} 
-                        style={{ ...fieldStyle, width: '120px', fontSize: '1.1rem' }} 
+                        style={{ ...fieldStyle, width: '120px', fontSize: '1.1rem', textAlign: isAr ? 'right' : 'left' }} 
                     />
                     <button 
                         onClick={handleSaveBasePrice} 
                         disabled={isSavingBasePrice}
                         style={{ padding: '0.7rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: '#fff', borderRadius: '6px', cursor: isSavingBasePrice ? 'wait' : 'pointer', fontWeight: 600 }}
                     >
-                        {isSavingBasePrice ? 'Saving...' : 'Save Price'}
+                        {isSavingBasePrice ? (isAr ? "جاري الحفظ..." : "Saving...") : (isAr ? "حفظ السعر" : "Save Price")}
                     </button>
                 </div>
             </div>
 
             {/* MAIN VIEW */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, color: '#fff' }}>Configurator Parts</h3>
-                    <div style={{ display: 'inline-flex', background: '#0d1117', border: '1px solid #30363d', borderRadius: '999px', padding: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                    <h3 style={{ margin: 0, color: '#fff' }}>{isAr ? "أجزاء المصمم" : "Configurator Parts"}</h3>
+                    <div style={{ display: 'inline-flex', background: '#0d1117', border: '1px solid #30363d', borderRadius: '999px', padding: '4px', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                         <button
                             type="button"
                             onClick={() => setViewMode('list')}
@@ -450,7 +463,7 @@ const AdminParts = () => {
                                 cursor: 'pointer'
                             }}
                         >
-                            List
+                            {isAr ? "قائمة" : "List"}
                         </button>
                         <button
                             type="button"
@@ -464,7 +477,7 @@ const AdminParts = () => {
                                 cursor: 'pointer'
                             }}
                         >
-                            Grid
+                            {isAr ? "شبكة" : "Grid"}
                         </button>
                     </div>
                 </div>
@@ -472,7 +485,7 @@ const AdminParts = () => {
                     onClick={handleOpenAddPart}
                     style={{ padding: '0.6rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                 >
-                    + Add New Part
+                    {isAr ? "+ إضافة جزء جديد" : "+ Add New Part"}
                 </button>
             </div>
 
@@ -503,7 +516,7 @@ const AdminParts = () => {
                             )}
                             <h4 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '1.2rem' }}>{p.title}</h4>
                             <div style={{ color: '#8b949e', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                                ID: {p.id} | Side: {p.side}
+                                ID: {p.id} | {isAr ? "الجهة" : "Side"}: {p.side}
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                                 <button onClick={(e) => handleEditPart(p, e)} style={{ flex: 1, background: '#1f6feb', color: '#fff', border: 'none', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
@@ -578,7 +591,7 @@ const AdminParts = () => {
 
             {parts.length === 0 && (
                 <div style={{ padding: '3rem', textAlign: 'center', color: '#8b949e', border: '1px dashed #30363d', borderRadius: '8px' }}>
-                    No parts have been created yet. Click "Add New Part" to start.
+                    {isAr ? "لم يتم إنشاء أي أجزاء حتى الآن. انقر فوق \"إضافة جزء جديد\" للبدء." : "No parts have been created yet. Click \"Add New Part\" to start."}
                 </div>
             )}
 
@@ -588,7 +601,7 @@ const AdminParts = () => {
                 <div style={{ ...overlayStyle, zIndex: 1050 }}>
                     <div style={modalStyle}>
                         <button onClick={() => setShowPartFormModal(false)} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#fff' }}>{partId && selectedPart ? 'Edit Part' : 'Add New Part'}</h2>
+                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#fff', textAlign: isAr ? 'right' : 'left' }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
                         <form onSubmit={handlePartSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Part ID (e.g. shell, trimpiece): </label>
@@ -834,8 +847,9 @@ const AdminParts = () => {
                                 <InventoryPricingEditor
                                     rows={subInventoryDetails}
                                     onChange={setSubInventoryDetails}
-                                    title="Inventory"
-                                    description="Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."
+                                    title={isAr ? "المخزون" : "Inventory"}
+                                    description={isAr ? "إضافة حركات المخزون مع الكمية والتاريخ والسبب. يتم إدارة سعر البيع بشكل منفصل وهو السعر الذي يظهر للعميل." : "Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."}
+                                    lang={lang}
                                 />
                             </div>
 

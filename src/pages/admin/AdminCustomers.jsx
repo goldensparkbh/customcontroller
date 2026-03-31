@@ -9,6 +9,7 @@ import {
   loadOrders
 } from './adminOrderData';
 import LoadingState from '../../components/LoadingState.jsx';
+import { i18n } from '../../i18n';
 
 const LIST_COLUMNS = '1.4fr 0.7fr 0.8fr 1fr';
 
@@ -33,11 +34,24 @@ const DetailField = ({ label, value }) => (
   </div>
 );
 
-const AdminCustomers = () => {
+const AdminCustomers = ({ lang = 'ar' }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedKey, setSelectedKey] = useState('');
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const isAr = lang === 'ar';
+
+  const t = (path) => {
+    const keys = path.split('.');
+    let result = i18n[lang];
+    if (!result) return path;
+    for (const key of keys) {
+      result = result[key];
+      if (!result) return path;
+    }
+    return result || path;
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -80,8 +94,8 @@ const AdminCustomers = () => {
     setDetailOpen(true);
   };
 
-  if (loading) return <LoadingState message="Loading customers..." minHeight="32vh" />;
-  if (!customers.length) return <p>No customers available.</p>;
+  if (loading) return <LoadingState message={isAr ? "جاري تحميل العملاء..." : "Loading customers..."} minHeight="32vh" />;
+  if (!customers.length) return <p style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>{isAr ? "لا يوجد عملاء حالياً." : "No customers available."}</p>;
 
   return (
     <div>
@@ -100,10 +114,10 @@ const AdminCustomers = () => {
             letterSpacing: '0.08em'
           }}
         >
-          <div>Customer</div>
-          <div>Orders</div>
-          <div>Spend</div>
-          <div>Latest</div>
+          <div>{isAr ? "العميل" : "Customer"}</div>
+          <div>{isAr ? "الطلبات" : "Orders"}</div>
+          <div>{isAr ? "الإنفاق" : "Spend"}</div>
+          <div>{isAr ? "الأحدث" : "Latest"}</div>
         </div>
 
         <div style={{ display: 'grid' }}>
@@ -123,7 +137,7 @@ const AdminCustomers = () => {
                   borderTop: '1px solid rgba(255,255,255,0.05)',
                   background: isSelected ? '#1f2937' : 'transparent',
                   color: '#e6edf3',
-                  textAlign: 'left',
+                  textAlign: isAr ? 'right' : 'left',
                   cursor: 'pointer'
                 }}
               >
@@ -166,11 +180,12 @@ const AdminCustomers = () => {
                 alignItems: 'center',
                 padding: '1.25rem 1.5rem',
                 borderBottom: '1px solid #30363d',
-                background: '#161b22'
+                background: '#161b22',
+                flexDirection: isAr ? 'row-reverse' : 'row'
               }}
             >
               <div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>Customer Details</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تفاصيل العميل" : "Customer Details"}</div>
                 <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>{selectedCustomer.name}</div>
               </div>
 
@@ -186,27 +201,27 @@ const AdminCustomers = () => {
                   cursor: 'pointer'
                 }}
               >
-                Close
+                {isAr ? "إغلاق" : "Close"}
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Email" value={selectedCustomer.email} />
+                  <DetailField label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedCustomer.email} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Phone" value={selectedCustomer.phone} />
+                  <DetailField label={isAr ? "الهاتف" : "Phone"} value={selectedCustomer.phone} />
                 </div>
 
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Orders" value={String(selectedCustomer.orders.length)} />
+                  <DetailField label={isAr ? "عدد الطلبات" : "Orders"} value={String(selectedCustomer.orders.length)} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Lifetime Spend" value={`${selectedCustomer.totalSpend.toFixed(2)} BHD`} />
+                  <DetailField label={isAr ? "إجمالي الإنفاق" : "Lifetime Spend"} value={`${selectedCustomer.totalSpend.toFixed(2)} BHD`} />
                 </div>
               </div>
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Customer Orders</div>
+                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "طلبات العميل" : "Customer Orders"}</div>
                 <div style={{ display: 'grid', gap: '0.7rem' }}>
                   {selectedCustomer.orders.map((order) => (
                     <div
@@ -218,7 +233,8 @@ const AdminCustomers = () => {
                         padding: '0.8rem',
                         background: '#111827',
                         borderRadius: '8px',
-                        color: '#d6d9e0'
+                        color: '#d6d9e0',
+                        direction: isAr ? 'rtl' : 'ltr'
                       }}
                     >
                       <div>
@@ -233,7 +249,7 @@ const AdminCustomers = () => {
               </div>
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Latest Shipping Address</div>
+                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "آخر عنوان شحن" : "Latest Shipping Address"}</div>
                 <div style={{ color: '#d6d9e0' }}>{formatAddress(selectedCustomer.orders[0]?.shipping)}</div>
               </div>
             </div>

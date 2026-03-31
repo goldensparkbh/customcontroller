@@ -1,17 +1,17 @@
 const createEntryId = () => `inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 export const INVENTORY_REASON_OPTIONS = [
-    { value: 'new_stock', label: 'New Stock' },
-    { value: 'supplier_restock', label: 'Supplier Restock' },
-    { value: 'returned_items', label: 'Returned Items' },
-    { value: 'stock_correction', label: 'Stock Correction' },
-    { value: 'manual_adjustment', label: 'Manual Adjustment' },
-    { value: 'opening_balance', label: 'Opening Balance' },
-    { value: 'order_allocation', label: 'Order Allocation' }
+    { value: 'new_stock', label: 'New Stock', labelAr: 'مخزون جديد' },
+    { value: 'supplier_restock', label: 'Supplier Restock', labelAr: 'إعادة توريد' },
+    { value: 'returned_items', label: 'Returned Items', labelAr: 'إرجاع منتجات' },
+    { value: 'stock_correction', label: 'Stock Correction', labelAr: 'تصحيح المخزون' },
+    { value: 'manual_adjustment', label: 'Manual Adjustment', labelAr: 'تعديل يدوي' },
+    { value: 'opening_balance', label: 'Opening Balance', labelAr: 'الرصيد الافتتاحي' },
+    { value: 'order_allocation', label: 'Order Allocation', labelAr: 'تخصيص لطلب' }
 ];
 
 const REASON_LABELS = INVENTORY_REASON_OPTIONS.reduce((map, option) => {
-    map[option.value] = option.label;
+    map[option.value] = { en: option.label, ar: option.labelAr };
     return map;
 }, {});
 
@@ -124,4 +124,8 @@ export const formatInventoryDate = (value) => {
     return Number.isNaN(date.getTime()) ? normalized : date.toLocaleDateString();
 };
 
-export const getInventoryReasonLabel = (reason) => REASON_LABELS[reason] || 'Inventory Update';
+export const getInventoryReasonLabel = (reason, lang = 'en') => {
+    const labels = REASON_LABELS[reason];
+    if (!labels) return lang === 'ar' ? 'تحديث المخزون' : 'Inventory Update';
+    return labels[lang] || labels['en'] || 'Inventory Update';
+};

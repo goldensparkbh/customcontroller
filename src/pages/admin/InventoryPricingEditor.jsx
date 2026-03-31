@@ -49,8 +49,10 @@ const InventoryPricingEditor = ({
     rows,
     onChange,
     title = 'Inventory',
-    description = 'Inventory is managed as stock movements. Use Add Inventory to increase stock and keep a dated history.'
+    description = 'Inventory is managed as stock movements. Use Add Inventory to increase stock and keep a dated history.',
+    lang = 'ar'
 }) => {
+    const isAr = lang === 'ar';
     const safeRows = Array.isArray(rows) ? rows : [];
     const [showAddModal, setShowAddModal] = useState(false);
     const [draftRow, setDraftRow] = useState({
@@ -73,6 +75,7 @@ const InventoryPricingEditor = ({
     };
 
     const handleRemoveRow = (rowId) => {
+        if (!window.confirm(isAr ? "هل أنت متأكد من حذف هذا السجل؟" : "Are you sure you want to remove this record?")) return;
         onChange(safeRows.filter((row) => row.id !== rowId));
     };
 
@@ -96,9 +99,9 @@ const InventoryPricingEditor = ({
     const sortedRows = [...safeRows].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
     return (
-        <div style={sectionStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div>
+        <div style={{ ...sectionStyle, direction: isAr ? 'rtl' : 'ltr' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                <div style={{ textAlign: isAr ? 'right' : 'left' }}>
                     <div style={{ fontWeight: 700, color: '#e6edf3' }}>{title}</div>
                     <div style={{ marginTop: '0.2rem', fontSize: '0.82rem', color: '#8b949e' }}>{description}</div>
                 </div>
@@ -115,7 +118,7 @@ const InventoryPricingEditor = ({
                         cursor: 'pointer'
                     }}
                 >
-                    Add Inventory
+                    {isAr ? "إضافة مخزون" : "Add Inventory"}
                 </button>
             </div>
 
@@ -135,13 +138,13 @@ const InventoryPricingEditor = ({
                                 background: isOutgoing ? 'rgba(127, 29, 29, 0.18)' : '#111827'
                             }}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <div style={{ display: 'grid', gap: '0.2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                                <div style={{ display: 'grid', gap: '0.2rem', textAlign: isAr ? 'right' : 'left' }}>
                                     <div style={{ fontSize: '0.85rem', color: '#e6edf3', fontWeight: 600 }}>
-                                        {getInventoryReasonLabel(row.reason)}
+                                        {getInventoryReasonLabel(row.reason, lang)}
                                     </div>
                                     <div style={{ fontSize: '0.78rem', color: '#8b949e' }}>
-                                        {formatInventoryDate(row.date)}{row.source === 'system' ? ' · System' : ''}
+                                        {formatInventoryDate(row.date)}{row.source === 'system' ? (isAr ? ' · نظام' : ' · System') : ''}
                                     </div>
                                     {row.note && (
                                         <div style={{ fontSize: '0.78rem', color: '#8b949e', fontStyle: 'italic', marginTop: '0.15rem' }}>
@@ -150,7 +153,7 @@ const InventoryPricingEditor = ({
                                     )}
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                     <span style={{ color: isOutgoing ? '#fca5a5' : '#86efac', fontWeight: 700 }}>
                                         {quantity > 0 ? '+' : ''}{quantity}
                                     </span>
@@ -166,15 +169,15 @@ const InventoryPricingEditor = ({
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        Remove
+                                        {isAr ? "إزالة" : "Remove"}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     );
                 }) : (
-                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed #30363d', color: '#8b949e', background: '#111827' }}>
-                        No inventory movements recorded yet.
+                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed #30363d', color: '#8b949e', background: '#111827', textAlign: isAr ? 'right' : 'left' }}>
+                        {isAr ? "لا توجد حركات مخزون مسجلة بعد." : "No inventory movements recorded yet."}
                     </div>
                 )}
             </div>
@@ -191,12 +194,12 @@ const InventoryPricingEditor = ({
                         }}
                         style={modalStyle}
                     >
-                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <div>
-                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>Add Inventory</div>
+                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                                <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "إضافة مخزون" : "Add Inventory"}</div>
                                     <div style={{ marginTop: '0.25rem', fontSize: '0.82rem', color: '#8b949e' }}>
-                                        Add a dated stock movement. Quantity is added to current stock.
+                                        {isAr ? "إضافة حركة مخزون مؤرخة. تتم إضافة الكمية إلى المخزون الحالي." : "Add a dated stock movement. Quantity is added to current stock."}
                                     </div>
                                 </div>
 
@@ -212,13 +215,13 @@ const InventoryPricingEditor = ({
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Close
+                                    {isAr ? "إغلاق" : "Close"}
                                 </button>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-                                <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Inventory Qty</span>
+                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <span>{isAr ? "كمية المخزون" : "Inventory Qty"}</span>
                                     <input
                                         type="number"
                                         min="1"
@@ -229,8 +232,8 @@ const InventoryPricingEditor = ({
                                     />
                                 </label>
 
-                                <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Date</span>
+                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <span>{isAr ? "التاريخ" : "Date"}</span>
                                     <input
                                         type="date"
                                         required
@@ -240,8 +243,8 @@ const InventoryPricingEditor = ({
                                     />
                                 </label>
 
-                                <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Reason</span>
+                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <span>{isAr ? "السبب" : "Reason"}</span>
                                     <select
                                         value={draftRow.reason}
                                         onChange={(event) => setDraftRow((current) => ({ ...current, reason: event.target.value }))}
@@ -250,13 +253,15 @@ const InventoryPricingEditor = ({
                                         {INVENTORY_REASON_OPTIONS
                                             .filter((option) => option.value !== 'order_allocation' && option.value !== 'opening_balance')
                                             .map((option) => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                                <option key={option.value} value={option.value}>
+                                                    {isAr ? (option.labelAr || option.label) : option.label}
+                                                </option>
                                             ))}
                                     </select>
                                 </label>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                 <button
                                     type="button"
                                     onClick={closeAddModal}
@@ -269,7 +274,7 @@ const InventoryPricingEditor = ({
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Cancel
+                                    {isAr ? "إلغاء" : "Cancel"}
                                 </button>
                                 <button
                                     type="button"
@@ -286,7 +291,7 @@ const InventoryPricingEditor = ({
                                         opacity: canAddRow ? 1 : 0.6
                                     }}
                                 >
-                                    Add Inventory
+                                    {isAr ? "إضافة مخزون" : "Add Inventory"}
                                 </button>
                             </div>
                         </div>

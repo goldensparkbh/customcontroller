@@ -10,6 +10,7 @@ import {
   panelStyle
 } from './adminOrderData';
 import LoadingState from '../../components/LoadingState.jsx';
+import { i18n } from '../../i18n';
 
 const LIST_COLUMNS = '1.1fr 1.3fr 0.8fr 0.9fr';
 
@@ -34,11 +35,24 @@ const DetailField = ({ label, value }) => (
   </div>
 );
 
-const AdminInvoices = () => {
+const AdminInvoices = ({ lang = 'ar' }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState('');
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const isAr = lang === 'ar';
+
+  const t = (path) => {
+    const keys = path.split('.');
+    let result = i18n[lang];
+    if (!result) return path;
+    for (const key of keys) {
+      result = result[key];
+      if (!result) return path;
+    }
+    return result || path;
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -79,8 +93,8 @@ const AdminInvoices = () => {
     setDetailOpen(true);
   };
 
-  if (loading) return <LoadingState message="Loading invoices..." minHeight="32vh" />;
-  if (!orders.length) return <p>No invoices available.</p>;
+  if (loading) return <LoadingState message={isAr ? "جاري تحميل الفواتير..." : "Loading invoices..."} minHeight="32vh" />;
+  if (!orders.length) return <p style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>{isAr ? "لا توجد فواتير حالياً." : "No invoices available."}</p>;
 
   return (
     <div>
@@ -99,10 +113,10 @@ const AdminInvoices = () => {
             letterSpacing: '0.08em'
           }}
         >
-          <div>Invoice</div>
-          <div>Customer</div>
-          <div>Total</div>
-          <div>Status</div>
+          <div>{isAr ? "رقم الفاتورة" : "Invoice #"}</div>
+          <div>{isAr ? "العميل" : "Customer"}</div>
+          <div>{isAr ? "الإجمالي" : "Total"}</div>
+          <div>{isAr ? "التاريخ" : "Date"}</div>
         </div>
 
         <div style={{ display: 'grid' }}>
@@ -122,17 +136,14 @@ const AdminInvoices = () => {
                   borderTop: '1px solid rgba(255,255,255,0.05)',
                   background: isSelected ? '#1f2937' : 'transparent',
                   color: '#e6edf3',
-                  textAlign: 'left',
+                  textAlign: isAr ? 'right' : 'left',
                   cursor: 'pointer'
                 }}
               >
-                <div>
-                  <div style={{ fontFamily: 'Consolas, monospace' }}>{getInvoiceNumber(order)}</div>
-                  <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>{formatDate(order.createdAt)}</div>
-                </div>
+                <div style={{ fontFamily: 'Consolas, monospace' }}>{getInvoiceNumber(order)}</div>
                 <div>{getCustomerName(order)}</div>
-                <div>{getOrderTotal(order).toFixed(2)} {order.currency || 'BHD'}</div>
-                <div>{getInvoiceStatus(order)}</div>
+                <div>{getOrderTotal(order).toFixed(2)} BHD</div>
+                <div>{formatDate(order.createdAt)}</div>
               </button>
             );
           })}
@@ -144,7 +155,7 @@ const AdminInvoices = () => {
           <div
             onClick={(event) => event.stopPropagation()}
             style={{
-              width: 'min(980px, 100%)',
+              width: 'min(760px, 100%)',
               maxHeight: '90vh',
               overflowY: 'auto',
               background: '#161b22',
@@ -165,11 +176,12 @@ const AdminInvoices = () => {
                 alignItems: 'center',
                 padding: '1.25rem 1.5rem',
                 borderBottom: '1px solid #30363d',
-                background: '#161b22'
+                background: '#161b22',
+                flexDirection: isAr ? 'row-reverse' : 'row'
               }}
             >
               <div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>Invoice Details</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تفاصيل الفاتورة" : "Invoice details"}</div>
                 <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: '#8b949e' }}>
                   {getInvoiceNumber(selectedOrder)}
                 </div>
@@ -187,52 +199,49 @@ const AdminInvoices = () => {
                   cursor: 'pointer'
                 }}
               >
-                Close
+                {isAr ? "إغلاق" : "Close"}
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Customer" value={getCustomerName(selectedOrder)} />
+                  <DetailField label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Email" value={selectedOrder.customer?.email} />
-                  <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Phone" value={selectedOrder.customer?.phone} />
+                  <DetailField label={isAr ? "الحالة" : "Status"} value={getInvoiceStatus(selectedOrder)} />
                 </div>
 
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Invoice Status" value={getInvoiceStatus(selectedOrder)} />
+                  <DetailField label={isAr ? "التاريخ" : "Date"} value={formatDate(selectedOrder.createdAt)} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Issued" value={formatDate(selectedOrder.createdAt)} />
-                  <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Total" value={`${getOrderTotal(selectedOrder).toFixed(2)} ${selectedOrder.currency || 'BHD'}`} />
-                </div>
-
-                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Billing / Shipping" value={formatAddress(selectedOrder.shipping)} />
+                  <DetailField label={isAr ? "المجموع" : "Total Amount"} value={`${getOrderTotal(selectedOrder).toFixed(2)} BHD`} />
                 </div>
               </div>
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Invoice Lines</div>
-                <div style={{ display: 'grid', gap: '0.65rem' }}>
+                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "عنوان الشحن" : "Shipping Address"}</div>
+                <div style={{ color: '#d6d9e0', whiteSpace: 'pre-wrap' }}>
+                  {formatAddress(selectedOrder.shipping)}
+                </div>
+              </div>
+
+              <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "العناصر" : "Items"}</div>
+                <div style={{ display: 'grid', gap: '0.6rem' }}>
                   {(selectedOrder.items || []).map((item, idx) => (
                     <div
-                      key={`${selectedOrder.id}-invoice-line-${idx}`}
+                      key={idx}
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1.5fr 0.6fr 0.7fr',
-                        gap: '0.75rem',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        background: '#111827',
-                        color: '#d6d9e0'
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '0.5rem 0',
+                        borderBottom: idx === (selectedOrder.items.length - 1) ? 'none' : '1px solid rgba(255,255,255,0.05)'
                       }}
                     >
-                      <div>{item.name || 'Controller'}</div>
-                      <div>Qty {item.quantity || 1}</div>
-                      <div>{(Number(item.unitPrice ?? item.total ?? 0) * Number(item.quantity || 1)).toFixed(2)} {selectedOrder.currency || 'BHD'}</div>
+                      <div style={{ color: '#d6d9e0' }}>
+                        {item.name} <span style={{ color: '#8b949e', fontSize: '0.85rem' }}>x{item.quantity || 1}</span>
+                      </div>
+                      <div style={{ color: '#e6edf3' }}>{Number(item.price || 0).toFixed(2)} BHD</div>
                     </div>
                   ))}
                 </div>

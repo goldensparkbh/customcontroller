@@ -4,6 +4,7 @@ import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
+import { i18n } from '../../i18n';
 import {
     buildInventoryPayload,
     formatInventoryDate,
@@ -95,7 +96,7 @@ const DetailField = ({ label, value }) => (
     </div>
 );
 
-const AdminItems = () => {
+const AdminItems = ({ lang = 'ar' }) => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedItemId, setSelectedItemId] = useState('');
@@ -105,6 +106,19 @@ const AdminItems = () => {
     const [formData, setFormData] = useState(createEmptyFormData);
     const [imageFiles, setImageFiles] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    const isAr = lang === 'ar';
+
+    const t = (path) => {
+        const keys = path.split('.');
+        let result = i18n[lang];
+        if (!result) return path;
+        for (const key of keys) {
+            result = result[key];
+            if (!result) return path;
+        }
+        return result || path;
+    };
 
     const fetchItems = async () => {
         setLoading(true);
@@ -249,14 +263,14 @@ const AdminItems = () => {
             await fetchItems();
         } catch (error) {
             console.error(error);
-            alert('Error saving item');
+            alert(isAr ? 'خطأ في حفظ المنتج' : 'Error saving item');
         } finally {
             setSaving(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Delete this item?')) return;
+        if (!window.confirm(isAr ? 'هل تريد حذف هذا المنتج؟' : 'Delete this item?')) return;
         try {
             await deleteDoc(doc(db, 'items', id));
             if (selectedItemId === id) {
@@ -266,16 +280,16 @@ const AdminItems = () => {
             await fetchItems();
         } catch (error) {
             console.error(error);
-            alert('Error deleting item');
+            alert(isAr ? 'خطأ في حذف المنتج' : 'Error deleting item');
         }
     };
 
-    if (loading) return <LoadingState message="Loading items..." minHeight="32vh" />;
+    if (loading) return <LoadingState message={isAr ? "جاري تحميل المنتجات..." : "Loading items..."} minHeight="32vh" />;
 
     return (
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div style={{ display: 'grid', gap: '1rem', direction: isAr ? 'rtl' : 'ltr' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ color: '#8b949e' }}>Manage normal inventory items from a single list. Click an item row for full details.</div>
+                <div style={{ color: '#8b949e' }}>{isAr ? "إدارة مخزون المنتجات العادية من قائمة واحدة. انقر فوق صف الصنف لمزيد من التفاصيل." : "Manage normal inventory items from a single list. Click an item row for full details."}</div>
                 <button
                     type="button"
                     onClick={openCreateModal}
@@ -289,7 +303,7 @@ const AdminItems = () => {
                         cursor: 'pointer'
                     }}
                 >
-                    Add New Item
+                    {isAr ? "إضافة منتج جديد" : "Add New Item"}
                 </button>
             </div>
 
@@ -308,12 +322,12 @@ const AdminItems = () => {
                         letterSpacing: '0.08em'
                     }}
                 >
-                    <div style={listCellStyle}>Item</div>
-                    <div style={listCellStyle}>Category</div>
-                    <div style={listCellStyle}>Sell Price</div>
-                    <div style={listCellStyle}>Purchase</div>
-                    <div style={listCellStyle}>Stock</div>
-                    <div style={listCellStyle}>Visibility</div>
+                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "المنتج" : "Item"}</div>
+                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "الفئة" : "Category"}</div>
+                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "سعر البيع" : "Sell Price"}</div>
+                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "سعر الشراء" : "Purchase"}</div>
+                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "المخزون" : "Stock"}</div>
+                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "الحالة" : "Visibility"}</div>
                 </div>
 
                 <div style={{ display: 'grid' }}>
@@ -333,11 +347,11 @@ const AdminItems = () => {
                                     borderTop: '1px solid rgba(255,255,255,0.05)',
                                     background: isSelected ? '#1f2937' : 'transparent',
                                     color: '#e6edf3',
-                                    textAlign: 'left',
+                                    textAlign: isAr ? 'right' : 'left',
                                     cursor: 'pointer'
                                 }}
                             >
-                                <div style={{ ...listCellStyle, display: 'flex', gap: '0.75rem' }}>
+                                <div style={{ ...listCellStyle, display: 'flex', gap: '0.75rem', textAlign: isAr ? 'right' : 'left' }}>
                                     {item.images?.[0] ? (
                                         <img
                                             src={item.images[0]}
@@ -350,15 +364,15 @@ const AdminItems = () => {
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
                                     <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            #{padNumericString(item.itemNumber)} · {item.description || 'No description'}
+                                            #{padNumericString(item.itemNumber)} · {item.description || (isAr ? 'بدون وصف' : 'No description')}
                                     </div>
                                 </div>
                             </div>
-                                <div style={listCellStyle}>{item.category || 'N/A'}</div>
-                                <div style={listCellStyle}>{formatInventoryMoney(item.sellPrice ?? item.price)}</div>
-                                <div style={listCellStyle}>{formatInventoryMoney(item.purchasePrice)}</div>
-                                <div style={listCellStyle}>{item.quantity ?? 0}</div>
-                                <div style={listCellStyle}>{item.showOnline ? 'Live' : 'Hidden'}</div>
+                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{item.category || 'N/A'}</div>
+                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{formatInventoryMoney(item.sellPrice ?? item.price)}</div>
+                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{formatInventoryMoney(item.purchasePrice)}</div>
+                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{item.quantity ?? 0}</div>
+                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{item.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}</div>
                             </button>
                         );
                     })}
@@ -391,12 +405,13 @@ const AdminItems = () => {
                                 alignItems: 'center',
                                 padding: '1.25rem 1.5rem',
                                 borderBottom: '1px solid #30363d',
-                                background: '#161b22'
+                                background: '#161b22',
+                                flexDirection: isAr ? 'row-reverse' : 'row'
                             }}
                         >
                             <div>
                                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{selectedItem.name}</div>
-                                <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>{selectedItem.category || 'Uncategorized'}</div>
+                                <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>{selectedItem.category || (isAr ? 'بدون تصنيف' : 'Uncategorized')}</div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -412,7 +427,7 @@ const AdminItems = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Edit
+                                    {isAr ? 'تعديل' : 'Edit'}
                                 </button>
                                 <button
                                     type="button"
@@ -426,7 +441,7 @@ const AdminItems = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Delete
+                                    {isAr ? 'حذف' : 'Delete'}
                                 </button>
                                 <button
                                     type="button"
@@ -440,47 +455,47 @@ const AdminItems = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Close
+                                    {isAr ? 'إغلاق' : 'Close'}
                                 </button>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
+                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Item Number" value={padNumericString(selectedItem.itemNumber)} />
+                                    <DetailField label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedItem.itemNumber)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Barcode" value={selectedItem.barcode} />
+                                    <DetailField label={isAr ? "الباركود" : "Barcode"} value={selectedItem.barcode} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Sell Price" value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
+                                    <DetailField label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Purchase Price" value={formatInventoryMoney(selectedItem.purchasePrice)} />
+                                    <DetailField label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Stock" value={String(selectedItem.quantity ?? 0)} />
+                                    <DetailField label={isAr ? "المخزون" : "Stock"} value={String(selectedItem.quantity ?? 0)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Visibility" value={selectedItem.showOnline ? 'Live' : 'Hidden'} />
+                                    <DetailField label={isAr ? "الحالة" : "Visibility"} value={selectedItem.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')} />
                                 </div>
 
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Created" value={formatDate(selectedItem.createdAt)} />
+                                    <DetailField label={isAr ? "تاريخ الإنشاء" : "Created"} value={formatDate(selectedItem.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Updated" value={formatDate(selectedItem.updatedAt)} />
+                                    <DetailField label={isAr ? "تاريخ التحديث" : "Updated"} value={formatDate(selectedItem.updatedAt)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Inventory Entries" value={String(selectedItem.inventoryDetails?.length || 0)} />
+                                    <DetailField label={isAr ? "سجلات المخزون" : "Inventory Entries"} value={String(selectedItem.inventoryDetails?.length || 0)} />
                                 </div>
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Platform Pricing & Stock</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "التسعير والمخزون" : "Platform Pricing & Stock"}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
-                                    <DetailField label="Purchase Price" value={formatInventoryMoney(selectedItem.purchasePrice)} />
-                                    <DetailField label="Sell Price" value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
-                                    <DetailField label="Quantity" value={String(selectedItem.quantity ?? 0)} />
+                                    <DetailField label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
+                                    <DetailField label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
+                                    <DetailField label={isAr ? "الكمية" : "Quantity"} value={String(selectedItem.quantity ?? 0)} />
                                 </div>
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Inventory History</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "تاريخ المخزون" : "Inventory History"}</div>
                                 <div style={{ display: 'grid', gap: '0.75rem' }}>
                                     {(selectedItem.inventoryDetails || []).map((row, index) => (
                                         <div
@@ -495,28 +510,28 @@ const AdminItems = () => {
                                                 background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : '#111827'
                                             }}
                                         >
-                                            <DetailField label="Entry" value={`Inventory Entry ${index + 1}`} />
-                                            <DetailField label="Reason" value={getInventoryReasonLabel(row.reason)} />
-                                            <DetailField label="Date" value={formatInventoryDate(row.date)} />
-                                            <DetailField label="Quantity" value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
+                                            <DetailField label={isAr ? "إدخال" : "Entry"} value={`${isAr ? "سجل مخزون" : "Inventory Entry"} ${index + 1}`} />
+                                            <DetailField label={isAr ? "السبب" : "Reason"} value={getInventoryReasonLabel(row.reason, lang)} />
+                                            <DetailField label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
+                                            <DetailField label={isAr ? "الكمية" : "Quantity"} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Description</div>
-                                <div style={{ color: '#d6d9e0', lineHeight: 1.6 }}>{selectedItem.description || 'No description provided.'}</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "الوصف" : "Description"}</div>
+                                <div style={{ color: '#d6d9e0', lineHeight: 1.6 }}>{selectedItem.description || (isAr ? 'لا يوجد وصف.' : 'No description provided.')}</div>
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Images</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "الصور" : "Images"}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
                                     {(selectedItem.images || []).map((image, index) => (
                                         <img key={`${selectedItem.id}-image-${index}`} src={image} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
                                     ))}
                                     {(!selectedItem.images || selectedItem.images.length === 0) && (
-                                        <div style={{ color: '#8b949e' }}>No images uploaded.</div>
+                                        <div style={{ color: '#8b949e' }}>{isAr ? "لا توجد صور." : "No images uploaded."}</div>
                                     )}
                                 </div>
                             </div>
@@ -539,14 +554,14 @@ const AdminItems = () => {
                             boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
                         }}
                     >
-                        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                 <div>
                                     <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>
-                                        {editingId ? 'Edit Item' : 'Add New Item'}
+                                        {editingId ? (isAr ? 'تعديل صنف' : 'Edit Item') : (isAr ? 'إضافة صنف جديد' : 'Add New Item')}
                                     </div>
                                     <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
-                                        {editingId ? 'Update pricing and stock movements for this item.' : 'Create a new normal item for the shop.'}
+                                        {editingId ? (isAr ? 'تحديث الأسعار وحركات المخزون لهذا المنتج.' : 'Update pricing and stock movements for this item.') : (isAr ? 'إنشاء منتج جديد للمتجر.' : 'Create a new normal item for the shop.')}
                                     </div>
                                 </div>
 
@@ -562,41 +577,41 @@ const AdminItems = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Close
+                                    {isAr ? 'إغلاق' : 'Close'}
                                 </button>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Item Number</span>
-                                    <input value={padNumericString(formData.itemNumber) || 'Auto-generated on save'} readOnly style={fieldStyle} />
+                                    <span>{isAr ? "رقم الصنف" : "Item Number"}</span>
+                                    <input value={padNumericString(formData.itemNumber) || (isAr ? 'توليد تلقائي عند الحفظ' : 'Auto-generated on save')} readOnly style={fieldStyle} />
                                 </label>
 
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Barcode</span>
-                                    <input value={padNumericString(formData.barcode) || padNumericString(formData.itemNumber) || 'Matches item number on save'} readOnly style={fieldStyle} />
+                                    <span>{isAr ? "الباركود" : "Barcode"}</span>
+                                    <input value={padNumericString(formData.barcode) || padNumericString(formData.itemNumber) || (isAr ? 'يطابق رقم الصنف عند الحفظ' : 'Matches item number on save')} readOnly style={fieldStyle} />
                                 </label>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Item Name</span>
+                                    <span>{isAr ? "اسم المنتج" : "Item Name"}</span>
                                     <input name="name" value={formData.name} onChange={handleFormChange} required style={fieldStyle} />
                                 </label>
 
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Category</span>
+                                    <span>{isAr ? "الفئة" : "Category"}</span>
                                     <select name="category" value={formData.category} onChange={handleFormChange} style={fieldStyle}>
-                                        <option value="Accessories">Accessories</option>
-                                        <option value="Controllers">Controllers</option>
-                                        <option value="Mod Kits">Mod Kits</option>
+                                        <option value="Accessories">{isAr ? "إكسسوارات" : "Accessories"}</option>
+                                        <option value="Controllers">{isAr ? "وحدات تحكم" : "Controllers"}</option>
+                                        <option value="Mod Kits">{isAr ? "أطقم تعديل" : "Mod Kits"}</option>
                                     </select>
                                 </label>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Purchase Price</span>
+                                    <span>{isAr ? "سعر الشراء" : "Purchase Price"}</span>
                                     <input
                                         name="purchasePrice"
                                         type="number"
@@ -609,7 +624,7 @@ const AdminItems = () => {
                                 </label>
 
                                 <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                    <span>Sell Price</span>
+                                    <span>{isAr ? "سعر البيع" : "Sell Price"}</span>
                                     <input
                                         name="sellPrice"
                                         type="number"
@@ -623,28 +638,29 @@ const AdminItems = () => {
                             </div>
 
                             <label style={{ display: 'grid', gap: '0.45rem' }}>
-                                <span>Description</span>
+                                <span>{isAr ? "الوصف" : "Description"}</span>
                                 <textarea name="description" value={formData.description} onChange={handleFormChange} style={{ ...fieldStyle, minHeight: '120px', resize: 'vertical' }} />
                             </label>
 
                             <InventoryPricingEditor
                                 rows={formData.inventoryDetails}
                                 onChange={(inventoryDetails) => setFormData((current) => ({ ...current, inventoryDetails }))}
-                                title="Inventory"
-                                description="Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."
+                                title={isAr ? "المخزون" : "Inventory"}
+                                description={isAr ? "أضف حركات المخزون بالكمية والتاريخ والسبب. يتم إدارة سعر البيع بشكل منفصل وهو السعر الذي يراه العميل." : "Add stock movements with quantity, date, and reason. Sell price is managed separately and is the customer-facing price."}
+                                lang={lang}
                             />
 
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3' }}>
                                 <input type="checkbox" name="showOnline" checked={formData.showOnline} onChange={handleFormChange} />
-                                Show Online
+                                {isAr ? "عرض في المتجر" : "Show Online"}
                             </label>
 
                             <div style={{ display: 'grid', gap: '0.5rem' }}>
-                                <span>Images</span>
+                                <span>{isAr ? "الصور" : "Images"}</span>
                                 <input type="file" multiple accept="image/*" onChange={(event) => setImageFiles(event.target.files)} style={{ color: '#e6edf3' }} />
                                 {editingId && (
                                     <div style={{ fontSize: '0.8rem', color: '#8b949e' }}>
-                                        Uploading new images replaces the existing image set.
+                                        {isAr ? "رفع صور جديدة يستبدل مجموعة الصور الحالية." : "Uploading new images replaces the existing image set."}
                                     </div>
                                 )}
                                 {formData.images?.length > 0 && (
@@ -669,7 +685,7 @@ const AdminItems = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Cancel
+                                    {isAr ? "إلغاء" : "Cancel"}
                                 </button>
                                 <button
                                     type="submit"
@@ -685,7 +701,7 @@ const AdminItems = () => {
                                         opacity: saving ? 0.7 : 1
                                     }}
                                 >
-                                    {saving ? 'Saving...' : (editingId ? 'Update Item' : 'Create Item')}
+                                    {saving ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (editingId ? (isAr ? 'تحديث المنتج' : 'Update Item') : (isAr ? 'إنشاء منتج' : 'Create Item'))}
                                 </button>
                             </div>
                         </form>

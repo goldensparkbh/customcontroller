@@ -12,6 +12,7 @@ import {
   panelStyle
 } from './adminOrderData';
 import LoadingState from '../../components/LoadingState.jsx';
+import { i18n } from '../../i18n';
 
 const LIST_COLUMNS = '1.2fr 1.2fr 0.8fr 0.9fr 0.9fr';
 
@@ -36,11 +37,24 @@ const DetailField = ({ label, value }) => (
   </div>
 );
 
-const AdminPayments = () => {
+const AdminPayments = ({ lang = 'ar' }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState('');
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const isAr = lang === 'ar';
+
+  const t = (path) => {
+    const keys = path.split('.');
+    let result = i18n[lang];
+    if (!result) return path;
+    for (const key of keys) {
+      result = result[key];
+      if (!result) return path;
+    }
+    return result || path;
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -81,8 +95,8 @@ const AdminPayments = () => {
     setDetailOpen(true);
   };
 
-  if (loading) return <LoadingState message="Loading payments..." minHeight="32vh" />;
-  if (!orders.length) return <p>No payments available.</p>;
+  if (loading) return <LoadingState message={isAr ? "جاري تحميل المدفوعات..." : "Loading payments..."} minHeight="32vh" />;
+  if (!orders.length) return <p style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>{isAr ? "لا توجد عمليات دفع حالياً." : "No payments available."}</p>;
 
   return (
     <div>
@@ -101,11 +115,11 @@ const AdminPayments = () => {
             letterSpacing: '0.08em'
           }}
         >
-          <div>Reference</div>
-          <div>Customer</div>
-          <div>Amount</div>
-          <div>Method</div>
-          <div>Status</div>
+          <div>{isAr ? "المرجع" : "Reference"}</div>
+          <div>{isAr ? "العميل" : "Customer"}</div>
+          <div>{isAr ? "المبلغ" : "Amount"}</div>
+          <div>{isAr ? "الطريقة" : "Method"}</div>
+          <div>{isAr ? "الحالة" : "Status"}</div>
         </div>
 
         <div style={{ display: 'grid' }}>
@@ -125,16 +139,13 @@ const AdminPayments = () => {
                   borderTop: '1px solid rgba(255,255,255,0.05)',
                   background: isSelected ? '#1f2937' : 'transparent',
                   color: '#e6edf3',
-                  textAlign: 'left',
+                  textAlign: isAr ? 'right' : 'left',
                   cursor: 'pointer'
                 }}
               >
-                <div>
-                  <div style={{ fontFamily: 'Consolas, monospace' }}>{getPaymentReference(order)}</div>
-                  <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>{getOrderNumberLabel(order)} · {formatDate(order.createdAt)}</div>
-                </div>
+                <div style={{ fontFamily: 'Consolas, monospace' }}>{getPaymentReference(order)}</div>
                 <div>{getCustomerName(order)}</div>
-                <div>{getOrderTotal(order).toFixed(2)} {order.currency || 'BHD'}</div>
+                <div>{getOrderTotal(order).toFixed(2)} BHD</div>
                 <div>{getPaymentMethod(order)}</div>
                 <div>{getPaymentStatus(order)}</div>
               </button>
@@ -148,7 +159,7 @@ const AdminPayments = () => {
           <div
             onClick={(event) => event.stopPropagation()}
             style={{
-              width: 'min(980px, 100%)',
+              width: 'min(780px, 100%)',
               maxHeight: '90vh',
               overflowY: 'auto',
               background: '#161b22',
@@ -169,11 +180,12 @@ const AdminPayments = () => {
                 alignItems: 'center',
                 padding: '1.25rem 1.5rem',
                 borderBottom: '1px solid #30363d',
-                background: '#161b22'
+                background: '#161b22',
+                flexDirection: isAr ? 'row-reverse' : 'row'
               }}
             >
               <div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>Payment Details</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تفاصيل الدفع" : "Payment details"}</div>
                 <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: '#8b949e' }}>
                   {getPaymentReference(selectedOrder)}
                 </div>
@@ -191,47 +203,39 @@ const AdminPayments = () => {
                   cursor: 'pointer'
                 }}
               >
-                Close
+                {isAr ? "إغلاق" : "Close"}
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Order Number" value={getOrderNumberLabel(selectedOrder)} />
+                  <DetailField label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Customer" value={getCustomerName(selectedOrder)} />
-                  <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Amount" value={`${getOrderTotal(selectedOrder).toFixed(2)} ${selectedOrder.currency || 'BHD'}`} />
-                  <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Date" value={formatDate(selectedOrder.createdAt)} />
+                  <DetailField label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
                 </div>
 
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label="Payment Method" value={getPaymentMethod(selectedOrder)} />
+                  <DetailField label={isAr ? "المبلغ" : "Amount"} value={`${getOrderTotal(selectedOrder).toFixed(2)} BHD`} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Payment Status" value={getPaymentStatus(selectedOrder)} />
-                  <div style={{ height: '0.75rem' }} />
-                  <DetailField label="Order Status" value={getOrderStatus(selectedOrder)} />
+                  <DetailField label={isAr ? "الحالة" : "Status"} value={getPaymentStatus(selectedOrder)} />
                 </div>
               </div>
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>Gateway Payload</div>
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: '0.9rem',
-                    background: '#111827',
-                    borderRadius: '8px',
-                    color: '#c7d2de',
-                    fontSize: '0.8rem',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
-                  }}
-                >
-                  {JSON.stringify(selectedOrder.paymentDetails || {}, null, 2)}
-                </pre>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  <DetailField label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
+                  <DetailField label={isAr ? "مرجع العملية" : "Transaction ID"} value={getPaymentReference(selectedOrder)} />
+                  <DetailField label={isAr ? "التاريخ" : "Date"} value={formatDate(selectedOrder.createdAt)} />
+                </div>
+              </div>
+
+              <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "الطلب المرتبط" : "Linked Order"}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontFamily: 'Consolas, monospace', color: '#d6d9e0' }}>{getOrderNumberLabel(selectedOrder)}</div>
+                  <div style={{ color: '#8b949e' }}>{getOrderStatus(selectedOrder)}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -242,3 +246,4 @@ const AdminPayments = () => {
 };
 
 export default AdminPayments;
+

@@ -281,7 +281,7 @@ const DetailField = ({ label, value }) => (
     </div>
 );
 
-const DetailActionField = ({ label, value, helperText, onClick, disabled }) => (
+const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }) => (
     <div style={{ display: 'grid', gap: '0.2rem' }}>
         <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {label}
@@ -296,7 +296,7 @@ const DetailActionField = ({ label, value, helperText, onClick, disabled }) => (
                 background: 'transparent',
                 color: disabled ? '#8b949e' : '#58a6ff',
                 lineHeight: 1.45,
-                textAlign: 'left',
+                textAlign: isAr ? 'right' : 'left',
                 font: 'inherit',
                 cursor: disabled ? 'not-allowed' : 'pointer'
             }}
@@ -309,7 +309,7 @@ const DetailActionField = ({ label, value, helperText, onClick, disabled }) => (
     </div>
 );
 
-const AdminOrders = () => {
+const AdminOrders = ({ lang = 'ar' }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -324,7 +324,35 @@ const AdminOrders = () => {
     const [paymentFilter, setPaymentFilter] = useState('all');
     const [urgencyFilter, setUrgencyFilter] = useState('all');
     const [saving, setSaving] = useState(false);
-    const lang = localStorage.getItem('ez_lang') || 'ar';
+
+    const isAr = lang === 'ar';
+    const t = (path) => {
+        const keys = path.split('.');
+        let result = i18n[lang];
+        if (!result) return path;
+        for (const key of keys) {
+            result = result[key];
+            if (!result) return path;
+        }
+        return result || path;
+    };
+
+    const getStatusLabelText = (status) => {
+        const normalized = normalizeOrderStatus(status);
+        if (normalized === 'Paid') return isAr ? 'مدفوع' : 'Paid';
+        if (normalized === 'On Going') return isAr ? 'قيد التنفيذ' : 'On Going';
+        if (normalized === 'Completed') return isAr ? 'مكتمل' : 'Completed';
+        if (normalized === 'Shipped') return isAr ? 'تم الشحن' : 'Shipped';
+        if (normalized === 'Canceled') return isAr ? 'ملغي' : 'Canceled';
+        return status;
+    };
+
+    const getUrgencyLabelText = (urgency) => {
+        const normalized = normalizeOrderUrgency(urgency);
+        if (normalized === 'Very Urgent') return isAr ? 'عاجل جداً' : 'Very Urgent';
+        if (normalized === 'Urgent') return isAr ? 'عاجل' : 'Urgent';
+        return isAr ? 'عادي' : 'Normal';
+    };
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -534,12 +562,12 @@ const AdminOrders = () => {
         setUrgencyFilter('all');
     };
 
-    if (loading) return <LoadingState message="Loading orders..." minHeight="32vh" />;
+    if (loading) return <LoadingState message={isAr ? "جاري تحميل الطلبات..." : "Loading orders..."} minHeight="32vh" />;
 
     if (orders.length === 0) {
         return (
-            <div>
-                <p>No orders found in Firebase.</p>
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>
+                <p>{isAr ? "لم يتم العثور على طلبات في النظام." : "No orders found in Firebase."}</p>
             </div>
         );
     }
@@ -557,13 +585,13 @@ const AdminOrders = () => {
             >
                 <div style={{ display: 'grid', gap: '0.35rem' }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Search
+                        {isAr ? "بحث" : "Search"}
                     </div>
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="Search by order, customer, phone, tracking, payment ref"
+                        placeholder={isAr ? "بحث برقم الطلب، العميل، الهاتف، التتبع..." : "Search by order, customer, phone, tracking, payment ref"}
                         style={{
                             padding: '0.72rem 0.8rem',
                             borderRadius: '8px',
@@ -576,7 +604,7 @@ const AdminOrders = () => {
 
                 <div style={{ display: 'grid', gap: '0.35rem' }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Status
+                        {isAr ? "الحالة" : "Status"}
                     </div>
                     <select
                         value={statusFilter}
@@ -589,16 +617,16 @@ const AdminOrders = () => {
                             color: '#e6edf3'
                         }}
                     >
-                        <option value="all">All Statuses</option>
+                        <option value="all">{isAr ? "جميع الحالات" : "All Statuses"}</option>
                         {ORDER_STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>{status}</option>
+                            <option key={status} value={status}>{getStatusLabelText(status)}</option>
                         ))}
                     </select>
                 </div>
 
                 <div style={{ display: 'grid', gap: '0.35rem' }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Payment
+                        {isAr ? "الدفع" : "Payment"}
                     </div>
                     <select
                         value={paymentFilter}
@@ -611,7 +639,7 @@ const AdminOrders = () => {
                             color: '#e6edf3'
                         }}
                     >
-                        <option value="all">All Payments</option>
+                        <option value="all">{isAr ? "جميع المدفوعات" : "All Payments"}</option>
                         {paymentStatusOptions.map((status) => (
                             <option key={status} value={status}>{status}</option>
                         ))}
@@ -620,7 +648,7 @@ const AdminOrders = () => {
 
                 <div style={{ display: 'grid', gap: '0.35rem' }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Urgency
+                        {isAr ? "الأهمية" : "Urgency"}
                     </div>
                     <select
                         value={urgencyFilter}
@@ -633,9 +661,9 @@ const AdminOrders = () => {
                             color: '#e6edf3'
                         }}
                     >
-                        <option value="all">All Urgency</option>
+                        <option value="all">{isAr ? "جميع الأهميات" : "All Urgency"}</option>
                         {ORDER_URGENCY_OPTIONS.map((urgency) => (
-                            <option key={urgency} value={urgency}>{urgency}</option>
+                            <option key={urgency} value={urgency}>{getUrgencyLabelText(urgency)}</option>
                         ))}
                     </select>
                 </div>
@@ -652,7 +680,7 @@ const AdminOrders = () => {
                         cursor: 'pointer'
                     }}
                 >
-                    Reset
+                    {isAr ? "إعادة ضبط" : "Reset"}
                 </button>
             </div>
 
@@ -671,12 +699,12 @@ const AdminOrders = () => {
                         letterSpacing: '0.08em'
                     }}
                 >
-                    <div style={listCellStyle}>Order</div>
-                    <div style={listCellStyle}>Customer</div>
-                    <div style={listCellStyle}>Total</div>
-                    <div style={listCellStyle}>Payment</div>
-                    <div style={listCellStyle}>Urgency</div>
-                    <div style={listCellStyle}>Status</div>
+                    <div style={listCellStyle}>{isAr ? "الطلب" : "Order"}</div>
+                    <div style={listCellStyle}>{isAr ? "العميل" : "Customer"}</div>
+                    <div style={listCellStyle}>{isAr ? "الإجمالي" : "Total"}</div>
+                    <div style={listCellStyle}>{isAr ? "الدفع" : "Payment"}</div>
+                    <div style={listCellStyle}>{isAr ? "الأهمية" : "Urgency"}</div>
+                    <div style={listCellStyle}>{isAr ? "الحالة" : "Status"}</div>
                 </div>
 
                 <div style={{ display: 'grid' }}>
@@ -714,7 +742,7 @@ const AdminOrders = () => {
                                         {getCustomerName(order)}
                                     </div>
                                     <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
-                                        {(order.items || []).length} item(s)
+                                        {(order.items || []).length} {isAr ? "عنصر" : "item(s)"}
                                     </div>
                                 </div>
 
@@ -731,13 +759,13 @@ const AdminOrders = () => {
 
                                 <div style={listCellStyle}>
                                     <span style={getUrgencyBadgeStyle(order.urgency)}>
-                                        {normalizeOrderUrgency(order.urgency)}
+                                        {getUrgencyLabelText(order.urgency)}
                                     </span>
                                 </div>
 
                                 <div style={listCellStyle}>
                                     <span style={getStatusBadgeStyle(order.status || 'Paid')}>
-                                        {normalizeOrderStatus(order.status, order)}
+                                        {getStatusLabelText(order.status)}
                                     </span>
                                 </div>
                             </button>
@@ -752,7 +780,7 @@ const AdminOrders = () => {
                                 borderTop: '1px solid rgba(255,255,255,0.05)'
                             }}
                         >
-                            No orders match the current filters.
+                            {isAr ? "لا توجد طلبات تطابق الفلتر الحالي." : "No orders match the current filters."}
                         </div>
                     )}
                 </div>
@@ -802,7 +830,7 @@ const AdminOrders = () => {
                         >
                             <div>
                                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>
-                                    Order Details
+                                    {isAr ? "تفاصيل الطلب" : "Order Details"}
                                 </div>
                                 <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: '#8b949e' }}>
                                     {getOrderNumberLabel(selectedOrder)}
@@ -811,7 +839,7 @@ const AdminOrders = () => {
 
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <span style={getStatusBadgeStyle(selectedOrder.status || 'Paid')}>
-                                    {normalizeOrderStatus(selectedOrder.status, selectedOrder)}
+                                    {getStatusLabelText(selectedOrder.status)}
                                 </span>
                                 <button
                                     type="button"
@@ -825,7 +853,7 @@ const AdminOrders = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Refresh
+                                    {isAr ? "تحديث" : "Refresh"}
                                 </button>
                                 <button
                                     type="button"
@@ -839,59 +867,60 @@ const AdminOrders = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Close
+                                    {isAr ? "إغلاق" : "Close"}
                                 </button>
                             </div>
                         </div>
 
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Customer" value={getCustomerName(selectedOrder)} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <DetailField label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Email" value={selectedOrder.customer?.email} />
+                                    <DetailField label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailActionField
-                                        label="Phone"
+                                        label={isAr ? "الهاتف" : "Phone"}
                                         value={selectedOrder.customer?.phone}
-                                        helperText="Click to choose a WhatsApp template and send it."
+                                        helperText={isAr ? "انقر لاختيار قالب واتساب وإرساله." : "Click to choose a WhatsApp template and send it."}
                                         onClick={openWhatsAppModal}
                                         disabled={!customerPhoneDigits}
+                                        isAr={isAr}
                                     />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Shipping Method" value={selectedOrder.shipping?.method} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <DetailField label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Address" value={formatAddress(selectedOrder.shipping)} />
+                                    <DetailField label={isAr ? "العنوان" : "Address"} value={formatAddress(selectedOrder.shipping)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Shipping Number" value={getTrackingNumber(selectedOrder)} />
+                                    <DetailField label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Payment Method" value={getPaymentMethod(selectedOrder)} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <DetailField label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Payment Status" value={getPaymentStatus(selectedOrder)} />
+                                    <DetailField label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label="Reference" value={getPaymentReference(selectedOrder)} />
+                                    <DetailField label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label="Created" value={formatDate(selectedOrder.createdAt)} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
+                                    <DetailField label={isAr ? "أنشئ في" : "Created"} value={formatDate(selectedOrder.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
-                                        label="Total"
+                                        label={isAr ? "الإجمالي" : "Total"}
                                         value={`${Number(selectedOrder.total || 0).toFixed(2)} ${selectedOrder.currency || 'BHD'}`}
                                     />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
-                                        label="Items"
-                                        value={`${(selectedOrder.items || []).length} item(s)`}
+                                        label={isAr ? "العناصر" : "Items"}
+                                        value={`${(selectedOrder.items || []).length} ${isAr ? "عنصر" : "item(s)"}`}
                                     />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
-                                        label="Urgency"
-                                        value={normalizeOrderUrgency(selectedOrder.urgency)}
+                                        label={isAr ? "الأهمية" : "Urgency"}
+                                        value={getUrgencyLabelText(selectedOrder.urgency)}
                                     />
                                 </div>
                             </div>
@@ -899,7 +928,7 @@ const AdminOrders = () => {
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontWeight: 700, color: '#e6edf3' }}>{t('admin.orders.save')}</div>
+                                        <div style={{ fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تحديث الحالة" : "Update Status"}</div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -916,7 +945,7 @@ const AdminOrders = () => {
                                             }}
                                         >
                                             {ORDER_STATUS_OPTIONS.map((status) => (
-                                                <option key={status} value={status}>{isAr ? getStatusLabelText(status) : status}</option>
+                                                <option key={status} value={status}>{getStatusLabelText(status)}</option>
                                             ))}
                                         </select>
 
@@ -933,7 +962,7 @@ const AdminOrders = () => {
                                             }}
                                         >
                                             {ORDER_URGENCY_OPTIONS.map((urgency) => (
-                                                <option key={urgency} value={urgency}>{urgency}</option>
+                                                <option key={urgency} value={urgency}>{getUrgencyLabelText(urgency)}</option>
                                             ))}
                                         </select>
 
@@ -967,14 +996,14 @@ const AdminOrders = () => {
                                                 opacity: saving || !hasOrderChanges ? 0.6 : 1
                                             }}
                                         >
-                                            {saving ? (isAr ? 'جاري الحفظ...' : 'Saving...') : t('admin.orders.save')}
+                                            {saving ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ التغييرات' : 'Save Changes')}
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
                             <div style={{ display: 'grid', gap: '0.9rem' }}>
-                                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>Order Items</div>
+                                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "عناصر الطلب" : "Order Items"}</div>
 
                                 {(selectedOrder.items || []).map((item, idx) => (
                                     <div
@@ -995,8 +1024,8 @@ const AdminOrders = () => {
                                             <div style={{ fontSize: '1rem', fontWeight: 700 }}>
                                                 {item.name || 'Controller'}
                                             </div>
-                                            <DetailField label="Quantity" value={String(item.quantity || 1)} />
-                                            <DetailField label="Line Total" value={`${getItemLineTotal(item).toFixed(2)} BHD`} />
+                                            <DetailField label={isAr ? "الكمية" : "Quantity"} value={String(item.quantity || 1)} />
+                                            <DetailField label={isAr ? "مجموع السطر" : "Line Total"} value={`${getItemLineTotal(item).toFixed(2)} BHD`} />
                                             <ItemCustomizationSummary item={item} lang={lang} compact />
                                         </div>
                                     </div>
@@ -1037,7 +1066,7 @@ const AdminOrders = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div>
                                 <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>
-                                    WhatsApp Message
+                                    {isAr ? "رسالة واتساب" : "WhatsApp Message"}
                                 </div>
                                 <div style={{ fontSize: '0.84rem', color: '#8b949e', marginTop: '0.25rem' }}>
                                     {selectedOrder.customer?.phone || 'N/A'}
@@ -1056,7 +1085,7 @@ const AdminOrders = () => {
                                     cursor: 'pointer'
                                 }}
                             >
-                                Close
+                                {isAr ? "إغلاق" : "Close"}
                             </button>
                         </div>
 
@@ -1087,7 +1116,7 @@ const AdminOrders = () => {
 
                             <div style={{ display: 'grid', gap: '0.45rem' }}>
                                 <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                    Message Preview
+                                    {isAr ? "معاينة الرسالة" : "Message Preview"}
                                 </div>
                                 <textarea
                                     readOnly
@@ -1121,7 +1150,7 @@ const AdminOrders = () => {
                                                 textDecoration: 'none'
                                             }}
                                         >
-                                            Open Front Image
+                                            {isAr ? "فتح صورة الأمام" : "Open Front Image"}
                                         </a>
                                     )}
                                     {previewLinks.back && (
@@ -1138,7 +1167,7 @@ const AdminOrders = () => {
                                                 textDecoration: 'none'
                                             }}
                                         >
-                                            Open Back Image
+                                            {isAr ? "فتح صورة الخلف" : "Open Back Image"}
                                         </a>
                                     )}
                                 </div>
@@ -1160,7 +1189,7 @@ const AdminOrders = () => {
                                         opacity: !customerPhoneDigits || !selectedWhatsAppTemplate?.message ? 0.6 : 1
                                     }}
                                 >
-                                    Send by WhatsApp
+                                    {isAr ? "إرسال عبر واتساب" : "Send by WhatsApp"}
                                 </button>
                             </div>
                         </div>
