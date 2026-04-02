@@ -11,6 +11,7 @@ import AdminItems from './admin/AdminItems';
 import AdminParts from './admin/AdminParts';
 import AdminInventoryMaster from './admin/AdminInventoryMaster';
 import AdminSettings from './admin/AdminSettings';
+import AdminTranslations from './admin/AdminTranslations';
 import AdminAbandonedCarts from './admin/AdminAbandonedCarts';
 import AdminDiscountCodes from './admin/AdminDiscountCodes';
 import { AdminNavIcon, IconLogout } from './admin/AdminSidebarIcons';
@@ -23,12 +24,14 @@ const Admin = () => {
     const [lang, setLang] = useState(storedLang);
     const isAr = lang === 'ar';
     
+    const [, setI18nTick] = useState(0);
+
     const [activeTab, setActiveTab] = useState(() => {
         const storedTab = window.localStorage.getItem(ADMIN_ACTIVE_TAB_KEY);
         const tabs = [
             'orders', 'invoices', 'payments', 'customers',
             'inventory', 'items', 'parts',
-            'abandonedCarts', 'discountCodes', 'settings'
+            'abandonedCarts', 'discountCodes', 'translations', 'settings'
         ];
         return tabs.includes(storedTab) ? storedTab : 'orders';
     });
@@ -75,6 +78,7 @@ const Admin = () => {
             id: 'system',
             label: t('admin.sidebar.system'),
             items: [
+                { id: 'translations', label: t('admin.sidebar.tabs.translations') },
                 { id: 'settings', label: t('admin.sidebar.tabs.settings') }
             ]
         }
@@ -93,6 +97,12 @@ const Admin = () => {
     useEffect(() => {
         window.localStorage.setItem(ADMIN_ACTIVE_TAB_KEY, activeTab);
     }, [activeTab]);
+
+    useEffect(() => {
+        const onI18nUpdated = () => setI18nTick((n) => n + 1);
+        window.addEventListener('ez-i18n-updated', onI18nUpdated);
+        return () => window.removeEventListener('ez-i18n-updated', onI18nUpdated);
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -344,6 +354,7 @@ const Admin = () => {
                     {activeTab === 'parts' && <AdminParts lang={lang} />}
                     {activeTab === 'abandonedCarts' && <AdminAbandonedCarts lang={lang} />}
                     {activeTab === 'discountCodes' && <AdminDiscountCodes lang={lang} />}
+                    {activeTab === 'translations' && <AdminTranslations lang={lang} />}
                     {activeTab === 'settings' && <AdminSettings lang={lang} />}
                 </div>
             </main>

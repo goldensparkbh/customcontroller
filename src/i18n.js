@@ -1,4 +1,7 @@
-export const i18n = {
+import { deepClone, mergeTranslationOverrides } from './translationMerge.js';
+
+/** Static defaults; runtime `i18n` is built from these + Firestore overrides. */
+const I18N_DEFAULT_SOURCE = {
   ar: {
     navPremade: "تصاميم جاهزة",
     navContact: "تواصل معنا",
@@ -293,9 +296,26 @@ export const i18n = {
                 configPart: "أجزاء المخصص",
                 abandonedCarts: "سلات مهجورة",
                 discountCodes: "رموز الخصم",
-                settings: "الإعدادات"
+                settings: "الإعدادات",
+                translations: "النصوص والترجمة"
             },
             logout: "تسجيل الخروج"
+        },
+        translationsPage: {
+            blurb: "عدّل أي نص يظهر في الموقع أو لوحة التحكم. المفتاح ثابت؛ القيم العربية والإنجليزية تُحفظ في السحابة وتُطبَّق فور الحفظ.",
+            searchPlaceholder: "بحث بالمفتاح أو النص…",
+            save: "حفظ التعديلات",
+            loading: "جاري التحميل…",
+            saving: "جاري الحفظ…",
+            saved: "تم حفظ النصوص.",
+            loadError: "تعذّر تحميل النصوص المحفوظة.",
+            saveError: "تعذّر حفظ النصوص.",
+            keyCol: "المفتاح",
+            enCol: "English",
+            arCol: "العربية",
+            showMore: "عرض المزيد",
+            resetRow: "استرجاع الافتراضي",
+            countShown: "عرض {n} من {total}"
         },
         abandoned: {
             heading: "سلات مهجورة",
@@ -729,9 +749,26 @@ export const i18n = {
                 configPart: "Configurator Parts",
                 abandonedCarts: "Abandoned carts",
                 discountCodes: "Discount codes",
-                settings: "Settings"
+                settings: "Settings",
+                translations: "Copy & translations"
             },
             logout: "Logout"
+        },
+        translationsPage: {
+            blurb: "Edit any storefront or admin label. Keys are fixed; Arabic and English values are stored in the cloud and apply after save.",
+            searchPlaceholder: "Search by key or text…",
+            save: "Save copy",
+            loading: "Loading…",
+            saving: "Saving…",
+            saved: "Copy saved.",
+            loadError: "Could not load saved copy.",
+            saveError: "Could not save copy.",
+            keyCol: "Key",
+            enCol: "English",
+            arCol: "Arabic",
+            showMore: "Show more",
+            resetRow: "Reset to default",
+            countShown: "Showing {n} of {total}"
         },
         abandoned: {
             heading: "Abandoned carts",
@@ -870,3 +907,19 @@ export const i18n = {
     `
   }
 };
+
+export const i18nDefaults = deepClone(I18N_DEFAULT_SOURCE);
+export let i18n = mergeTranslationOverrides(I18N_DEFAULT_SOURCE, {});
+
+export function applyTranslationOverrideEntries(entries) {
+    i18n = mergeTranslationOverrides(I18N_DEFAULT_SOURCE, entries);
+    if (typeof window !== 'undefined') {
+        window.__EZ_I18N__ = i18n;
+        window.dispatchEvent(new CustomEvent('ez-i18n-updated'));
+    }
+    return i18n;
+}
+
+export function getI18nDefaultSource() {
+    return I18N_DEFAULT_SOURCE;
+}

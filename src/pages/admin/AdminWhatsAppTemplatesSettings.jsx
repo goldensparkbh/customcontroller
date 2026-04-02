@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { db } from '../../firebase';
 import LoadingState from '../../components/LoadingState.jsx';
 import { adminAlign } from './adminUi.js';
 import {
+    WHATSAPP_BODY_FONT_STACK,
     WHATSAPP_TEMPLATE_TAGS,
     loadWhatsAppTemplates,
     saveWhatsAppTemplates
@@ -17,6 +18,31 @@ const fieldStyle = {
     color: '#e6edf3'
 };
 
+const QUICK_EMOJIS = [
+    '✅', '❤️', '🙏', '👍', '🎉', '📦', '🚚', '✨', '🎮', '📱',
+    '⏳', '🔔', '💬', '⭐', '🛒', '📍', '🇧🇭', '☺️', '😊', '👋'
+];
+
+const toolbarBtn = {
+    padding: '0.35rem 0.55rem',
+    minWidth: '2.25rem',
+    borderRadius: '6px',
+    border: '1px solid #3b4452',
+    background: '#21262d',
+    color: '#e6edf3',
+    cursor: 'pointer',
+    fontSize: '1.05rem',
+    lineHeight: 1.2,
+    fontFamily: WHATSAPP_BODY_FONT_STACK
+};
+
+const formatBtn = {
+    ...toolbarBtn,
+    fontWeight: 700,
+    fontSize: '0.82rem',
+    fontFamily: 'Consolas, monospace'
+};
+
 /**
  * WhatsApp order message templates (Firestore: admin_settings/whatsapp_templates).
  * Separate from the main settings form save button.
@@ -28,6 +54,8 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const [messageTone, setMessageTone] = useState('success');
+    const bodyRefs = useRef(new Map());
+    const pendingSel = useRef(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -47,6 +75,22 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
     useEffect(() => {
         load();
     }, [load]);
+
+    useEffect(() => {
+        const p = pendingSel.current;
+        if (!p) return;
+        const el = bodyRefs.current.get(p.rowId);
+        if (!el) return;
+        pendingSel.current = null;
+        requestAnimationFrame(() => {
+            try {
+                el.focus();
+                el.setSelectionRange(p.start, p.end);
+            } catch {
+                /* ignore */
+            }
+        });
+    }, [rows]);
 
     const patchRow = (id, field, value) => {
         setRows((r) => r.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -95,6 +139,59 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const insertIntoBody = (rowId, body, start, end, insertion) => {
+        const next = body.slice(0, start) + insertion + body.slice(end);
+        const pos = start + insertion.length;
+        pendingSel.current = { rowId, start: pos, end: pos };
+        patchRow(rowId, 'body', next);
+    };
+
+    const wrapBodySelection = (rowId, body, start, end, delimiter) => {
+        const selected = body.slice(start, end);
+        let insertion;
+        let caretStart;
+        let caretEnd;
+        if (selected.length > 0) {
+            insertion = `${delimiter}${selected}${delimiter}`;
+            caretStart = start + insertion.length;
+            caretEnd = caretStart;
+        } else {
+            insertion = `${delimiter}${delimiter}`;
+            caretStart = start + delimiter.length;
+            caretEnd = caretStart;
+        }
+        const next = body.slice(0, start) + insertion + body.slice(end);
+        pendingSel.current = { rowId, start: caretStart, end: caretEnd };
+        patchRow(rowId, 'body', next);
+    };
+
+    const insertCodeBlock = (rowId, body, start, end) => {
+        const insertion = '\n```\n\n```\n';
+        const next = body.slice(0, start) + insertion + body.slice(end);
+        const inner = start + '\n```\n'.length;
+        pendingSel.current = { rowId, start: inner, end: inner };
+        patchRow(rowId, 'body', next);
+    };
+
+    const handleEmojiClick = (rowId, emoji) => {
+        const el = bodyRefs.current.get(rowId);
+        const row = rows.find((r) => r.id === rowId);
+        if (!el || !row) return;
+        insertIntoBody(rowId, row.body, el.selectionStart, el.selectionEnd, emoji);
+    };
+
+    const handleFormat = (rowId, kind) => {
+        const el = bodyRefs.current.get(rowId);
+        const row = rows.find((r) => r.id === rowId);
+        if (!el || !row) return;
+        const { selectionStart: a, selectionEnd: b } = el;
+        const body = row.body;
+        if (kind === 'bold') wrapBodySelection(rowId, body, a, b, '*');
+        else if (kind === 'italic') wrapBodySelection(rowId, body, a, b, '_');
+        else if (kind === 'strike') wrapBodySelection(rowId, body, a, b, '~');
+        else if (kind === 'code') insertCodeBlock(rowId, body, a, b);
     };
 
     if (loading) {
@@ -176,6 +273,25 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                 </div>
             </details>
 
+            <details
+                style={{
+                    background: '#0d1117',
+                    border: '1px solid #30363d',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1rem',
+                    textAlign: adminAlign(isAr)
+                }}
+            >
+                <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#c9d1d9' }}>
+                    {isAr ? 'الإيموجي والتنسيق في واتساب' : 'Emojis & WhatsApp text formatting'}
+                </summary>
+                <div style={{ marginTop: '0.75rem', color: '#8b949e', fontSize: '0.88rem', lineHeight: 1.55 }}>
+                    {isAr
+                        ? 'الرسائل تُرسل كنص عادي UTF-8: يدعم واتساب الإيموجي. للتنسيق استخدم *غامق* و _مائل_ و ~شطب~ و ```مونospace``` كما في تطبيق واتساب.'
+                        : 'Messages are plain UTF-8 text: WhatsApp supports emojis. For styling use *bold*, _italic_, ~strikethrough~, and ```monospace``` blocks like in WhatsApp.'}
+                </div>
+            </details>
+
             <div style={{ display: 'grid', gap: '1.25rem' }}>
                 {rows.map((row) => (
                     <div
@@ -227,17 +343,122 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                                 {isAr ? 'حذف' : 'Delete'}
                             </button>
                         </div>
-                        <label style={{ display: 'grid', gap: '0.4rem' }}>
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
                             <span style={{ color: '#8b949e', fontSize: '0.88rem' }}>
-                                {isAr ? 'نص الرسالة' : 'Message body'}
+                                {isAr ? 'نص الرسالة (نص غني: إيموجي وتنسيق واتساب)' : 'Message body (emoji + WhatsApp formatting)'}
                             </span>
+                            <div
+                                role="toolbar"
+                                aria-label={isAr ? 'إدراج إيموجي وتنسيق' : 'Insert emoji and formatting'}
+                                style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '0.45rem',
+                                    alignItems: 'center',
+                                    padding: '0.55rem 0.65rem',
+                                    background: '#0d1117',
+                                    border: '1px solid #30363d',
+                                    borderRadius: '8px'
+                                }}
+                            >
+                                <span style={{ fontSize: '0.72rem', color: '#6e7681', marginInlineEnd: '0.25rem' }}>
+                                    {isAr ? 'إيموجي' : 'Emoji'}
+                                </span>
+                                {QUICK_EMOJIS.map((emoji, ei) => (
+                                    <button
+                                        key={`${row.id}-e-${ei}`}
+                                        type="button"
+                                        disabled={saving}
+                                        title={emoji}
+                                        onClick={() => handleEmojiClick(row.id, emoji)}
+                                        style={{
+                                            ...toolbarBtn,
+                                            opacity: saving ? 0.5 : 1,
+                                            cursor: saving ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                                <span
+                                    style={{
+                                        width: '1px',
+                                        height: '1.25rem',
+                                        background: '#30363d',
+                                        margin: '0 0.25rem'
+                                    }}
+                                    aria-hidden
+                                />
+                                <span style={{ fontSize: '0.72rem', color: '#6e7681', marginInlineEnd: '0.25rem' }}>
+                                    {isAr ? 'تنسيق' : 'Format'}
+                                </span>
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    title={isAr ? 'غامق *' : 'Bold *'}
+                                    onClick={() => handleFormat(row.id, 'bold')}
+                                    style={{ ...formatBtn, opacity: saving ? 0.5 : 1 }}
+                                >
+                                    B
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    title={isAr ? 'مائل _' : 'Italic _'}
+                                    onClick={() => handleFormat(row.id, 'italic')}
+                                    style={{ ...formatBtn, fontStyle: 'italic', opacity: saving ? 0.5 : 1 }}
+                                >
+                                    I
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    title={isAr ? 'شطب ~' : 'Strikethrough ~'}
+                                    onClick={() => handleFormat(row.id, 'strike')}
+                                    style={{ ...formatBtn, textDecoration: 'line-through', opacity: saving ? 0.5 : 1 }}
+                                >
+                                    S
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    title={isAr ? 'مونospace ```' : 'Monospace ```'}
+                                    onClick={() => handleFormat(row.id, 'code')}
+                                    style={{ ...formatBtn, opacity: saving ? 0.5 : 1 }}
+                                >
+                                    {'</>'}
+                                </button>
+                            </div>
                             <textarea
+                                ref={(el) => {
+                                    if (el) bodyRefs.current.set(row.id, el);
+                                    else bodyRefs.current.delete(row.id);
+                                }}
                                 value={row.body}
                                 onChange={(e) => patchRow(row.id, 'body', e.target.value)}
-                                rows={8}
-                                style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.55 }}
+                                onPaste={(e) => {
+                                    let t = e.clipboardData.getData('text/plain');
+                                    if (!t && e.clipboardData.types.includes('text/html')) {
+                                        const d = document.createElement('div');
+                                        d.innerHTML = e.clipboardData.getData('text/html');
+                                        t = d.textContent || d.innerText || '';
+                                    }
+                                    if (!t) return;
+                                    e.preventDefault();
+                                    const el = e.currentTarget;
+                                    insertIntoBody(row.id, row.body, el.selectionStart, el.selectionEnd, t);
+                                }}
+                                spellCheck="true"
+                                rows={10}
+                                style={{
+                                    ...fieldStyle,
+                                    resize: 'vertical',
+                                    fontFamily: WHATSAPP_BODY_FONT_STACK,
+                                    lineHeight: 1.65,
+                                    fontSize: '1.02rem'
+                                }}
                             />
-                        </label>
+                        </div>
                         <div style={{ fontSize: '0.78rem', color: '#6e7681' }}>
                             {isAr ? 'المعرّف الداخلي:' : 'Internal ID:'}{' '}
                             <code style={{ color: '#8b949e' }}>{row.id}</code>

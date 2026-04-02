@@ -7,6 +7,7 @@ import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
 import {
+    WHATSAPP_BODY_FONT_STACK,
     WHATSAPP_TEMPLATE_TAGS,
     applyWhatsAppTemplateBody,
     buildWhatsAppTemplateContext,
@@ -1593,7 +1594,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         background: '#0d1117',
                                         color: '#e6edf3',
                                         lineHeight: 1.65,
-                                        fontSize: '0.95rem'
+                                        fontSize: '1.02rem',
+                                        fontFamily: WHATSAPP_BODY_FONT_STACK
                                     }}
                                 />
                             </div>

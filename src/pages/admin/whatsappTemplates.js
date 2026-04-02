@@ -1,6 +1,10 @@
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 
+/** Use in textareas / previews so emojis render clearly (WhatsApp payload is plain UTF-8). */
+export const WHATSAPP_BODY_FONT_STACK =
+    'system-ui, "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif';
+
 const WHATSAPP_TEMPLATES_DOC = ['admin_settings', 'whatsapp_templates'];
 
 const getCustomerName = (order) => {

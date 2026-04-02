@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
 import App from './App.jsx';
-import { i18n } from './i18n.js';
+import { db } from './firebase.js';
+import { applyTranslationOverrideEntries, i18n } from './i18n.js';
+import { TRANSLATION_OVERRIDES_DOC } from './translationMerge.js';
 import './index.css';
 
 window.__EZ_I18N__ = i18n;
@@ -62,6 +65,51 @@ const router = createBrowserRouter(
   }
 );
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <RouterProvider router={router} />
-);
+function TranslationBootstrap() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const ref = doc(db, TRANSLATION_OVERRIDES_DOC[0], TRANSLATION_OVERRIDES_DOC[1]);
+        const snap = await getDoc(ref);
+        if (!cancelled && snap.exists()) {
+          const entries = snap.data()?.entries;
+          if (entries && typeof entries === 'object') {
+            applyTranslationOverrideEntries(entries);
+          }
+        }
+      } catch (err) {
+        console.warn('[i18n] Translation overrides load failed', err);
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!ready) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'system-ui, sans-serif',
+          background: '#0d1117',
+          color: '#8b949e'
+        }}
+      >
+        …
+      </div>
+    );
+  }
+
+  return <RouterProvider router={router} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<TranslationBootstrap />);
