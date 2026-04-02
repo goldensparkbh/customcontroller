@@ -22,6 +22,7 @@ const TermsConditions = lazy(() => import('./pages/TermsConditions.jsx'));
 const ReturnPolicy = lazy(() => import('./pages/ReturnPolicy.jsx'));
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { gtagPageView } from './analytics.js';
 
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin.jsx'));
 const AdminPage = lazy(() => import('./pages/Admin.jsx'));
@@ -49,6 +50,15 @@ function App() {
   const location = useLocation();
   const hideNavbarOn = ['/pos'];
   const shouldHideNavbar = hideNavbarOn.includes(location.pathname);
+
+  const gaFirstNavigation = React.useRef(true);
+  React.useEffect(() => {
+    if (gaFirstNavigation.current) {
+      gaFirstNavigation.current = false;
+      return;
+    }
+    gtagPageView(location.pathname, location.search);
+  }, [location.pathname, location.search]);
 
   return (
     <>

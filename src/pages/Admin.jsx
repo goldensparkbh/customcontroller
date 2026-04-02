@@ -11,6 +11,8 @@ import AdminItems from './admin/AdminItems';
 import AdminParts from './admin/AdminParts';
 import AdminInventoryMaster from './admin/AdminInventoryMaster';
 import AdminSettings from './admin/AdminSettings';
+import AdminAbandonedCarts from './admin/AdminAbandonedCarts';
+import AdminDiscountCodes from './admin/AdminDiscountCodes';
 
 const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
 
@@ -24,7 +26,8 @@ const Admin = () => {
         const storedTab = window.localStorage.getItem(ADMIN_ACTIVE_TAB_KEY);
         const tabs = [
             'orders', 'invoices', 'payments', 'customers',
-            'inventory', 'items', 'parts', 'settings'
+            'inventory', 'items', 'parts',
+            'abandonedCarts', 'discountCodes', 'settings'
         ];
         return tabs.includes(storedTab) ? storedTab : 'orders';
     });
@@ -57,6 +60,14 @@ const Admin = () => {
                 { id: 'inventory', label: t('admin.sidebar.tabs.inventoryMaster') },
                 { id: 'items', label: t('admin.sidebar.tabs.normalItems') },
                 { id: 'parts', label: t('admin.sidebar.tabs.configPart') }
+            ]
+        },
+        {
+            id: 'marketing',
+            label: t('admin.sidebar.marketing'),
+            items: [
+                { id: 'abandonedCarts', label: t('admin.sidebar.tabs.abandonedCarts') },
+                { id: 'discountCodes', label: t('admin.sidebar.tabs.discountCodes') }
             ]
         },
         {
@@ -300,6 +311,8 @@ const Admin = () => {
                     {activeTab === 'inventory' && <AdminInventoryMaster lang={lang} />}
                     {activeTab === 'items' && <AdminItems lang={lang} />}
                     {activeTab === 'parts' && <AdminParts lang={lang} />}
+                    {activeTab === 'abandonedCarts' && <AdminAbandonedCarts lang={lang} />}
+                    {activeTab === 'discountCodes' && <AdminDiscountCodes lang={lang} />}
                     {activeTab === 'settings' && <AdminSettings lang={lang} />}
                 </div>
             </main>

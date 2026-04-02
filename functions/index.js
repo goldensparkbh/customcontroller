@@ -485,6 +485,343 @@ function getNormalizedOrderAmounts(body) {
   };
 }
 
+function normalizeOrderHandlerPath(req) {
+  let requestPath = String((req.path || req.url || "/").split("?")[0] || "/")
+    .replace(/\/+$/, "") || "/";
+  if (!requestPath.startsWith("/")) requestPath = `/${requestPath}`;
+  if (requestPath.startsWith("/api")) {
+    const rest = requestPath.slice(4);
+    requestPath = rest.startsWith("/") ? rest : `/${rest}`;
+    if (!requestPath || requestPath === "") requestPath = "/";
+  }
+  return requestPath;
+}
+
+function roundMoney(n) {
+  return Math.round(toFiniteNumber(n, 0) * 100) / 100;
+}
+
+function parseFirestoreDateValue(value) {
+  if (!value) return null;
+  if (typeof value.toDate === "function") return value.toDate();
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function loadDiscountCodeDoc(db, codeUpper) {
+  const snap = await db.collection("discount_codes").doc(codeUpper).get();
+  if (!snap.exists) return { ok: false, error: "invalid_code" };
+  const data = snap.data() || {};
+  if (data.active === false) return { ok: false, error: "inactive" };
+  const now = new Date();
+  const start = parseFirestoreDateValue(data.startsAt);
+  const end = parseFirestoreDateValue(data.endsAt);
+  if (start && now < start) return { ok: false, error: "not_started" };
+  if (end && now > end) return { ok: false, error: "expired" };
+  const maxUses = Number(data.maxUses);
+  const uses = Number(data.usesCount || 0);
+  if (Number.isFinite(maxUses) && maxUses > 0 && uses >= maxUses) {
+    return { ok: false, error: "usage_exhausted" };
+  }
+  const discountType = String(data.discountType || "percent").toLowerCase() === "fixed" ? "fixed" : "percent";
+  const discountValue = toFiniteNumber(data.discountValue, 0);
+  if (discountValue <= 0) return { ok: false, error: "invalid_discount" };
+  return { ok: true, data: { ...data, discountType, discountValue } };
+}
+
+function computeDiscountAmountForBase(baseTotal, discountType, discountValue) {
+  const base = roundMoney(baseTotal);
+  if (base <= 0) return 0;
+  if (discountType === "fixed") {
+    return roundMoney(Math.min(discountValue, base));
+  }
+  const pct = Math.min(100, Math.max(0, discountValue));
+  return roundMoney(Math.min(base, base * (pct / 100)));
+}
+
+async function validateDiscountForCart(db, rawCode, amounts) {
+  const code = String(rawCode || "").trim().toUpperCase();
+  if (!code) {
+    return {
+      ok: true,
+      discountAmount: 0,
+      code: "",
+      discountType: "",
+      description: ""
+    };
+  }
+  const loaded = await loadDiscountCodeDoc(db, code);
+  if (!loaded.ok) return { ok: false, error: loaded.error };
+  const baseTotal = roundMoney(toFiniteNumber(amounts.subtotal, 0) + toFiniteNumber(amounts.shippingCost, 0));
+  const discountAmount = computeDiscountAmountForBase(baseTotal, loaded.data.discountType, loaded.data.discountValue);
+  return {
+    ok: true,
+    discountAmount,
+    code,
+    discountType: loaded.data.discountType,
+    description: String(loaded.data.description || "").trim()
+  };
+}
+
+async function incrementDiscountUses(db, codeUpper) {
+  if (!codeUpper) return { ok: true };
+  const ref = db.collection("discount_codes").doc(codeUpper);
+  return db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists) return { ok: false };
+    const data = snap.data() || {};
+    const maxUses = Number(data.maxUses);
+    const uses = Number(data.usesCount || 0);
+    if (Number.isFinite(maxUses) && maxUses > 0 && uses >= maxUses) return { ok: false };
+    transaction.update(ref, {
+      usesCount: FieldValue.increment(1),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    return { ok: true };
+  });
+}
+
+function fillTemplatePlaceholders(template, map) {
+  let out = String(template || "");
+  Object.keys(map).forEach((key) => {
+    const val = map[key];
+    out = out.split(`{{${key}}}`).join(String(val == null ? "" : val));
+  });
+  return out;
+}
+
+async function buildRecoveryOfferLine(db, settings, currency) {
+  const recoveryCode = String(settings.abandonedCartRecoveryCode || "").trim().toUpperCase();
+  if (!recoveryCode) {
+    return { recoveryOffer: "", discountCode: "", discountDetails: "" };
+  }
+  const loaded = await loadDiscountCodeDoc(db, recoveryCode);
+  if (!loaded.ok) {
+    return { recoveryOffer: "", discountCode: recoveryCode, discountDetails: "" };
+  }
+  const d = loaded.data;
+  const details = d.discountType === "fixed" ?
+    `${formatMoney(d.discountValue, currency)} off` :
+    `${d.discountValue}% off`;
+  const recoveryOffer = `Use code ${recoveryCode} at checkout for ${details}.`;
+  return { recoveryOffer, discountCode: recoveryCode, discountDetails: details };
+}
+
+async function sendAbandonedCartRecoveryEmail({ req, cartData, settings, db }) {
+  const email = String(cartData.email || "").trim();
+  if (!isValidEmailAddress(email)) throw new Error("invalid_email");
+  const { transporter, config, error } = getSmtpTransporter(settings);
+  if (!transporter) throw new Error(error || "smtp_missing");
+
+  const currency = cartData.currency || settings.defaultCurrency || "BHD";
+  const siteBaseUrl = getSiteBaseUrl(req, settings);
+  const cartLink = siteBaseUrl ? `${String(siteBaseUrl).replace(/\/$/, "")}/checkout` : "https://customcontroller.co/checkout";
+  const customerName = [cartData.firstName, cartData.lastName].filter(Boolean).join(" ").trim() ||
+    String(cartData.fullName || "").trim() || "there";
+  const cartTotal = formatMoney(toFiniteNumber(cartData.total, 0), currency);
+  const offer = await buildRecoveryOfferLine(db, settings, currency);
+
+  const defaultSubject = `${settings.storeName || "Store"} | Complete your order`;
+  const defaultBody = [
+    "Hi {{customerName}},",
+    "",
+    "You started checkout with a cart total of {{cartTotal}} {{currency}}.",
+    "",
+    "{{recoveryOffer}}",
+    "",
+    "Return to checkout: {{cartLink}}",
+    "",
+    "— {{storeName}}"
+  ].join("\n");
+
+  const subjectTpl = String(settings.abandonedCartEmailSubject || "").trim() || defaultSubject;
+  const bodyTpl = String(settings.abandonedCartEmailBody || "").trim() || defaultBody;
+
+  const map = {
+    customerName,
+    cartTotal,
+    currency,
+    cartLink,
+    recoveryOffer: offer.recoveryOffer,
+    discountCode: offer.discountCode,
+    discountDetails: offer.discountDetails,
+    storeName: settings.storeName || "Custom Controller"
+  };
+
+  const subject = fillTemplatePlaceholders(subjectTpl, map);
+  const textBody = fillTemplatePlaceholders(bodyTpl, map);
+  const htmlBody = escapeHtml(textBody).replace(/\n/g, "<br />");
+
+  const storeName = map.storeName;
+  const context = { storeName, branding: getEmailBranding(settings, siteBaseUrl) };
+  const html = wrapOrderEmail({
+    context,
+    title: subject,
+    subtitle: " ",
+    summaryHtml: "",
+    bodyHtml: `<div style="font-size:15px;line-height:1.7;color:#d7dee7;">${htmlBody}</div>`
+  });
+
+  await transporter.sendMail({
+    from: { name: config.fromName, address: config.fromEmail },
+    to: email,
+    replyTo: config.replyTo || undefined,
+    subject,
+    text: textBody,
+    html
+  });
+}
+
+async function processAbandonedCartReminders() {
+  const db = getFirestore();
+  const settings = await getGeneralAdminSettings();
+  const days = Math.max(1, Number(settings.abandonedCartReminderDays) || 3);
+  const threshold = Date.now() - days * 86400000;
+
+  const snap = await db.collection("abandoned_carts")
+    .where("status", "==", "payment_started")
+    .limit(200)
+    .get();
+
+  const jobs = [];
+  snap.docs.forEach((docSnap) => {
+    const data = docSnap.data();
+    if (data.reminderSentAt) return;
+    const ps = data.paymentStartedAt;
+    const startMs = ps && typeof ps.toMillis === "function" ? ps.toMillis() : 0;
+    if (!startMs || startMs > threshold) return;
+    jobs.push({ ref: docSnap.ref, data });
+  });
+
+  for (const job of jobs) {
+    try {
+      await sendAbandonedCartRecoveryEmail({ req: null, cartData: job.data, settings, db });
+      await job.ref.update({
+        status: "reminder_sent",
+        reminderSentAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    } catch (err) {
+      console.error("[abandonedCartReminder] failed", job.ref.id, err.message || err);
+    }
+  }
+}
+
+async function handleDiscountValidate(req, res) {
+  try {
+    const body = req.body || {};
+    const amounts = getNormalizedOrderAmounts(body);
+    const db = getFirestore();
+    const v = await validateDiscountForCart(db, body.code || body.discountCode, amounts);
+    if (!v.ok) return res.status(400).json({ success: false, error: v.error });
+    const newTotal = roundMoney(Math.max(0, amounts.subtotal + amounts.shippingCost - v.discountAmount));
+    return res.json({
+      success: true,
+      discountAmount: v.discountAmount,
+      code: v.code,
+      discountType: v.discountType,
+      description: v.description,
+      newTotal
+    });
+  } catch (error) {
+    console.error("[handleDiscountValidate]", error);
+    return res.status(500).json({ error: error.message || "validate_failed" });
+  }
+}
+
+async function handleAbandonedCartStart(req, res) {
+  try {
+    const body = req.body || {};
+    const sessionId = String(body.abandonSessionId || "").trim();
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!sessionId || !isValidEmailAddress(email)) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+    const cart = Array.isArray(body.cart) ? body.cart : [];
+    if (!cart.length) return res.status(400).json({ error: "empty_cart" });
+    const amounts = getNormalizedOrderAmounts(body);
+    if (amounts.total <= 0) return res.status(400).json({ error: "invalid_total" });
+
+    const db = getFirestore();
+    const ref = db.collection("abandoned_carts").doc(sessionId);
+    await ref.set({
+      abandonSessionId: sessionId,
+      email,
+      firstName: body.firstName || "",
+      lastName: body.lastName || "",
+      fullName: body.fullName || "",
+      phone: body.phoneFull || body.phone || "",
+      cart,
+      subtotal: amounts.subtotal,
+      shippingCost: amounts.shippingCost,
+      total: amounts.total,
+      currency: body.currency || "BHD",
+      status: "payment_started",
+      paymentStartedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      discountCode: String(body.discountCode || "").trim().toUpperCase() || "",
+      discountAmount: roundMoney(toFiniteNumber(body.discountAmount, 0)),
+      checkoutSnapshot: {
+        country: body.country || "",
+        shippingMethod: body.shippingMethod || "",
+        city: body.city || ""
+      }
+    }, { merge: true });
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("[handleAbandonedCartStart]", error);
+    return res.status(500).json({ error: error.message || "abandoned_start_failed" });
+  }
+}
+
+async function handleAbandonedCartRecover(req, res) {
+  try {
+    const body = req.body || {};
+    const email = String(body.email || "").trim().toLowerCase();
+    const sessionId = String(body.abandonSessionId || "").trim();
+    if (!email && !sessionId) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+
+    const db = getFirestore();
+    const refsToUpdate = [];
+
+    if (sessionId) refsToUpdate.push(db.collection("abandoned_carts").doc(sessionId));
+    if (email) {
+      const q = await db.collection("abandoned_carts").where("email", "==", email).limit(100).get();
+      q.docs.forEach((d) => {
+        const st = String(d.data().status || "");
+        if (st === "payment_started" || st === "reminder_sent") refsToUpdate.push(d.ref);
+      });
+    }
+
+    const seen = new Set();
+    const unique = [];
+    refsToUpdate.forEach((r) => {
+      if (!r || seen.has(r.path)) return;
+      seen.add(r.path);
+      unique.push(r);
+    });
+
+    if (!unique.length) return res.json({ success: true, updated: 0 });
+
+    const batch = db.batch();
+    unique.forEach((r) => {
+      batch.set(r, {
+        status: "recovered",
+        recoveredAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+    });
+    await batch.commit();
+    return res.json({ success: true, updated: unique.length });
+  } catch (error) {
+    console.error("[handleAbandonedCartRecover]", error);
+    return res.status(500).json({ error: error.message || "abandoned_recover_failed" });
+  }
+}
+
 function toFiniteNumber(value, fallback = 0) {
   const normalized = Number(value);
   return Number.isFinite(normalized) ? normalized : fallback;
@@ -1703,11 +2040,10 @@ exports.orderHandler = functions
     res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     if (req.method === "OPTIONS") return res.status(204).send("");
 
-    const requestPath = String((req.path || req.url || "/").split("?")[0] || "/")
-      .replace(/\/+$/, "") || "/";
+    const requestPath = normalizeOrderHandlerPath(req);
 
     if (req.method === "GET") {
-      const isTrackOrderRequest = requestPath === "/trackorder" || requestPath === "/api/trackorder";
+      const isTrackOrderRequest = requestPath === "/trackorder";
       if (!isTrackOrderRequest) {
         return res.status(405).json({ error: "method_not_allowed" });
       }
@@ -1735,9 +2071,39 @@ exports.orderHandler = functions
 
     if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
 
+    const postPath = normalizeOrderHandlerPath(req);
     try {
+      if (postPath === "/discount/validate") {
+        return await handleDiscountValidate(req, res);
+      }
+      if (postPath === "/abandonedCart/start") {
+        return await handleAbandonedCartStart(req, res);
+      }
+      if (postPath === "/abandonedCart/recover") {
+        return await handleAbandonedCartRecover(req, res);
+      }
+      if (postPath !== "/createOrder") {
+        return res.status(404).json({ error: "not_found" });
+      }
+
       const body = req.body || {};
+      const db = getFirestore();
       const amounts = getNormalizedOrderAmounts(body);
+      const discountResult = await validateDiscountForCart(db, body.discountCode, amounts);
+      if (!discountResult.ok) {
+        return res.status(400).json({ error: discountResult.error || "discount_invalid" });
+      }
+      const discountAmount = discountResult.discountAmount;
+      const computedTotal = roundMoney(Math.max(0, amounts.subtotal + amounts.shippingCost - discountAmount));
+      const clientTotal = roundMoney(Number(body.total));
+      if (Math.abs(computedTotal - clientTotal) > 0.02) {
+        return res.status(400).json({
+          error: "total_mismatch",
+          computedTotal,
+          clientTotal
+        });
+      }
+
       const orderNumber = await allocateCounterValue("orders", 500000);
       const paymentState = String(body.paymentStatus || body.paymentDetails?.status || "").toUpperCase();
       const paymentStatus = body.paymentStatus ||
@@ -1751,7 +2117,6 @@ exports.orderHandler = functions
       const initialOrderStatus = getInitialOrderStatus(paymentStatus);
       const adminSettings = await getGeneralAdminSettings();
 
-      // The body directly comes from Checkour form -> /api/createOrder
       const orderDoc = {
         customer: {
           firstName: body.firstName || "",
@@ -1778,7 +2143,9 @@ exports.orderHandler = functions
         items: amounts.items,
         orderNumber,
         subtotal: amounts.subtotal,
-        total: amounts.total,
+        discountCode: discountResult.code || "",
+        discountAmount,
+        total: computedTotal,
         currency: body.currency || "BHD",
         status: initialOrderStatus,
         urgency: body.urgency || "Normal",
@@ -1791,7 +2158,7 @@ exports.orderHandler = functions
         updatedAt: FieldValue.serverTimestamp()
       };
 
-      const docRef = await getFirestore().collection("orders").add(orderDoc);
+      const docRef = await db.collection("orders").add(orderDoc);
       let inventorySyncStatus = "not_required";
       let inventoryAdjustments = [];
       let inventorySyncError = "";
@@ -1860,6 +2227,15 @@ exports.orderHandler = functions
         console.error("[orderHandler] post-create update error", orderUpdateError);
       }
 
+      if (paymentStatus === "Paid" && discountResult.code) {
+        try {
+          const inc = await incrementDiscountUses(db, discountResult.code);
+          if (!inc.ok) console.warn("[orderHandler] discount increment skipped", discountResult.code);
+        } catch (incErr) {
+          console.error("[orderHandler] discount increment error", incErr);
+        }
+      }
+
       res.json({
         success: true,
         orderId: docRef.id,
@@ -1875,6 +2251,15 @@ exports.orderHandler = functions
         error: err.message
       });
     }
+  });
+
+exports.abandonedCartReminderJob = functions
+  .runWith({ memory: "256MB", timeoutSeconds: 120 })
+  .pubsub.schedule("every day 09:00")
+  .timeZone("Asia/Bahrain")
+  .onRun(async () => {
+    await processAbandonedCartReminders();
+    return null;
   });
 
 // Serve preview images (e.g., data URI → svg) for Zoho descriptions

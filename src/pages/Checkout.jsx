@@ -69,10 +69,28 @@ function buildTapChargeBody(orderData, origin) {
   };
 }
 
+function getOrCreateAbandonSessionId() {
+  try {
+    let s = localStorage.getItem('ezAbandonSession');
+    if (!s) {
+      s = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `ez_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem('ezAbandonSession', s);
+    }
+    return s;
+  } catch {
+    return `ez_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 const CheckoutPage = () => {
   const formRef = useRef(null);
   const [lang, setLang] = useState('ar');
   const [cartItems, setCartItems] = useState([]);
+  const [abandonSessionId] = useState(() => getOrCreateAbandonSessionId());
+  const [discountInput, setDiscountInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [discountLoading, setDiscountLoading] = useState(false);
+  const [discountMessage, setDiscountMessage] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -129,8 +147,22 @@ const CheckoutPage = () => {
     shippingCost = pairs * 5.00;
   }
 
-  const totalDue = subtotal + shippingCost;
+  const discountAmount = appliedDiscount && Number(appliedDiscount.amount) > 0 ? Number(appliedDiscount.amount) : 0;
+  const totalDue = Math.max(0, subtotal + shippingCost - discountAmount);
   const isLoading = loadingAction !== '';
+
+  const cartFingerprint = JSON.stringify(
+    (cartItems || []).map((i) => ({
+      k: i.cartKey || i.id || i.name,
+      q: i.quantity || 1,
+      u: i.unitPrice ?? i.total ?? 0
+    }))
+  );
+
+  useEffect(() => {
+    setAppliedDiscount(null);
+    setDiscountMessage('');
+  }, [cartFingerprint, formData.shippingType, formData.country]);
   const shippingOptions = [
     { value: 'delivery', label: t('shippingBahrainDelivery') || 'توصيل (2 د.ب)' },
     { value: 'pickup', label: t('shippingBahrainPickup') || 'استلام من المتجر (مجاني)' }
@@ -213,7 +245,10 @@ const CheckoutPage = () => {
       fullName: `${formData.firstName} ${formData.lastName}`.trim(),
       phoneFull: `+${formData.phonePrefix}${formData.phone}`,
       shippingMethod: isBahrain ? formData.shippingType : 'international',
-      addressLine1: composedAddress
+      addressLine1: composedAddress,
+      abandonSessionId,
+      discountCode: appliedDiscount?.code || '',
+      discountAmount: discountAmount || 0
     };
 
     if (!requiresAddress) {
@@ -229,6 +264,41 @@ const CheckoutPage = () => {
     }
 
     return orderData;
+  };
+
+  const handleApplyDiscount = async () => {
+    const code = discountInput.trim();
+    if (!code) return;
+    setDiscountLoading(true);
+    setDiscountMessage('');
+    try {
+      const payload = {
+        code,
+        cart: cartItems,
+        subtotal,
+        shippingCost,
+        total: subtotal + shippingCost
+      };
+      const res = await fetch('/api/discount/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await parseJsonSafe(res);
+      if (!res.ok || !data?.success) {
+        setAppliedDiscount(null);
+        setDiscountMessage(t('discountInvalid') || data?.error || 'Invalid code');
+        return;
+      }
+      setAppliedDiscount({ code: data.code, amount: data.discountAmount });
+      setDiscountMessage(t('discountApplied') || 'Discount applied');
+    } catch (err) {
+      console.error(err);
+      setAppliedDiscount(null);
+      setDiscountMessage(t('discountInvalid') || 'Invalid code');
+    } finally {
+      setDiscountLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -267,6 +337,12 @@ const CheckoutPage = () => {
       if (!result?.transaction?.url) {
         throw new Error('No payment URL received');
       }
+
+      fetch('/api/abandonedCart/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      }).catch(() => {});
 
       window.location.href = result.transaction.url;
     } catch (err) {
@@ -459,7 +535,51 @@ const CheckoutPage = () => {
               <span>{shippingCost.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
             </div>
 
+            {discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#4ade80' }}>
+                <span>{t('discountLabel') || 'Discount'}:</span>
+                <span>-{discountAmount.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+              </div>
+            )}
+
             <hr style={{ borderColor: '#333', margin: '1rem 0' }} />
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.9rem', color: '#ccc' }}>
+                {t('discountCodeLabel') || 'Discount code'}
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  placeholder={t('discountCodePlaceholder') || ''}
+                  autoComplete="off"
+                  style={{ flex: '1 1 160px', padding: '0.5rem', minWidth: 0 }}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyDiscount}
+                  disabled={discountLoading || !discountInput.trim()}
+                  style={{
+                    padding: '0.5rem 0.85rem',
+                    borderRadius: '6px',
+                    border: '1px solid #30363d',
+                    background: '#21262d',
+                    color: '#e6edf3',
+                    cursor: discountLoading ? 'wait' : 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  {discountLoading ? '…' : (t('discountApply') || 'Apply')}
+                </button>
+              </div>
+              {discountMessage && (
+                <div style={{ marginTop: '0.35rem', fontSize: '0.85rem', color: appliedDiscount ? '#4ade80' : '#f87171' }}>
+                  {discountMessage}
+                </div>
+              )}
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', color: '#4ade80' }}>
               <span>{t('totalDueLabel')}:</span>

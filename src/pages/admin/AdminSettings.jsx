@@ -29,7 +29,11 @@ const defaultSettings = {
   smtpPass: '',
   smtpFromEmail: '',
   smtpFromName: '',
-  tapPublicKey: ''
+  tapPublicKey: '',
+  abandonedCartReminderDays: 3,
+  abandonedCartEmailSubject: '',
+  abandonedCartEmailBody: '',
+  abandonedCartRecoveryCode: ''
 };
 
 const fieldStyle = {
@@ -466,6 +470,71 @@ const AdminSettings = ({ lang = 'ar' }) => {
               {isAr ? "توجد كلمة مرور SMTP محفوظة بالفعل في إعدادات المسؤول." : "A saved SMTP password already exists in admin settings."}
             </div>
           )}
+        </section>
+
+        <section style={sectionStyle}>
+          <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>
+              {isAr ? 'سلات مهجورة واستردادها' : 'Abandoned carts & recovery'}
+            </div>
+            <div style={{ marginTop: '0.3rem', color: '#8b949e', fontSize: '0.9rem' }}>
+              {isAr
+                ? 'يُسجّل النظام السلة عند بدء الدفع. تُرسل رسالة بعد عدد الأيام التالي (جدول يومي). استخدم رمز خصم موجود في قاعدة الرموز.'
+                : 'Carts are captured when checkout starts payment. A daily job sends email after the delay below. Offer a discount code that exists under Discount codes.'}
+            </div>
+          </div>
+
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left', maxWidth: '280px' }}>
+            <span>{isAr ? 'أيام قبل تذكير البريد' : 'Days before email reminder'}</span>
+            <input
+              type="number"
+              name="abandonedCartReminderDays"
+              min={1}
+              value={formData.abandonedCartReminderDays}
+              onChange={handleChange}
+              style={fieldStyle}
+            />
+          </label>
+
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <span>{isAr ? 'رمز الخصم المقترح في البريد' : 'Recovery discount code (must exist)'}</span>
+            <input
+              name="abandonedCartRecoveryCode"
+              value={formData.abandonedCartRecoveryCode}
+              onChange={handleChange}
+              placeholder="SAVE10"
+              style={fieldStyle}
+            />
+          </label>
+
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <span>{isAr ? 'موضوع البريد' : 'Email subject'}</span>
+            <input
+              name="abandonedCartEmailSubject"
+              value={formData.abandonedCartEmailSubject}
+              onChange={handleChange}
+              placeholder={isAr ? 'أكمل طلبك' : 'Complete your order'}
+              style={fieldStyle}
+            />
+          </label>
+
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <span>{isAr ? 'نص البريد (قالب)' : 'Email body template'}</span>
+            <textarea
+              name="abandonedCartEmailBody"
+              value={formData.abandonedCartEmailBody}
+              onChange={handleChange}
+              rows={8}
+              placeholder={'Hi {{customerName}},\n\nYour cart: {{cartTotal}} {{currency}}.\n\n{{recoveryOffer}}\n\n{{cartLink}}'}
+              style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit' }}
+            />
+          </label>
+
+          <div style={{ fontSize: '0.82rem', color: '#8b949e', textAlign: isAr ? 'right' : 'left' }}>
+            {isAr
+              ? 'عناصر: {{customerName}} {{cartTotal}} {{currency}} {{cartLink}} {{recoveryOffer}} {{discountCode}} {{discountDetails}} {{storeName}}'
+              : 'Placeholders: {{customerName}} {{cartTotal}} {{currency}} {{cartLink}} {{recoveryOffer}} {{discountCode}} {{discountDetails}} {{storeName}}'}
+          </div>
         </section>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>

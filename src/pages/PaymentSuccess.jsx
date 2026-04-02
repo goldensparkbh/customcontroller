@@ -111,6 +111,25 @@ function PaymentSuccessPage() {
 
         setStatus('success');
         setMessage(t('paymentConfirmed') || 'Payment confirmed and order created!');
+
+        try {
+          await fetch('/api/abandonedCart/recover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: orderData.email,
+              abandonSessionId: orderData.abandonSessionId || ''
+            })
+          });
+        } catch (_) {
+          /* ignore */
+        }
+        try {
+          localStorage.removeItem('ezAbandonSession');
+        } catch (_) {
+          /* ignore */
+        }
+
         localStorage.removeItem('ezCart');
         localStorage.removeItem('ezOrderDraft');
 
