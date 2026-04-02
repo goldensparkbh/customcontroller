@@ -122,14 +122,14 @@ const Admin = () => {
             className="admin-dashboard"
             style={{
                 display: 'grid',
+                /* LTR grid so column 1 is always the left edge and 2 the right edge (rtl on parent mirrors tracks). */
+                direction: 'ltr',
                 gridTemplateColumns: isAr ? '1fr 300px' : '300px 1fr',
                 height: 'calc(100vh - 73px)',
                 minHeight: 'calc(100vh - 73px)',
                 background: '#0e1117',
                 color: '#fff',
-                fontFamily: 'Cairo, sans-serif',
-                direction: isAr ? 'rtl' : 'ltr',
-                textAlign: isAr ? 'right' : 'left'
+                fontFamily: 'Cairo, sans-serif'
             }}
         >
             <aside
@@ -140,15 +140,29 @@ const Admin = () => {
                     padding: '2rem 1.25rem',
                     display: 'flex',
                     flexDirection: 'column',
+                    alignItems: 'stretch',
                     gap: '8px',
                     minHeight: 0,
                     overflowY: 'auto',
+                    /* Arabic: right column; English: left column */
                     gridColumn: isAr ? 2 : 1,
                     gridRow: 1,
+                    direction: isAr ? 'rtl' : 'ltr',
                     textAlign: isAr ? 'right' : 'left'
                 }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexDirection: 'row',
+                        /* With aside direction rtl/ltr, flex-start = right cluster (AR) or left cluster (EN) */
+                        justifyContent: 'flex-start',
+                        gap: '10px',
+                        marginBottom: '1.5rem',
+                        width: '100%'
+                    }}
+                >
                     <h2
                         style={{
                             fontSize: '18px',
@@ -156,14 +170,17 @@ const Admin = () => {
                             color: '#8b949e',
                             margin: 0,
                             textTransform: 'uppercase',
-                            letterSpacing: '1px'
+                            letterSpacing: '1px',
+                            textAlign: isAr ? 'right' : 'left'
                         }}
                     >
                         {t('admin.panelTitle')}
                     </h2>
                     <button
+                        type="button"
                         onClick={toggleLanguage}
                         style={{
+                            flexShrink: 0,
                             background: '#21262d',
                             border: '1px solid #30363d',
                             color: '#c9d1d9',
@@ -179,7 +196,7 @@ const Admin = () => {
                 </div>
 
                 {navigationGroups.map((group) => (
-                    <div key={group.id} style={{ display: 'grid', gap: '6px' }}>
+                    <div key={group.id} style={{ display: 'grid', gap: '6px', width: '100%' }}>
                         {group.label ? (
                             <div
                                 style={{
@@ -188,7 +205,9 @@ const Admin = () => {
                                     fontSize: '0.78rem',
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
-                                    letterSpacing: '0.08em'
+                                    letterSpacing: '0.08em',
+                                    textAlign: isAr ? 'right' : 'left',
+                                    width: '100%'
                                 }}
                             >
                                 {group.label}
@@ -203,8 +222,11 @@ const Admin = () => {
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: isAr ? 'flex-end' : 'flex-start',
+                                    justifyContent: 'flex-start',
+                                    width: '100%',
+                                    boxSizing: 'border-box',
                                     padding: '12px 14px',
+                                    paddingInlineStart: group.label ? '12px' : undefined,
                                     background: activeTab === tab.id ? navButtonActiveBackground : 'transparent',
                                     color: activeTab === tab.id ? '#fff' : '#c9d1d9',
                                     border: 'none',
@@ -216,8 +238,7 @@ const Admin = () => {
                                     transition: 'all 0.2s',
                                     boxShadow: activeTab === tab.id
                                         ? 'var(--button-primary-shadow), 0 0 0 1px rgba(240,246,252,0.1)'
-                                        : 'none',
-                                    marginInlineStart: group.label ? '12px' : '0'
+                                        : 'none'
                                 }}
                                 onMouseOver={(event) => {
                                     if (activeTab !== tab.id) {
@@ -246,7 +267,9 @@ const Admin = () => {
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: isAr ? 'flex-end' : 'flex-start',
+                        justifyContent: 'flex-start',
+                        width: '100%',
+                        boxSizing: 'border-box',
                         padding: '12px 14px',
                         background: 'transparent',
                         color: '#eb3942',
@@ -272,24 +295,26 @@ const Admin = () => {
 
             <main
                 style={{
-                    padding: isAr ? '2rem 2rem 2rem 3rem' : '2rem 3rem 2rem 2rem',
+                    padding: '2rem',
                     overflowY: 'auto',
                     minHeight: 0,
                     maxHeight: 'calc(100vh - 73px)',
                     WebkitOverflowScrolling: 'touch',
+                    /* Arabic: wide column on the left of the viewport; English: wide column on the right */
                     gridColumn: isAr ? 1 : 2,
-                    gridRow: 1,
-                    textAlign: isAr ? 'right' : 'left'
+                    gridRow: 1
                 }}
             >
                 <div
+                    dir={isAr ? 'rtl' : 'ltr'}
                     style={{
                         background: '#161b22',
                         border: '1px solid #30363d',
                         borderRadius: '10px',
                         padding: '2rem',
                         minHeight: '100%',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        textAlign: 'left'
                     }}
                 >
                     <h1
@@ -298,7 +323,8 @@ const Admin = () => {
                             fontWeight: 700,
                             marginBottom: '2rem',
                             paddingBottom: '1rem',
-                            borderBottom: '1px solid #30363d'
+                            borderBottom: '1px solid #30363d',
+                            textAlign: 'left'
                         }}
                     >
                         {navigationGroups.flatMap(g => g.items).find((tab) => tab.id === activeTab)?.label}
