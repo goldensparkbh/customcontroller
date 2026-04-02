@@ -10,8 +10,7 @@ import {
     WHATSAPP_TEMPLATE_TAGS,
     applyWhatsAppTemplateBody,
     buildWhatsAppTemplateContext,
-    loadWhatsAppTemplates,
-    saveWhatsAppTemplates
+    loadWhatsAppTemplates
 } from './whatsappTemplates';
 
 const LIST_COLUMNS = '1.1fr 1.25fr 0.8fr 0.95fr 0.9fr 0.9fr';
@@ -332,10 +331,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
     const [whatsAppOpen, setWhatsAppOpen] = useState(false);
     const [selectedTemplateKey, setSelectedTemplateKey] = useState('controller_ready');
     const [waTemplateDefs, setWaTemplateDefs] = useState([]);
-    const [waTemplatesLoading, setWaTemplatesLoading] = useState(true);
-    const [waTemplatesSaving, setWaTemplatesSaving] = useState(false);
-    const [waManageOpen, setWaManageOpen] = useState(false);
-    const [waLocalTemplates, setWaLocalTemplates] = useState([]);
+    const [waTemplatesLoading, setWaTemplatesLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [paymentFilter, setPaymentFilter] = useState('all');
@@ -404,6 +400,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
     }, []);
 
     useEffect(() => {
+        if (!whatsAppOpen) return undefined;
         let cancelled = false;
         (async () => {
             try {
@@ -428,7 +425,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
         return () => {
             cancelled = true;
         };
-    }, [isAr]);
+    }, [whatsAppOpen, isAr]);
 
     const selectedOrder = useMemo(
         () => orders.find((order) => order.id === selectedOrderId) || null,
@@ -609,77 +606,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
     const closeWhatsAppModal = () => {
         setWhatsAppOpen(false);
-        setWaManageOpen(false);
     };
-
-    const openWaTemplateManage = () => {
-        setWaLocalTemplates(waTemplateDefs.map((t) => ({ ...t })));
-        setWaManageOpen(true);
-    };
-
-    const cancelWaTemplateManage = () => {
-        setWaManageOpen(false);
-    };
-
-    const patchWaLocalRow = (id, field, value) => {
-        setWaLocalTemplates((rows) => rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
-    };
-
-    const addWaLocalTemplate = () => {
-        setWaLocalTemplates((rows) => [
-            ...rows,
-            {
-                id: `tpl_${Date.now()}`,
-                label: isAr ? 'قالب جديد' : 'New template',
-                body: 'Hello {{customerName}},\n\n'
-            }
-        ]);
-    };
-
-    const removeWaLocalRow = (id) => {
-        if (waLocalTemplates.length <= 1) {
-            alert(isAr ? 'يجب الإبقاء على قالب واحد على الأقل.' : 'You must keep at least one template.');
-            return;
-        }
-        const ok = window.confirm(
-            isAr ? 'حذف هذا القالب؟' : 'Delete this template?'
-        );
-        if (!ok) return;
-        setWaLocalTemplates((rows) => rows.filter((r) => r.id !== id));
-    };
-
-    const saveWaTemplatesFromManage = async () => {
-        if (!waLocalTemplates.length) {
-            alert(isAr ? 'أضف قالبًا واحدًا على الأقل.' : 'Add at least one template.');
-            return;
-        }
-        const invalid = waLocalTemplates.some((r) => !String(r.label || '').trim());
-        if (invalid) {
-            alert(isAr ? 'كل قالب يحتاج عنوانًا.' : 'Each template needs a title.');
-            return;
-        }
-        setWaTemplatesSaving(true);
-        try {
-            const saved = await saveWhatsAppTemplates(db, waLocalTemplates);
-            setWaTemplateDefs(saved);
-            setSelectedTemplateKey((prev) => (saved.some((t) => t.id === prev) ? prev : saved[0].id));
-            setWaManageOpen(false);
-        } catch (error) {
-            console.error('Failed to save WhatsApp templates', error);
-            alert(isAr ? 'فشل حفظ القوالب.' : 'Failed to save templates.');
-        } finally {
-            setWaTemplatesSaving(false);
-        }
-    };
-
-    useEffect(() => {
-        if (!waTemplateDefs.length) return;
-        setSelectedTemplateKey((prev) => (
-            waTemplateDefs.some((t) => t.id === prev)
-                ? prev
-                : (waTemplateDefs.find((t) => t.id === 'controller_ready') || waTemplateDefs[0]).id
-        ));
-    }, [waTemplateDefs]);
 
     const handleSendWhatsApp = () => {
         if (!customerPhoneDigits || !selectedWhatsAppTemplate?.message) {
@@ -1489,33 +1416,45 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(3, 7, 18, 0.72)',
+                        background: 'rgba(3, 7, 18, 0.78)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '1.5rem',
+                        padding: 'clamp(1rem, 4vw, 2rem)',
                         zIndex: 1250
                     }}
                 >
                     <div
                         onClick={(event) => event.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={isAr ? 'رسالة واتساب' : 'WhatsApp message'}
                         style={{
-                            width: 'min(760px, 100%)',
-                            maxHeight: '88vh',
+                            width: 'min(640px, 100%)',
+                            maxHeight: 'min(90vh, 820px)',
                             overflowY: 'auto',
                             background: '#161b22',
                             border: '1px solid #30363d',
-                            borderRadius: '14px',
-                            boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
-                            padding: '1.25rem'
+                            borderRadius: '16px',
+                            boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+                            padding: 'clamp(1.25rem, 3vw, 2rem)'
                         }}
                     >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div>
-                                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>
-                                    {isAr ? "رسالة واتساب" : "WhatsApp Message"}
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: '1.25rem',
+                                alignItems: 'flex-start',
+                                flexWrap: 'wrap',
+                                marginBottom: '1.5rem'
+                            }}
+                        >
+                            <div style={{ flex: '1 1 200px' }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e6edf3', lineHeight: 1.3 }}>
+                                    {isAr ? 'رسالة واتساب' : 'WhatsApp message'}
                                 </div>
-                                <div style={{ fontSize: '0.84rem', color: '#8b949e', marginTop: '0.25rem' }}>
+                                <div style={{ fontSize: '0.95rem', color: '#8b949e', marginTop: '0.5rem', lineHeight: 1.45 }}>
                                     {selectedOrder.customer?.phone || 'N/A'}
                                 </div>
                             </div>
@@ -1524,54 +1463,56 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 type="button"
                                 onClick={closeWhatsAppModal}
                                 style={{
-                                    padding: '0.55rem 0.8rem',
-                                    borderRadius: '6px',
+                                    padding: '0.6rem 1rem',
+                                    borderRadius: '8px',
                                     border: '1px solid #3b4452',
                                     background: '#0d1117',
                                     color: '#e6edf3',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    fontWeight: 600
                                 }}
                             >
-                                {isAr ? "إغلاق" : "Close"}
+                                {isAr ? 'إغلاق' : 'Close'}
                             </button>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
+                        <div style={{ display: 'grid', gap: '1.5rem' }}>
                             {waTemplatesLoading && (
-                                <div style={{ color: '#8b949e', fontSize: '0.9rem' }}>
+                                <div style={{ color: '#8b949e', fontSize: '1rem', padding: '0.5rem 0' }}>
                                     {isAr ? 'جاري تحميل القوالب…' : 'Loading templates…'}
                                 </div>
                             )}
 
                             {!waTemplatesLoading && whatsAppTemplates.length === 0 && (
-                                <div style={{ color: '#f85149', fontSize: '0.9rem' }}>
-                                    {isAr ? 'لا توجد قوالب. افتح إدارة القوالب لإضافة قالب.' : 'No templates. Use Manage templates to add one.'}
+                                <div style={{ color: '#f85149', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                                    {isAr
+                                        ? 'لا توجد قوالب. أضفها من الإعدادات ← قسم قوالب واتساب.'
+                                        : 'No templates yet. Add them under Settings → WhatsApp templates.'}
                                 </div>
                             )}
 
                             {!waTemplatesLoading && whatsAppTemplates.length > 0 && (
-                                <label style={{ display: 'grid', gap: '0.35rem' }}>
+                                <label style={{ display: 'grid', gap: '0.5rem' }}>
                                     <span
                                         style={{
-                                            fontSize: '0.72rem',
+                                            fontSize: '0.8rem',
                                             color: '#8b949e',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.06em',
+                                            fontWeight: 600,
                                             textAlign: adminAlign(isAr)
                                         }}
                                     >
-                                        {isAr ? 'اختر القالب' : 'Template'}
+                                        {isAr ? 'اختر القالب' : 'Choose template'}
                                     </span>
                                     <select
                                         value={selectedWhatsAppTemplate?.key || ''}
                                         onChange={(e) => setSelectedTemplateKey(e.target.value)}
                                         style={{
-                                            padding: '0.65rem 0.75rem',
-                                            borderRadius: '8px',
+                                            padding: '0.85rem 1rem',
+                                            borderRadius: '10px',
                                             border: '1px solid #30363d',
                                             background: '#0d1117',
                                             color: '#e6edf3',
-                                            fontSize: '0.95rem',
+                                            fontSize: '1rem',
                                             textAlign: adminAlign(isAr)
                                         }}
                                     >
@@ -1584,241 +1525,97 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 </label>
                             )}
 
-                            <div
+                            <p
                                 style={{
-                                    background: '#0d1117',
-                                    border: '1px solid #30363d',
-                                    borderRadius: '8px',
-                                    padding: '0.85rem',
+                                    margin: 0,
+                                    fontSize: '0.88rem',
+                                    color: '#8b949e',
+                                    lineHeight: 1.55,
                                     textAlign: adminAlign(isAr)
                                 }}
                             >
-                                <div
+                                {isAr
+                                    ? 'لتعديل القوالب أو الوسوم، افتح تبويب الإعدادات وانتقل إلى قسم «قوالب رسائل واتساب».'
+                                    : 'To edit templates or placeholders, open the Settings tab and use the “WhatsApp message templates” section.'}
+                            </p>
+
+                            <details
+                                style={{
+                                    background: '#0d1117',
+                                    border: '1px solid #30363d',
+                                    borderRadius: '10px',
+                                    padding: '0.9rem 1.1rem',
+                                    textAlign: adminAlign(isAr)
+                                }}
+                            >
+                                <summary
                                     style={{
-                                        fontSize: '0.72rem',
-                                        color: '#8b949e',
-                                        marginBottom: '0.55rem',
-                                        fontWeight: 700,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.06em'
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        color: '#c9d1d9',
+                                        fontSize: '0.92rem'
                                     }}
                                 >
-                                    {isAr ? 'وسوم للاستخدام في نص القالب' : 'Placeholders for template text'}
-                                </div>
-                                <div style={{ display: 'grid', gap: '0.4rem', fontSize: '0.82rem' }}>
+                                    {isAr ? 'مرجع سريع للوسوم' : 'Quick placeholder reference'}
+                                </summary>
+                                <div style={{ marginTop: '0.85rem', display: 'grid', gap: '0.45rem' }}>
                                     {WHATSAPP_TEMPLATE_TAGS.map((row) => (
-                                        <div key={row.tag} style={{ color: '#c9d1d9', lineHeight: 1.45 }}>
-                                            <code style={{ color: '#79c0ff', fontSize: '0.8rem' }}>{row.tag}</code>
-                                            <span style={{ color: '#8b949e', marginInlineStart: '0.45rem' }}>
+                                        <div key={row.tag} style={{ color: '#c9d1d9', fontSize: '0.84rem', lineHeight: 1.5 }}>
+                                            <code style={{ color: '#79c0ff' }}>{row.tag}</code>
+                                            <span style={{ color: '#8b949e', marginInlineStart: '0.4rem' }}>
                                                 {isAr ? row.ar : row.en}
                                             </span>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </details>
 
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                                <button
-                                    type="button"
-                                    onClick={openWaTemplateManage}
-                                    disabled={waTemplatesLoading || waTemplatesSaving}
-                                    style={{
-                                        padding: '0.55rem 0.9rem',
-                                        borderRadius: '8px',
-                                        border: '1px solid #3b4452',
-                                        background: '#21262d',
-                                        color: '#e6edf3',
-                                        cursor: waTemplatesLoading || waTemplatesSaving ? 'not-allowed' : 'pointer',
-                                        fontWeight: 600,
-                                        opacity: waTemplatesLoading || waTemplatesSaving ? 0.6 : 1
-                                    }}
-                                >
-                                    {isAr ? 'إدارة القوالب (إضافة / تعديل / حذف)' : 'Manage templates (add / edit / delete)'}
-                                </button>
-                            </div>
-
-                            {waManageOpen && (
+                            <div style={{ display: 'grid', gap: '0.5rem' }}>
                                 <div
                                     style={{
-                                        border: '1px solid #30363d',
-                                        borderRadius: '10px',
-                                        padding: '1rem',
-                                        background: '#111827',
-                                        display: 'grid',
-                                        gap: '0.9rem',
+                                        fontSize: '0.8rem',
+                                        color: '#8b949e',
+                                        fontWeight: 600,
                                         textAlign: adminAlign(isAr)
                                     }}
                                 >
-                                    <div style={{ fontWeight: 700, color: '#e6edf3' }}>
-                                        {isAr ? 'محرر القوالب' : 'Template editor'}
-                                    </div>
-                                    {waLocalTemplates.map((row) => (
-                                        <div
-                                            key={row.id}
-                                            style={{
-                                                border: '1px solid #30363d',
-                                                borderRadius: '8px',
-                                                padding: '0.85rem',
-                                                display: 'grid',
-                                                gap: '0.5rem',
-                                                background: '#0d1117'
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    gap: '0.5rem',
-                                                    flexWrap: 'wrap',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                <input
-                                                    value={row.label}
-                                                    onChange={(e) => patchWaLocalRow(row.id, 'label', e.target.value)}
-                                                    placeholder={isAr ? 'عنوان القالب' : 'Template title'}
-                                                    style={{
-                                                        flex: '1 1 200px',
-                                                        padding: '0.55rem 0.65rem',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid #30363d',
-                                                        background: '#161b22',
-                                                        color: '#e6edf3'
-                                                    }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeWaLocalRow(row.id)}
-                                                    disabled={waTemplatesSaving}
-                                                    style={{
-                                                        padding: '0.5rem 0.75rem',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid #f85149',
-                                                        background: 'transparent',
-                                                        color: '#f85149',
-                                                        cursor: waTemplatesSaving ? 'not-allowed' : 'pointer',
-                                                        fontWeight: 600
-                                                    }}
-                                                >
-                                                    {isAr ? 'حذف' : 'Delete'}
-                                                </button>
-                                            </div>
-                                            <textarea
-                                                value={row.body}
-                                                onChange={(e) => patchWaLocalRow(row.id, 'body', e.target.value)}
-                                                rows={7}
-                                                placeholder={isAr ? 'نص الرسالة… استخدم الوسوم أعلاه' : 'Message body… use placeholders above'}
-                                                style={{
-                                                    width: '100%',
-                                                    boxSizing: 'border-box',
-                                                    padding: '0.65rem',
-                                                    borderRadius: '8px',
-                                                    border: '1px solid #30363d',
-                                                    background: '#161b22',
-                                                    color: '#e6edf3',
-                                                    lineHeight: 1.5,
-                                                    resize: 'vertical',
-                                                    fontFamily: 'inherit'
-                                                }}
-                                            />
-                                            <div style={{ fontSize: '0.7rem', color: '#6e7681' }}>
-                                                {isAr ? 'المعرّف:' : 'ID:'} <code style={{ color: '#8b949e' }}>{row.id}</code>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <button
-                                            type="button"
-                                            onClick={addWaLocalTemplate}
-                                            disabled={waTemplatesSaving}
-                                            style={{
-                                                padding: '0.55rem 0.9rem',
-                                                borderRadius: '8px',
-                                                border: '1px solid #3fb950',
-                                                background: 'rgba(63,185,80,0.12)',
-                                                color: '#3fb950',
-                                                fontWeight: 700,
-                                                cursor: waTemplatesSaving ? 'not-allowed' : 'pointer'
-                                            }}
-                                        >
-                                            {isAr ? '+ إضافة قالب' : '+ Add template'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={saveWaTemplatesFromManage}
-                                            disabled={waTemplatesSaving}
-                                            style={{
-                                                padding: '0.55rem 0.9rem',
-                                                borderRadius: '8px',
-                                                border: 'none',
-                                                background: '#238636',
-                                                color: '#fff',
-                                                fontWeight: 700,
-                                                cursor: waTemplatesSaving ? 'not-allowed' : 'pointer',
-                                                opacity: waTemplatesSaving ? 0.7 : 1
-                                            }}
-                                        >
-                                            {waTemplatesSaving
-                                                ? (isAr ? 'جاري الحفظ…' : 'Saving…')
-                                                : (isAr ? 'حفظ القوالب' : 'Save templates')}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={cancelWaTemplateManage}
-                                            disabled={waTemplatesSaving}
-                                            style={{
-                                                padding: '0.55rem 0.9rem',
-                                                borderRadius: '8px',
-                                                border: '1px solid #3b4452',
-                                                background: '#21262d',
-                                                color: '#e6edf3',
-                                                fontWeight: 600,
-                                                cursor: waTemplatesSaving ? 'not-allowed' : 'pointer'
-                                            }}
-                                        >
-                                            {isAr ? 'إلغاء' : 'Cancel'}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div style={{ display: 'grid', gap: '0.45rem' }}>
-                                <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                    {isAr ? "معاينة الرسالة" : "Message Preview"}
+                                    {isAr ? 'معاينة الرسالة' : 'Message preview'}
                                 </div>
                                 <textarea
                                     readOnly
                                     value={selectedWhatsAppTemplate?.message || ''}
                                     style={{
-                                        minHeight: '240px',
+                                        minHeight: '200px',
                                         resize: 'vertical',
-                                        padding: '0.9rem',
-                                        borderRadius: '10px',
+                                        padding: '1.1rem 1.15rem',
+                                        borderRadius: '12px',
                                         border: '1px solid #30363d',
                                         background: '#0d1117',
                                         color: '#e6edf3',
-                                        lineHeight: 1.55
+                                        lineHeight: 1.65,
+                                        fontSize: '0.95rem'
                                     }}
                                 />
                             </div>
 
                             {(previewLinks?.front || previewLinks?.back) && (
-                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
                                     {previewLinks.front && (
                                         <a
                                             href={previewLinks.front}
                                             target="_blank"
                                             rel="noreferrer"
                                             style={{
-                                                padding: '0.58rem 0.9rem',
-                                                borderRadius: '6px',
+                                                padding: '0.65rem 1rem',
+                                                borderRadius: '8px',
                                                 border: '1px solid #3b4452',
                                                 background: '#0d1117',
                                                 color: '#58a6ff',
-                                                textDecoration: 'none'
+                                                textDecoration: 'none',
+                                                fontWeight: 600
                                             }}
                                         >
-                                            {isAr ? "فتح صورة الأمام" : "Open Front Image"}
+                                            {isAr ? 'فتح صورة الأمام' : 'Open front image'}
                                         </a>
                                     )}
                                     {previewLinks.back && (
@@ -1827,53 +1624,54 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             target="_blank"
                                             rel="noreferrer"
                                             style={{
-                                                padding: '0.58rem 0.9rem',
-                                                borderRadius: '6px',
+                                                padding: '0.65rem 1rem',
+                                                borderRadius: '8px',
                                                 border: '1px solid #3b4452',
                                                 background: '#0d1117',
                                                 color: '#58a6ff',
-                                                textDecoration: 'none'
+                                                textDecoration: 'none',
+                                                fontWeight: 600
                                             }}
                                         >
-                                            {isAr ? "فتح صورة الخلف" : "Open Back Image"}
+                                            {isAr ? 'فتح صورة الخلف' : 'Open back image'}
                                         </a>
                                     )}
                                 </div>
                             )}
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                <button
-                                    type="button"
-                                    onClick={handleSendWhatsApp}
-                                    disabled={
+                            <button
+                                type="button"
+                                onClick={handleSendWhatsApp}
+                                disabled={
+                                    waTemplatesLoading ||
+                                    !customerPhoneDigits ||
+                                    !selectedWhatsAppTemplate?.message
+                                }
+                                style={{
+                                    width: '100%',
+                                    padding: '0.95rem 1.25rem',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #f6d365 0%, #f5b942 100%)',
+                                    color: '#0d1117',
+                                    fontWeight: 800,
+                                    fontSize: '1.02rem',
+                                    cursor:
                                         waTemplatesLoading ||
                                         !customerPhoneDigits ||
                                         !selectedWhatsAppTemplate?.message
-                                    }
-                                    style={{
-                                        padding: '0.7rem 1.1rem',
-                                        borderRadius: '8px',
-                                        border: 'none',
-                                        background: 'linear-gradient(135deg, #f6d365 0%, #f5b942 100%)',
-                                        color: '#0d1117',
-                                        fontWeight: 700,
-                                        cursor:
-                                            waTemplatesLoading ||
-                                            !customerPhoneDigits ||
-                                            !selectedWhatsAppTemplate?.message
-                                                ? 'not-allowed'
-                                                : 'pointer',
-                                        opacity:
-                                            waTemplatesLoading ||
-                                            !customerPhoneDigits ||
-                                            !selectedWhatsAppTemplate?.message
-                                                ? 0.6
-                                                : 1
-                                    }}
-                                >
-                                    {isAr ? "إرسال عبر واتساب" : "Send by WhatsApp"}
-                                </button>
-                            </div>
+                                            ? 'not-allowed'
+                                            : 'pointer',
+                                    opacity:
+                                        waTemplatesLoading ||
+                                        !customerPhoneDigits ||
+                                        !selectedWhatsAppTemplate?.message
+                                            ? 0.55
+                                            : 1
+                                }}
+                            >
+                                {isAr ? 'إرسال في واتساب' : 'Open WhatsApp with message'}
+                            </button>
                         </div>
                     </div>
                 </div>
