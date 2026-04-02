@@ -176,7 +176,7 @@ export const i18n = {
     addressLine2Label: "العنوان (سطر 2) اختياري",
     saudiUnifiedAddressLabel: "الرجاء وضع العنوان الموحد",
     shippingMethodLabel: "طريقة الشحن",
-    shippingBahrainDelivery: "توصيل (2 د.ب)",
+    shippingBahrainDelivery: "توصيل - خلال 6-7 أيام عمل (2 د.ب)",
     shippingBahrainPickup: "استلام من المتجر (مجاني)",
     shippingInternational: "شحن دولي (حسب الكمية)",
     arabCountries: {
@@ -612,7 +612,7 @@ export const i18n = {
     addressLine2Label: "Address line 2 (optional)",
     saudiUnifiedAddressLabel: "Please enter Saudi Unified Address",
     shippingMethodLabel: "Shipping method",
-    shippingBahrainDelivery: "Delivery (2 BHD)",
+    shippingBahrainDelivery: "Delivery - 6-7 business days (2 BHD)",
     shippingBahrainPickup: "Store pickup (Free)",
     shippingInternational: "International shipping",
     arabCountries: {

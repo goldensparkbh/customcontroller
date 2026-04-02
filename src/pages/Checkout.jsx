@@ -164,7 +164,7 @@ const CheckoutPage = () => {
     setDiscountMessage('');
   }, [cartFingerprint, formData.shippingType, formData.country]);
   const shippingOptions = [
-    { value: 'delivery', label: t('shippingBahrainDelivery') || 'توصيل (2 د.ب)' },
+    { value: 'delivery', label: t('shippingBahrainDelivery') || 'توصيل - خلال 6-7 أيام عمل (2 د.ب)' },
     { value: 'pickup', label: t('shippingBahrainPickup') || 'استلام من المتجر (مجاني)' }
   ];
 
@@ -363,8 +363,33 @@ const CheckoutPage = () => {
 
         {/* Left: Form */}
         <div className="checkout-form-panel" style={{ flex: '2 1 600px', background: '#1c1f28', padding: '2rem', borderRadius: '8px' }}>
-          <h2 style={{ margin: '0 0 1.5rem 0' }}>{t('formTitle') || 'Customer & Payment Details'}</h2>
           <form className="checkout-form-stack" ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {isBahrain && (
+              <div className="checkout-shipping-box" style={{ background: '#222', padding: '1rem', borderRadius: '4px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('shippingMethodLabel') || 'Shipping Method'}</label>
+                <div className="checkout-shipping-toggle" role="radiogroup" aria-label={t('shippingMethodLabel') || 'Shipping Method'}>
+                  {shippingOptions.map((option) => {
+                    const isActive = formData.shippingType === option.value;
+                    return (
+                      <label key={option.value} className={`checkout-shipping-option${isActive ? ' active' : ''}`}>
+                        <input
+                          className="checkout-shipping-input"
+                          type="radio"
+                          name="shippingType"
+                          value={option.value}
+                          checked={isActive}
+                          onChange={handleChange}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <h2 style={{ margin: '0 0 1.5rem 0' }}>{t('formTitle') || 'Customer & Payment Details'}</h2>
+
             <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <label>{t('firstNameLabel') || 'First Name'} *</label>
@@ -411,30 +436,6 @@ const CheckoutPage = () => {
                 ))}
               </select>
             </div>
-
-            {isBahrain && (
-              <div className="checkout-shipping-box" style={{ background: '#222', padding: '1rem', borderRadius: '4px' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('shippingMethodLabel') || 'Shipping Method'}</label>
-                <div className="checkout-shipping-toggle" role="radiogroup" aria-label={t('shippingMethodLabel') || 'Shipping Method'}>
-                  {shippingOptions.map((option) => {
-                    const isActive = formData.shippingType === option.value;
-                    return (
-                      <label key={option.value} className={`checkout-shipping-option${isActive ? ' active' : ''}`}>
-                        <input
-                          className="checkout-shipping-input"
-                          type="radio"
-                          name="shippingType"
-                          value={option.value}
-                          checked={isActive}
-                          onChange={handleChange}
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {requiresAddress && (
               <div className="checkout-address-box" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#222', padding: '1rem', borderRadius: '4px' }}>

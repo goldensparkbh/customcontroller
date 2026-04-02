@@ -23,6 +23,12 @@ const fieldStyle = {
   color: '#e6edf3'
 };
 
+/** Light calendar icon on dark inputs (WebKit/Blink); color-scheme helps Firefox. */
+const datetimeLocalFieldStyle = {
+  ...fieldStyle,
+  colorScheme: 'dark'
+};
+
 const sectionStyle = {
   background: '#161b22',
   border: '1px solid #30363d',
@@ -339,7 +345,8 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
           <span>{t('admin.discounts.startsAt')}</span>
           <input
             type="datetime-local"
-            style={fieldStyle}
+            className="admin-discount-datetime"
+            style={datetimeLocalFieldStyle}
             value={form.startsAt}
             onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
           />
@@ -348,7 +355,8 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
           <span>{t('admin.discounts.endsAt')}</span>
           <input
             type="datetime-local"
-            style={fieldStyle}
+            className="admin-discount-datetime"
+            style={datetimeLocalFieldStyle}
             value={form.endsAt}
             onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))}
           />
@@ -596,6 +604,18 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
+            <style>
+              {`
+                .admin-discount-datetime::-webkit-calendar-picker-indicator {
+                  filter: invert(1) brightness(1.15);
+                  cursor: pointer;
+                  opacity: 1;
+                }
+                .admin-discount-datetime::-webkit-calendar-picker-indicator:hover {
+                  filter: invert(1) brightness(1.35);
+                }
+              `}
+            </style>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
               <h2 id="discount-modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
                 {modalTitle}
