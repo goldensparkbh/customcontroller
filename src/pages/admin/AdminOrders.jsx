@@ -48,6 +48,31 @@ const getInventorySyncStatus = (order) => String(order?.inventorySyncStatus || '
 const getInventorySyncError = (order) => String(order?.inventorySyncError || '').trim();
 const getInventoryAdjustments = (order) => Array.isArray(order?.inventoryAdjustments) ? order.inventoryAdjustments : [];
 const normalizeWhatsAppPhone = (phone) => String(phone || '').replace(/\D/g, '');
+
+/**
+ * Synchronous copy so we can open WhatsApp in the same click (popup blockers + async clipboard break that).
+ * URL ?text= often corrupts emoji () for long Arabic messages in WhatsApp.
+ */
+function copyPlainTextToClipboardSync(text) {
+    const value = String(text ?? '').normalize('NFC');
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = value;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, value.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+    } catch {
+        return false;
+    }
+}
 const normalizeOrderUrgency = (urgency) => {
     const normalized = String(urgency || '').trim().toLowerCase();
     if (normalized === 'urgent') return 'Urgent';
@@ -330,6 +355,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
     const [detailUrgency, setDetailUrgency] = useState('Normal');
     const [detailTrackingNumber, setDetailTrackingNumber] = useState('');
     const [whatsAppOpen, setWhatsAppOpen] = useState(false);
+    const [whatsAppSendHint, setWhatsAppSendHint] = useState(null);
     const [selectedTemplateKey, setSelectedTemplateKey] = useState('controller_ready');
     const [waTemplateDefs, setWaTemplateDefs] = useState([]);
     const [waTemplatesLoading, setWaTemplatesLoading] = useState(false);
@@ -607,16 +633,33 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
     const closeWhatsAppModal = () => {
         setWhatsAppOpen(false);
+        setWhatsAppSendHint(null);
     };
 
     const handleSendWhatsApp = () => {
         if (!customerPhoneDigits || !selectedWhatsAppTemplate?.message) {
-            alert('WhatsApp message is not ready.');
+            alert(isAr ? 'الرسالة غير جاهزة.' : 'WhatsApp message is not ready.');
             return;
         }
 
-        const href = `https://wa.me/${customerPhoneDigits}?text=${encodeURIComponent(selectedWhatsAppTemplate.message)}`;
-        window.open(href, '_blank', 'noopener,noreferrer');
+        const message = String(selectedWhatsAppTemplate.message).normalize('NFC');
+        const waChatUrl = `https://wa.me/${customerPhoneDigits}`;
+
+        if (copyPlainTextToClipboardSync(message)) {
+            const w = window.open(waChatUrl, '_blank', 'noopener,noreferrer');
+            if (!w) {
+                alert(
+                    isAr
+                        ? 'المتصفح منع فتح واتساب. اسمح بالنوافذ المنبثقة. الرسالة منسوخة — الصقها يدوياً في محادثة واتساب.'
+                        : 'Pop-up blocked. The message is copied — open WhatsApp and paste, or allow pop-ups and try again.'
+                );
+            }
+            setWhatsAppSendHint('paste');
+            return;
+        }
+
+        window.open(`${waChatUrl}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+        setWhatsAppSendHint('url_fallback');
     };
 
     const handleResetFilters = () => {
@@ -1506,7 +1549,10 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     </span>
                                     <select
                                         value={selectedWhatsAppTemplate?.key || ''}
-                                        onChange={(e) => setSelectedTemplateKey(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedTemplateKey(e.target.value);
+                                            setWhatsAppSendHint(null);
+                                        }}
                                         style={{
                                             padding: '0.85rem 1rem',
                                             borderRadius: '10px',
@@ -1641,6 +1687,60 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 </div>
                             )}
 
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: '0.86rem',
+                                    color: '#8b949e',
+                                    lineHeight: 1.55,
+                                    textAlign: adminAlign(isAr)
+                                }}
+                            >
+                                {isAr
+                                    ? 'لتفادي ظهور الرموز التعبيرية كعلامات استفهام، تُنسخ الرسالة كاملةً ثم يُفتح واتساب؛ الصق الرسالة في الحقل (Ctrl+V أو لصق من شريط الهاتف).'
+                                    : 'Emoji and Arabic stay correct when the message is copied to your clipboard and you paste it into WhatsApp. The link no longer puts the text in the URL (that often breaks emoji).'}
+                            </p>
+
+                            {whatsAppSendHint === 'paste' && (
+                                <div
+                                    role="status"
+                                    style={{
+                                        padding: '0.85rem 1rem',
+                                        borderRadius: '10px',
+                                        background: 'rgba(35, 134, 54, 0.18)',
+                                        border: '1px solid rgba(35, 134, 54, 0.45)',
+                                        color: '#3fb950',
+                                        fontSize: '0.95rem',
+                                        lineHeight: 1.5,
+                                        textAlign: adminAlign(isAr)
+                                    }}
+                                >
+                                    {isAr
+                                        ? 'تم نسخ الرسالة. بعد فتح واتساب، الصقها في مربع الكتابة (Ctrl+V أو ⌘V).'
+                                        : 'Message copied. After WhatsApp opens, paste into the message field (Ctrl+V or ⌘V).'}
+                                </div>
+                            )}
+
+                            {whatsAppSendHint === 'url_fallback' && (
+                                <div
+                                    role="status"
+                                    style={{
+                                        padding: '0.85rem 1rem',
+                                        borderRadius: '10px',
+                                        background: 'rgba(210, 153, 34, 0.15)',
+                                        border: '1px solid rgba(210, 153, 34, 0.4)',
+                                        color: '#d29922',
+                                        fontSize: '0.95rem',
+                                        lineHeight: 1.5,
+                                        textAlign: adminAlign(isAr)
+                                    }}
+                                >
+                                    {isAr
+                                        ? 'تعذّر النسخ تلقائياً. فُتح واتساب بنص في الرابط قد لا تظهر فيه الرموز بشكل صحيح — انسخ الرسالة يدوياً من المعاينة أعلاه ثم الصقها في واتساب.'
+                                        : 'Could not copy automatically. WhatsApp opened with text in the URL (emoji may break). Copy the message from the preview above and paste it into WhatsApp.'}
+                                </div>
+                            )}
+
                             <button
                                 type="button"
                                 onClick={handleSendWhatsApp}
@@ -1672,7 +1772,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             : 1
                                 }}
                             >
-                                {isAr ? 'إرسال في واتساب' : 'Open WhatsApp with message'}
+                                {isAr ? 'نسخ الرسالة وفتح واتساب' : 'Copy message & open WhatsApp'}
                             </button>
                         </div>
                     </div>

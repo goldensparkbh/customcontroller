@@ -1,4 +1,4 @@
-import{r as t,j as n}from"./index-Co3uvXAr.js";const a=`
+import{r as t,j as n}from"./index-D8qe2hIb.js";const a=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav" style="display:none;"></div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
