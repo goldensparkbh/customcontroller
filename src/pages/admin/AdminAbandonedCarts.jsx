@@ -3,6 +3,7 @@ import { db } from '../../firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 
 const sectionStyle = {
   background: '#161b22',
@@ -111,7 +112,7 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
         <div style={{ fontWeight: 700 }}>{t('admin.abandoned.list')}</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
           <thead>
-            <tr style={{ textAlign: isAr ? 'right' : 'left', color: '#8b949e' }}>
+            <tr style={{ textAlign: adminAlign(isAr), color: '#8b949e' }}>
               <th style={{ padding: '0.5rem' }}>{t('admin.abandoned.status')}</th>
               <th style={{ padding: '0.5rem' }}>{t('admin.abandoned.email')}</th>
               <th style={{ padding: '0.5rem' }}>{t('admin.abandoned.total')}</th>
@@ -127,9 +128,9 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
                 </td>
               </tr>
             )}
-            {rows.map((row) => (
-              <tr key={row.id} style={{ borderTop: '1px solid #30363d' }}>
-                <td style={{ padding: '0.5rem' }}>{String(row.status || '—')}</td>
+              {rows.map((row) => (
+                <tr key={row.id} style={{ borderTop: '1px solid #30363d', textAlign: adminAlign(isAr) }}>
+                  <td style={{ padding: '0.5rem' }}>{String(row.status || '—')}</td>
                 <td style={{ padding: '0.5rem' }}>{row.email || '—'}</td>
                 <td style={{ padding: '0.5rem' }}>
                   {Number(row.total || 0).toFixed(2)} {row.currency || 'BHD'}

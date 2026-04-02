@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import {
@@ -68,14 +69,17 @@ const normalizeMasterRecord = ({ id, raw, sourceType, sourceLabel, partId = '', 
     })
 });
 
-const DetailField = ({ label, value }) => (
-    <div style={{ display: 'grid', gap: '0.2rem' }}>
-        <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {label}
+const DetailField = ({ label, value, isAr }) => {
+    const align = adminAlign(isAr);
+    return (
+        <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
+            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+            </div>
+            <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
         </div>
-        <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
-    </div>
-);
+    );
+};
 
 const AdminInventoryMaster = ({ lang = 'ar' }) => {
     const [records, setRecords] = useState([]);
@@ -232,7 +236,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
     return (
         <div style={{ display: 'grid', gap: '1rem', direction: isAr ? 'rtl' : 'ltr' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1.5fr) repeat(2, minmax(180px, 0.8fr))', gap: '0.9rem' }}>
-                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
                     <span style={{ color: '#8b949e' }}>{isAr ? "البحث بالاسم، الرقم أو الباركود" : "Search by item, item number, or barcode"}</span>
                     <input
                         value={searchQuery}
@@ -242,7 +246,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                     />
                 </label>
 
-                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
                     <span style={{ color: '#8b949e' }}>{isAr ? "المصدر" : "Source"}</span>
                     <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} style={fieldStyle}>
                         <option value="all">{isAr ? "جميع المصادر" : "All Sources"}</option>
@@ -251,7 +255,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                     </select>
                 </label>
 
-                <label style={{ display: 'grid', gap: '0.45rem' }}>
+                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
                     <span style={{ color: '#8b949e' }}>{isAr ? "المخزون" : "Stock"}</span>
                     <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)} style={fieldStyle}>
                         <option value="all">{t('admin.inventory.all')}</option>
@@ -261,7 +265,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                 </label>
             </div>
 
-            <div style={{ color: '#8b949e' }}>
+            <div style={{ color: '#8b949e', textAlign: adminAlign(isAr) }}>
                 {filteredRecords.length} {isAr ? "سجل مخزون" : "inventory record(s)"}
             </div>
 
@@ -277,7 +281,8 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                         fontSize: '0.72rem',
                         color: '#8b949e',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.08em'
+                        letterSpacing: '0.08em',
+                        textAlign: adminAlign(isAr)
                     }}
                 >
                     <div>{isAr ? "الرقم" : "ID"}</div>
@@ -304,7 +309,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                                 borderTop: '1px solid rgba(255,255,255,0.05)',
                                 background: 'transparent',
                                 color: '#e6edf3',
-                                textAlign: isAr ? 'right' : 'left',
+                                textAlign: adminAlign(isAr),
                                 cursor: 'pointer'
                             }}
                         >
@@ -323,7 +328,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                         </button>
                     ))}
                     {filteredRecords.length === 0 && (
-                        <div style={{ padding: '1.2rem', color: '#8b949e' }}>
+                        <div style={{ padding: '1.2rem', color: '#8b949e', textAlign: adminAlign(isAr) }}>
                             {isAr ? "لا توجد سجلات مخزون تطابق الفلتر الحالي." : "No inventory records matched your filters."}
                         </div>
                     )}
@@ -361,7 +366,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                                 flexDirection: isAr ? 'row-reverse' : 'row'
                             }}
                         >
-                            <div>
+                            <div style={{ textAlign: adminAlign(isAr) }}>
                                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{selectedRecord.name}</div>
                                 <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
                                     #{padNumericString(selectedRecord.itemNumber)} · {selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`}
@@ -403,27 +408,27 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
+                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr', textAlign: adminAlign(isAr) }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedRecord.itemNumber)} />
+                                    <DetailField isAr={isAr} label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedRecord.itemNumber)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "الباركود" : "Barcode"} value={selectedRecord.barcode} />
+                                    <DetailField isAr={isAr} label={isAr ? "الباركود" : "Barcode"} value={selectedRecord.barcode} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "المصدر" : "Source"} value={selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`} />
+                                    <DetailField isAr={isAr} label={isAr ? "المصدر" : "Source"} value={selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`} />
                                 </div>
 
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedRecord.sellPrice ?? selectedRecord.price)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedRecord.sellPrice ?? selectedRecord.price)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedRecord.purchasePrice)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedRecord.purchasePrice)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={t('admin.inventory.inHand')} value={String(selectedRecord.quantity ?? 0)} />
+                                    <DetailField isAr={isAr} label={t('admin.inventory.inHand')} value={String(selectedRecord.quantity ?? 0)} />
                                 </div>
                             </div>
 
                             {selectedRecord.sourceType === 'normal' && (
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3', flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: isAr ? 'flex-end' : 'flex-start' }}>
                                     <input
                                         type="checkbox"
                                         checked={formState.showOnline}
@@ -442,7 +447,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                             />
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{t('admin.inventory.history')}</div>
+                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{t('admin.inventory.history')}</div>
                                 <div style={{ display: 'grid', gap: '0.75rem' }}>
                                     {(formState.inventoryDetails || []).map((row, index) => (
                                         <div
@@ -457,14 +462,14 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                                                 background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : '#111827'
                                             }}
                                         >
-                                            <DetailField label={t('admin.inventory.reason')} value={getInventoryReasonLabel(row.reason, lang)} />
-                                            <DetailField label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
-                                            <DetailField label={t('admin.inventory.columns.quantity')} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
-                                            <DetailField label={isAr ? "ملاحظة / المصدر" : "Note / Source"} value={row.note || row.source || (isAr ? 'يدوي' : 'manual')} />
+                                            <DetailField isAr={isAr} label={t('admin.inventory.reason')} value={getInventoryReasonLabel(row.reason, lang)} />
+                                            <DetailField isAr={isAr} label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
+                                            <DetailField isAr={isAr} label={t('admin.inventory.columns.quantity')} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
+                                            <DetailField isAr={isAr} label={isAr ? "ملاحظة / المصدر" : "Note / Source"} value={row.note || row.source || (isAr ? 'يدوي' : 'manual')} />
                                         </div>
                                     ))}
                                     {(!formState.inventoryDetails || formState.inventoryDetails.length === 0) && (
-                                        <div style={{ color: '#8b949e' }}>{isAr ? "لا توجد حركات مخزون مسجلة." : "No inventory movements recorded."}</div>
+                                        <div style={{ color: '#8b949e', textAlign: adminAlign(isAr) }}>{isAr ? "لا توجد حركات مخزون مسجلة." : "No inventory movements recorded."}</div>
                                     )}
                                 </div>
                             </div>

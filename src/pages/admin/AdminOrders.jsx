@@ -5,6 +5,7 @@ import { getOrderNumber, padNumericString } from './recordNumbers';
 import LoadingState from '../../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.jsx';
 import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 
 const LIST_COLUMNS = '1.1fr 1.25fr 0.8fr 0.95fr 0.9fr 0.9fr';
 const CHECKBOX_COL_WIDTH = '44px';
@@ -217,9 +218,8 @@ const sectionCardStyle = {
     overflow: 'hidden'
 };
 
-const listCellStyle = {
-    minWidth: 0,
-    textAlign: 'left'
+const listCellBase = {
+    minWidth: 0
 };
 
 const PreviewStack = ({ layers, fallbackSrc, alt }) => (
@@ -311,42 +311,48 @@ const ItemPreview = ({ item }) => {
     );
 };
 
-const DetailField = ({ label, value }) => (
-    <div style={{ display: 'grid', gap: '0.2rem' }}>
-        <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {label}
+const DetailField = ({ label, value, isAr }) => {
+    const align = adminAlign(isAr);
+    return (
+        <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
+            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+            </div>
+            <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
         </div>
-        <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
-    </div>
-);
+    );
+};
 
-const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }) => (
-    <div style={{ display: 'grid', gap: '0.2rem' }}>
-        <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {label}
+const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }) => {
+    const align = adminAlign(isAr);
+    return (
+        <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
+            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+            </div>
+            <button
+                type="button"
+                onClick={onClick}
+                disabled={disabled}
+                style={{
+                    padding: 0,
+                    border: 'none',
+                    background: 'transparent',
+                    color: disabled ? '#8b949e' : '#58a6ff',
+                    lineHeight: 1.45,
+                    textAlign: align,
+                    font: 'inherit',
+                    cursor: disabled ? 'not-allowed' : 'pointer'
+                }}
+            >
+                {value || 'N/A'}
+            </button>
+            <div style={{ fontSize: '0.76rem', color: '#8b949e' }}>
+                {helperText}
+            </div>
         </div>
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            style={{
-                padding: 0,
-                border: 'none',
-                background: 'transparent',
-                color: disabled ? '#8b949e' : '#58a6ff',
-                lineHeight: 1.45,
-                textAlign: isAr ? 'right' : 'left',
-                font: 'inherit',
-                cursor: disabled ? 'not-allowed' : 'pointer'
-            }}
-        >
-            {value || 'N/A'}
-        </button>
-        <div style={{ fontSize: '0.76rem', color: '#8b949e' }}>
-            {helperText}
-        </div>
-    </div>
-);
+    );
+};
 
 async function deleteOrderDocuments(orderIds) {
     const ids = [...new Set(orderIds.map(String).filter(Boolean))];
@@ -378,6 +384,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
     const selectAllCheckboxRef = useRef(null);
 
     const isAr = lang === 'ar';
+    const listCellStyle = useMemo(() => ({ ...listCellBase, textAlign: adminAlign(isAr) }), [isAr]);
     const t = (path) => {
         const keys = path.split('.');
         let result = i18n[lang];
@@ -722,7 +729,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     marginBottom: '1rem'
                 }}
             >
-                <div style={{ display: 'grid', gap: '0.35rem' }}>
+                <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "بحث" : "Search"}
                     </div>
@@ -741,7 +748,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     />
                 </div>
 
-                <div style={{ display: 'grid', gap: '0.35rem' }}>
+                <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "الحالة" : "Status"}
                     </div>
@@ -763,7 +770,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     </select>
                 </div>
 
-                <div style={{ display: 'grid', gap: '0.35rem' }}>
+                <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "الدفع" : "Payment"}
                     </div>
@@ -785,7 +792,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     </select>
                 </div>
 
-                <div style={{ display: 'grid', gap: '0.35rem' }}>
+                <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
                     <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "الأهمية" : "Urgency"}
                     </div>
@@ -971,7 +978,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         border: 'none',
                                         background: 'transparent',
                                         color: '#e6edf3',
-                                        textAlign: 'left',
+                                        textAlign: adminAlign(isAr),
                                         cursor: deletingOrders ? 'not-allowed' : 'pointer',
                                         opacity: deletingOrders ? 0.65 : 1
                                     }}
@@ -1077,7 +1084,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 background: '#161b22'
                             }}
                         >
-                            <div>
+                            <div style={{ textAlign: adminAlign(isAr) }}>
                                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>
                                     {isAr ? "تفاصيل الطلب" : "Order Details"}
                                 </div>
@@ -1141,12 +1148,12 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem' }}>
+                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', textAlign: adminAlign(isAr) }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
-                                    <DetailField label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                    <DetailField isAr={isAr} label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
+                                    <DetailField isAr={isAr} label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailActionField
                                         label={isAr ? "الهاتف" : "Phone"}
@@ -1158,36 +1165,39 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
-                                    <DetailField label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                    <DetailField isAr={isAr} label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "العنوان" : "Address"} value={formatAddress(selectedOrder.shipping)} />
+                                    <DetailField isAr={isAr} label={isAr ? "العنوان" : "Address"} value={formatAddress(selectedOrder.shipping)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
+                                    <DetailField isAr={isAr} label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
-                                    <DetailField label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                    <DetailField isAr={isAr} label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
+                                    <DetailField isAr={isAr} label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
+                                    <DetailField isAr={isAr} label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: isAr ? 'right' : 'left' }}>
-                                    <DetailField label={isAr ? "أنشئ في" : "Created"} value={formatDate(selectedOrder.createdAt)} />
+                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                    <DetailField isAr={isAr} label={isAr ? "أنشئ في" : "Created"} value={formatDate(selectedOrder.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
+                                        isAr={isAr}
                                         label={isAr ? "الإجمالي" : "Total"}
                                         value={`${Number(selectedOrder.total || 0).toFixed(2)} ${selectedOrder.currency || 'BHD'}`}
                                     />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
+                                        isAr={isAr}
                                         label={isAr ? "العناصر" : "Items"}
                                         value={`${(selectedOrder.items || []).length} ${isAr ? "عنصر" : "item(s)"}`}
                                     />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
+                                        isAr={isAr}
                                         label={isAr ? "الأهمية" : "Urgency"}
                                         value={getUrgencyLabelText(selectedOrder.urgency)}
                                     />
@@ -1208,17 +1218,20 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                                         <div style={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.9rem' }}>
                                             <DetailField
+                                                isAr={isAr}
                                                 label={isAr ? 'حالة المزامنة' : 'Sync Status'}
                                                 value={getInventorySyncStatus(selectedOrder) || (isAr ? 'غير متوفر' : 'N/A')}
                                             />
                                             <div style={{ height: '0.6rem' }} />
                                             <DetailField
+                                                isAr={isAr}
                                                 label={isAr ? 'عدد الحركات' : 'Adjustments'}
                                                 value={String(getInventoryAdjustments(selectedOrder).length)}
                                             />
                                         </div>
                                         <div style={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.9rem' }}>
                                             <DetailField
+                                                isAr={isAr}
                                                 label={isAr ? 'ملاحظة / خطأ' : 'Note / Error'}
                                                 value={getInventorySyncError(selectedOrder) || (isAr ? 'لا يوجد' : 'None')}
                                             />
@@ -1237,7 +1250,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                     color: '#8b949e',
                                                     fontSize: '0.72rem',
                                                     textTransform: 'uppercase',
-                                                    letterSpacing: '0.08em'
+                                                    letterSpacing: '0.08em',
+                                                    textAlign: adminAlign(isAr)
                                                 }}
                                             >
                                                 <div>{isAr ? 'المسار / الصنف' : 'Path / Item'}</div>
@@ -1257,7 +1271,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                             borderTop: '1px solid rgba(255,255,255,0.06)',
                                                             background: 'transparent',
                                                             color: '#e6edf3',
-                                                            fontFamily: 'inherit'
+                                                            fontFamily: 'inherit',
+                                                            textAlign: adminAlign(isAr)
                                                         }}
                                                     >
                                                         <div style={{ minWidth: 0 }}>
@@ -1388,8 +1403,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             <div style={{ fontSize: '1rem', fontWeight: 700 }}>
                                                 {item.name || 'Controller'}
                                             </div>
-                                            <DetailField label={isAr ? "الكمية" : "Quantity"} value={String(item.quantity || 1)} />
-                                            <DetailField label={isAr ? "مجموع السطر" : "Line Total"} value={`${getItemLineTotal(item).toFixed(2)} BHD`} />
+                                            <DetailField isAr={isAr} label={isAr ? "الكمية" : "Quantity"} value={String(item.quantity || 1)} />
+                                            <DetailField isAr={isAr} label={isAr ? "مجموع السطر" : "Line Total"} value={`${getItemLineTotal(item).toFixed(2)} BHD`} />
                                             <ItemCustomizationSummary item={item} lang={lang} compact />
                                         </div>
                                     </div>

@@ -3,6 +3,7 @@ import { db } from '../../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 
 const NAMECHEAP_SMTP_HOST = 'mail.privateemail.com';
 const NAMECHEAP_SMTP_PORT_SSL = '465';
@@ -224,10 +225,10 @@ const AdminSettings = ({ lang = 'ar' }) => {
   return (
     <div style={{ display: 'grid', gap: '1rem', direction: isAr ? 'rtl' : 'ltr' }}>
       <div style={sectionStyle}>
-        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3', textAlign: isAr ? 'right' : 'left' }}>
+        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3', textAlign: adminAlign(isAr) }}>
           {isAr ? "الإعدادات العامة" : "General Settings"}
         </div>
-        <div style={{ marginTop: '0.35rem', color: '#8b949e', textAlign: isAr ? 'right' : 'left' }}>
+        <div style={{ marginTop: '0.35rem', color: '#8b949e', textAlign: adminAlign(isAr) }}>
           {isAr ? "قيم المتجر للطلبات، إشعارات البريد الإلكتروني، روابط التتبع، وتوصيل SMTP." : "Store-wide values for orders, email notifications, tracking links, and SMTP delivery."}
         </div>
       </div>
@@ -237,7 +238,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
         style={{ display: 'grid', gap: '1rem' }}
       >
         <section style={sectionStyle}>
-          <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+          <div style={{ textAlign: adminAlign(isAr) }}>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "إعدادات المتجر والطلبات" : "Store & Order Settings"}</div>
             <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
               {isAr ? "معلومات المتجر التي تظهر للعملاء، وتصنيفات الطلبات، وروابط التتبع." : "Customer-facing store info, order labels, and tracking URLs."}
@@ -245,51 +246,51 @@ const AdminSettings = ({ lang = 'ar' }) => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "اسم المتجر" : "Store Name"}</span>
               <input name="storeName" value={formData.storeName} onChange={handleChange} style={fieldStyle} />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "بريد المسؤول" : "Admin Email"}</span>
               <input name="adminEmail" value={formData.adminEmail} onChange={handleChange} style={fieldStyle} />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "بريد الدعم" : "Support Email"}</span>
               <input name="supportEmail" value={formData.supportEmail} onChange={handleChange} style={fieldStyle} />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "هاتف الدعم" : "Support Phone"}</span>
               <input name="supportPhone" value={formData.supportPhone} onChange={handleChange} style={fieldStyle} />
             </label>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "العملة الافتراضية" : "Default Currency"}</span>
               <input name="defaultCurrency" value={formData.defaultCurrency} onChange={handleChange} style={fieldStyle} />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "بادئة الطلب" : "Order Prefix"}</span>
               <input name="orderPrefix" value={formData.orderPrefix} onChange={handleChange} style={fieldStyle} />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "بادئة الفاتورة" : "Invoice Prefix"}</span>
               <input name="invoicePrefix" value={formData.invoicePrefix} onChange={handleChange} style={fieldStyle} />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "مفتاح Tap العام" : "Tap Public Key"}</span>
               <input name="tapPublicKey" value={formData.tapPublicKey} onChange={handleChange} style={fieldStyle} />
             </label>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "رابط الموقع الأساسي" : "Website Base URL"}</span>
               <input
                 name="websiteBaseUrl"
@@ -300,7 +301,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "رابط الشعار" : "Logo URL"}</span>
               <input
                 name="logoUrl"
@@ -313,7 +314,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "رابط التتبع الأساسي" : "Tracking Base URL"}</span>
               <input
                 name="trackingBaseUrl"
@@ -324,7 +325,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "رابط انستغرام" : "Instagram URL"}</span>
               <input
                 name="instagramUrl"
@@ -337,7 +338,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "رابط تيك توك" : "TikTok URL"}</span>
               <input
                 name="tiktokUrl"
@@ -348,7 +349,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "رابط فيسبوك" : "Facebook URL"}</span>
               <input
                 name="facebookUrl"
@@ -362,7 +363,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
         </section>
 
         <section style={sectionStyle}>
-          <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+          <div style={{ textAlign: adminAlign(isAr) }}>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "توصيل SMTP والبريد الإلكتروني" : "SMTP & Email Delivery"}</div>
             <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
               {isAr ? "تم تكوين بريد Namecheap الخاص هنا باستخدام خادم SMTP الرسمي الآمن. اترك كلمة المرور فارغة للاحتفاظ بكلمة المرور الحالية المحفوظة." : "Namecheap Private Email is configured here using the secure official SMTP server. Leave the password blank to keep the current saved password."}
@@ -377,13 +378,13 @@ const AdminSettings = ({ lang = 'ar' }) => {
             color: '#cbd5f5',
             fontSize: '0.92rem',
             lineHeight: 1.5,
-            textAlign: isAr ? 'right' : 'left'
+            textAlign: adminAlign(isAr)
           }}>
             {isAr ? "يتطلب بريد Namecheap الخاص استخدام `mail.privateemail.com` وعنوان بريد إلكتروني كامل لمستخدم SMTP وإرسالاً موثقاً. وضع الأمان الموصى به هو `465` مع SSL/TLS. يستخدم المنفذ `587` STARTTLS." : "Namecheap Private Email requires `mail.privateemail.com`, full email address for SMTP user, and authenticated sending. Recommended secure mode is `465` with SSL/TLS. Port `587` uses STARTTLS."}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "مضيف SMTP" : "SMTP Host"}</span>
               <input
                 name="smtpHost"
@@ -393,7 +394,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "منفذ SMTP" : "SMTP Port"}</span>
               <select name="smtpPort" value={formData.smtpPort} onChange={handleChange} style={fieldStyle}>
                 <option value={NAMECHEAP_SMTP_PORT_SSL}>{isAr ? "465 - SSL/TLS (موصى به)" : "465 - SSL/TLS (Recommended)"}</option>
@@ -401,7 +402,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               </select>
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "مستخدم SMTP" : "SMTP User"}</span>
               <input
                 type="email"
@@ -414,7 +415,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "كلمة مرور SMTP" : "SMTP Password"}</span>
               <input
                 type="password"
@@ -428,7 +429,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "البريد الإلكتروني للإرسال" : "From Email"}</span>
               <input
                 type="email"
@@ -441,7 +442,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               />
             </label>
 
-            <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? "اسم المرسل" : "From Name"}</span>
               <input
                 name="smtpFromName"
@@ -466,14 +467,14 @@ const AdminSettings = ({ lang = 'ar' }) => {
           </label>
 
           {hasStoredSmtpPass && !formData.smtpPass && (
-            <div style={{ color: '#8b949e', fontSize: '0.88rem', textAlign: isAr ? 'right' : 'left' }}>
+            <div style={{ color: '#8b949e', fontSize: '0.88rem', textAlign: adminAlign(isAr) }}>
               {isAr ? "توجد كلمة مرور SMTP محفوظة بالفعل في إعدادات المسؤول." : "A saved SMTP password already exists in admin settings."}
             </div>
           )}
         </section>
 
         <section style={sectionStyle}>
-          <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+          <div style={{ textAlign: adminAlign(isAr) }}>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>
               {isAr ? 'سلات مهجورة واستردادها' : 'Abandoned carts & recovery'}
             </div>
@@ -484,7 +485,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             </div>
           </div>
 
-          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left', maxWidth: '280px' }}>
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr), maxWidth: '280px' }}>
             <span>{isAr ? 'أيام قبل تذكير البريد' : 'Days before email reminder'}</span>
             <input
               type="number"
@@ -496,7 +497,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             />
           </label>
 
-          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
             <span>{isAr ? 'رمز الخصم المقترح في البريد' : 'Recovery discount code (must exist)'}</span>
             <input
               name="abandonedCartRecoveryCode"
@@ -507,7 +508,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             />
           </label>
 
-          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
             <span>{isAr ? 'موضوع البريد' : 'Email subject'}</span>
             <input
               name="abandonedCartEmailSubject"
@@ -518,7 +519,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             />
           </label>
 
-          <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+          <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
             <span>{isAr ? 'نص البريد (قالب)' : 'Email body template'}</span>
             <textarea
               name="abandonedCartEmailBody"
@@ -530,7 +531,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             />
           </label>
 
-          <div style={{ fontSize: '0.82rem', color: '#8b949e', textAlign: isAr ? 'right' : 'left' }}>
+          <div style={{ fontSize: '0.82rem', color: '#8b949e', textAlign: adminAlign(isAr) }}>
             {isAr
               ? 'عناصر: {{customerName}} {{cartTotal}} {{currency}} {{cartLink}} {{recoveryOffer}} {{discountCode}} {{discountDetails}} {{storeName}}'
               : 'Placeholders: {{customerName}} {{cartTotal}} {{currency}} {{cartLink}} {{recoveryOffer}} {{discountCode}} {{discountDetails}} {{storeName}}'}

@@ -5,6 +5,7 @@ import {
     getInventoryReasonLabel,
     INVENTORY_REASON_OPTIONS
 } from './inventoryPricing';
+import { adminAlign } from './adminUi.js';
 
 const sectionStyle = {
     background: '#0d1117',
@@ -101,7 +102,7 @@ const InventoryPricingEditor = ({
     return (
         <div style={{ ...sectionStyle, direction: isAr ? 'rtl' : 'ltr' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+                <div style={{ textAlign: adminAlign(isAr) }}>
                     <div style={{ fontWeight: 700, color: '#e6edf3' }}>{title}</div>
                     <div style={{ marginTop: '0.2rem', fontSize: '0.82rem', color: '#8b949e' }}>{description}</div>
                 </div>
@@ -139,7 +140,7 @@ const InventoryPricingEditor = ({
                             }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                                <div style={{ display: 'grid', gap: '0.2rem', textAlign: isAr ? 'right' : 'left' }}>
+                                <div style={{ display: 'grid', gap: '0.2rem', textAlign: adminAlign(isAr) }}>
                                     <div style={{ fontSize: '0.85rem', color: '#e6edf3', fontWeight: 600 }}>
                                         {getInventoryReasonLabel(row.reason, lang)}
                                     </div>
@@ -176,7 +177,7 @@ const InventoryPricingEditor = ({
                         </div>
                     );
                 }) : (
-                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed #30363d', color: '#8b949e', background: '#111827', textAlign: isAr ? 'right' : 'left' }}>
+                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed #30363d', color: '#8b949e', background: '#111827', textAlign: adminAlign(isAr) }}>
                         {isAr ? "لا توجد حركات مخزون مسجلة بعد." : "No inventory movements recorded yet."}
                     </div>
                 )}
@@ -196,7 +197,7 @@ const InventoryPricingEditor = ({
                     >
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                                <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+                                <div style={{ textAlign: adminAlign(isAr) }}>
                                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "إضافة مخزون" : "Add Inventory"}</div>
                                     <div style={{ marginTop: '0.25rem', fontSize: '0.82rem', color: '#8b949e' }}>
                                         {isAr ? "إضافة حركة مخزون مؤرخة. تتم إضافة الكمية إلى المخزون الحالي." : "Add a dated stock movement. Quantity is added to current stock."}
@@ -220,7 +221,7 @@ const InventoryPricingEditor = ({
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
                                     <span>{isAr ? "كمية المخزون" : "Inventory Qty"}</span>
                                     <input
                                         type="number"
@@ -232,7 +233,7 @@ const InventoryPricingEditor = ({
                                     />
                                 </label>
 
-                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
                                     <span>{isAr ? "التاريخ" : "Date"}</span>
                                     <input
                                         type="date"
@@ -243,7 +244,7 @@ const InventoryPricingEditor = ({
                                     />
                                 </label>
 
-                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: isAr ? 'right' : 'left' }}>
+                                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
                                     <span>{isAr ? "السبب" : "Reason"}</span>
                                     <select
                                         value={draftRow.reason}

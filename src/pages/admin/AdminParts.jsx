@@ -4,6 +4,8 @@ import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
+import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 import {
     buildInventoryPayload,
     formatInventoryMoney,
@@ -422,7 +424,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         <div>
             {/* BASE PRICE SETTINGS */}
             <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                <div style={{ flex: 1, minWidth: '250px', textAlign: isAr ? 'right' : 'left' }}>
+                <div style={{ flex: 1, minWidth: '250px', textAlign: adminAlign(isAr) }}>
                     <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff' }}>{isAr ? "سعر وحدة التحكم الأساسي" : "Base Controller Price"}</h3>
                     <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>{isAr ? "هذا هو السعر الأولي لوحدة التحكم قبل تطبيق أي تخصيصات." : "This is the initial price of the controller before any customizations are applied."}</p>
                 </div>
@@ -434,7 +436,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                         step="0.01" 
                         value={basePrice} 
                         onChange={e => setBasePrice(e.target.value)} 
-                        style={{ ...fieldStyle, width: '120px', fontSize: '1.1rem', textAlign: isAr ? 'right' : 'left' }} 
+                        style={{ ...fieldStyle, width: '120px', fontSize: '1.1rem', textAlign: adminAlign(isAr) }} 
                     />
                     <button 
                         onClick={handleSaveBasePrice} 
@@ -538,14 +540,15 @@ const AdminParts = ({ lang = 'ar' }) => {
                             fontSize: '0.72rem',
                             color: '#8b949e',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.08em'
+                            letterSpacing: '0.08em',
+                            textAlign: adminAlign(isAr)
                         }}
                     >
-                        <div>Icon</div>
-                        <div>Part</div>
-                        <div>Side</div>
-                        <div>Priority</div>
-                        <div>Actions</div>
+                        <div>{isAr ? 'أيقونة' : 'Icon'}</div>
+                        <div>{isAr ? 'الجزء' : 'Part'}</div>
+                        <div>{isAr ? 'الجهة' : 'Side'}</div>
+                        <div>{isAr ? 'الأولوية' : 'Priority'}</div>
+                        <div>{isAr ? 'إجراءات' : 'Actions'}</div>
                     </div>
 
                     <div style={{ display: 'grid' }}>
@@ -562,7 +565,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     borderTop: '1px solid rgba(255,255,255,0.05)',
                                     background: 'transparent',
                                     color: '#e6edf3',
-                                    textAlign: 'left',
+                                    textAlign: adminAlign(isAr),
                                     cursor: 'pointer'
                                 }}
                             >
@@ -601,7 +604,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                 <div style={{ ...overlayStyle, zIndex: 1050 }}>
                     <div style={modalStyle}>
                         <button onClick={() => setShowPartFormModal(false)} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#fff', textAlign: isAr ? 'right' : 'left' }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
+                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#fff', textAlign: adminAlign(isAr) }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
                         <form onSubmit={handlePartSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Part ID (e.g. shell, trimpiece): </label>

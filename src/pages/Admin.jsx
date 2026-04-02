@@ -13,6 +13,7 @@ import AdminInventoryMaster from './admin/AdminInventoryMaster';
 import AdminSettings from './admin/AdminSettings';
 import AdminAbandonedCarts from './admin/AdminAbandonedCarts';
 import AdminDiscountCodes from './admin/AdminDiscountCodes';
+import { AdminNavIcon, IconLogout } from './admin/AdminSidebarIcons';
 
 const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
 
@@ -223,6 +224,7 @@ const Admin = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'flex-start',
+                                    gap: '10px',
                                     width: '100%',
                                     boxSizing: 'border-box',
                                     padding: '12px 14px',
@@ -255,7 +257,8 @@ const Admin = () => {
                                     }
                                 }}
                             >
-                                <span>{tab.label}</span>
+                                <AdminNavIcon tabId={tab.id} />
+                                <span style={{ flex: 1, minWidth: 0 }}>{tab.label}</span>
                             </button>
                         ))}
                     </div>
@@ -268,6 +271,7 @@ const Admin = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'flex-start',
+                        gap: '10px',
                         width: '100%',
                         boxSizing: 'border-box',
                         padding: '12px 14px',
@@ -289,7 +293,8 @@ const Admin = () => {
                         event.currentTarget.style.background = 'transparent';
                     }}
                 >
-                    <span>{t('admin.sidebar.logout')}</span>
+                    <IconLogout style={{ color: 'inherit' }} />
+                    <span style={{ flex: 1, minWidth: 0 }}>{t('admin.sidebar.logout')}</span>
                 </button>
             </aside>
 
@@ -314,7 +319,7 @@ const Admin = () => {
                         padding: '2rem',
                         minHeight: '100%',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        textAlign: 'left'
+                        textAlign: isAr ? 'right' : 'left'
                     }}
                 >
                     <h1
@@ -324,7 +329,7 @@ const Admin = () => {
                             marginBottom: '2rem',
                             paddingBottom: '1rem',
                             borderBottom: '1px solid #30363d',
-                            textAlign: 'left'
+                            textAlign: isAr ? 'right' : 'left'
                         }}
                     >
                         {navigationGroups.flatMap(g => g.items).find((tab) => tab.id === activeTab)?.label}

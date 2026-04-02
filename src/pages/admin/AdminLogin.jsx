@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { LoadingInline } from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n.js';
+import { adminAlign } from './adminUi.js';
 
 const AdminLogin = () => {
     const [lang] = useState(localStorage.getItem('ez_lang') || 'ar');
@@ -58,7 +59,7 @@ const AdminLogin = () => {
                 width: '100%',
                 maxWidth: '400px',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                textAlign: isAr ? 'right' : 'left'
+                textAlign: adminAlign(isAr)
             }}>
                 <h1 style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '24px' }}>{t('admin.login.title')}</h1>
                 

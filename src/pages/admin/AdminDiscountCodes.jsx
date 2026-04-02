@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 
 const fieldStyle = {
   width: '100%',
@@ -487,7 +488,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
             <thead>
-              <tr style={{ textAlign: isAr ? 'right' : 'left', color: '#8b949e' }}>
+              <tr style={{ textAlign: adminAlign(isAr), color: '#8b949e' }}>
                 <th style={{ padding: '0.5rem' }}>{t('admin.discounts.code')}</th>
                 <th style={{ padding: '0.5rem' }}>{t('admin.discounts.active')}</th>
                 <th style={{ padding: '0.5rem' }}>{t('admin.discounts.type')}</th>
@@ -525,7 +526,8 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
                     key={row.id}
                     style={{
                       borderTop: '1px solid #30363d',
-                      opacity: notUsable ? 0.72 : 1
+                      opacity: notUsable ? 0.72 : 1,
+                      textAlign: adminAlign(isAr)
                     }}
                   >
                     <td style={{ padding: '0.5rem', fontWeight: 600 }}>{row.id}</td>
@@ -534,7 +536,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
                     <td style={{ padding: '0.5rem' }}>{row.discountValue}</td>
                     <td style={{ padding: '0.5rem' }}>{d.used}</td>
                     <td style={{ padding: '0.5rem' }}>{leftDisplay}</td>
-                    <td style={{ padding: '0.5rem', verticalAlign: 'top' }}>{renderValidityCell(row)}</td>
+                    <td style={{ padding: '0.5rem', verticalAlign: 'top', textAlign: adminAlign(isAr) }}>{renderValidityCell(row)}</td>
                     <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
                       <button
                         type="button"

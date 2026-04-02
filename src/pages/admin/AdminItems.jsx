@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { adminAlign } from './adminUi.js';
 import { db, storage } from '../../firebase';
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -63,9 +64,8 @@ const fieldStyle = {
     color: '#e6edf3'
 };
 
-const listCellStyle = {
-    minWidth: 0,
-    textAlign: 'left'
+const listCellBase = {
+    minWidth: 0
 };
 
 const formatDate = (value) => {
@@ -87,14 +87,17 @@ const normalizeItemRecord = (id, raw = {}) => ({
     })
 });
 
-const DetailField = ({ label, value }) => (
-    <div style={{ display: 'grid', gap: '0.2rem' }}>
-        <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {label}
+const DetailField = ({ label, value, isAr }) => {
+    const align = adminAlign(isAr);
+    return (
+        <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
+            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+            </div>
+            <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
         </div>
-        <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
-    </div>
-);
+    );
+};
 
 const AdminItems = ({ lang = 'ar' }) => {
     const [items, setItems] = useState([]);
@@ -108,6 +111,7 @@ const AdminItems = ({ lang = 'ar' }) => {
     const [saving, setSaving] = useState(false);
 
     const isAr = lang === 'ar';
+    const listCellStyle = useMemo(() => ({ ...listCellBase, textAlign: adminAlign(isAr) }), [isAr]);
 
     const t = (path) => {
         const keys = path.split('.');
@@ -322,12 +326,12 @@ const AdminItems = ({ lang = 'ar' }) => {
                         letterSpacing: '0.08em'
                     }}
                 >
-                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "المنتج" : "Item"}</div>
-                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "الفئة" : "Category"}</div>
-                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "سعر البيع" : "Sell Price"}</div>
-                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "سعر الشراء" : "Purchase"}</div>
-                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "المخزون" : "Stock"}</div>
-                    <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{isAr ? "الحالة" : "Visibility"}</div>
+                    <div style={listCellStyle}>{isAr ? "المنتج" : "Item"}</div>
+                    <div style={listCellStyle}>{isAr ? "الفئة" : "Category"}</div>
+                    <div style={listCellStyle}>{isAr ? "سعر البيع" : "Sell Price"}</div>
+                    <div style={listCellStyle}>{isAr ? "سعر الشراء" : "Purchase"}</div>
+                    <div style={listCellStyle}>{isAr ? "المخزون" : "Stock"}</div>
+                    <div style={listCellStyle}>{isAr ? "الحالة" : "Visibility"}</div>
                 </div>
 
                 <div style={{ display: 'grid' }}>
@@ -347,11 +351,11 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     borderTop: '1px solid rgba(255,255,255,0.05)',
                                     background: isSelected ? '#1f2937' : 'transparent',
                                     color: '#e6edf3',
-                                    textAlign: isAr ? 'right' : 'left',
+                                    textAlign: adminAlign(isAr),
                                     cursor: 'pointer'
                                 }}
                             >
-                                <div style={{ ...listCellStyle, display: 'flex', gap: '0.75rem', textAlign: isAr ? 'right' : 'left' }}>
+                                <div style={{ ...listCellStyle, display: 'flex', gap: '0.75rem' }}>
                                     {item.images?.[0] ? (
                                         <img
                                             src={item.images[0]}
@@ -368,11 +372,11 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     </div>
                                 </div>
                             </div>
-                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{item.category || 'N/A'}</div>
-                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{formatInventoryMoney(item.sellPrice ?? item.price)}</div>
-                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{formatInventoryMoney(item.purchasePrice)}</div>
-                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{item.quantity ?? 0}</div>
-                                <div style={{ ...listCellStyle, textAlign: isAr ? 'right' : 'left' }}>{item.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}</div>
+                                <div style={listCellStyle}>{item.category || 'N/A'}</div>
+                                <div style={listCellStyle}>{formatInventoryMoney(item.sellPrice ?? item.price)}</div>
+                                <div style={listCellStyle}>{formatInventoryMoney(item.purchasePrice)}</div>
+                                <div style={listCellStyle}>{item.quantity ?? 0}</div>
+                                <div style={listCellStyle}>{item.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}</div>
                             </button>
                         );
                     })}
@@ -463,34 +467,34 @@ const AdminItems = ({ lang = 'ar' }) => {
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedItem.itemNumber)} />
+                                    <DetailField isAr={isAr} label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedItem.itemNumber)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "الباركود" : "Barcode"} value={selectedItem.barcode} />
+                                    <DetailField isAr={isAr} label={isAr ? "الباركود" : "Barcode"} value={selectedItem.barcode} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "المخزون" : "Stock"} value={String(selectedItem.quantity ?? 0)} />
+                                    <DetailField isAr={isAr} label={isAr ? "المخزون" : "Stock"} value={String(selectedItem.quantity ?? 0)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "الحالة" : "Visibility"} value={selectedItem.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')} />
+                                    <DetailField isAr={isAr} label={isAr ? "الحالة" : "Visibility"} value={selectedItem.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')} />
                                 </div>
 
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField label={isAr ? "تاريخ الإنشاء" : "Created"} value={formatDate(selectedItem.createdAt)} />
+                                    <DetailField isAr={isAr} label={isAr ? "تاريخ الإنشاء" : "Created"} value={formatDate(selectedItem.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "تاريخ التحديث" : "Updated"} value={formatDate(selectedItem.updatedAt)} />
+                                    <DetailField isAr={isAr} label={isAr ? "تاريخ التحديث" : "Updated"} value={formatDate(selectedItem.updatedAt)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField label={isAr ? "سجلات المخزون" : "Inventory Entries"} value={String(selectedItem.inventoryDetails?.length || 0)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سجلات المخزون" : "Inventory Entries"} value={String(selectedItem.inventoryDetails?.length || 0)} />
                                 </div>
                             </div>
 
                             <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
                                 <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "التسعير والمخزون" : "Platform Pricing & Stock"}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
-                                    <DetailField label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
-                                    <DetailField label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
-                                    <DetailField label={isAr ? "الكمية" : "Quantity"} value={String(selectedItem.quantity ?? 0)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
+                                    <DetailField isAr={isAr} label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
+                                    <DetailField isAr={isAr} label={isAr ? "الكمية" : "Quantity"} value={String(selectedItem.quantity ?? 0)} />
                                 </div>
                             </div>
 
@@ -510,10 +514,10 @@ const AdminItems = ({ lang = 'ar' }) => {
                                                 background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : '#111827'
                                             }}
                                         >
-                                            <DetailField label={isAr ? "إدخال" : "Entry"} value={`${isAr ? "سجل مخزون" : "Inventory Entry"} ${index + 1}`} />
-                                            <DetailField label={isAr ? "السبب" : "Reason"} value={getInventoryReasonLabel(row.reason, lang)} />
-                                            <DetailField label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
-                                            <DetailField label={isAr ? "الكمية" : "Quantity"} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
+                                            <DetailField isAr={isAr} label={isAr ? "إدخال" : "Entry"} value={`${isAr ? "سجل مخزون" : "Inventory Entry"} ${index + 1}`} />
+                                            <DetailField isAr={isAr} label={isAr ? "السبب" : "Reason"} value={getInventoryReasonLabel(row.reason, lang)} />
+                                            <DetailField isAr={isAr} label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
+                                            <DetailField isAr={isAr} label={isAr ? "الكمية" : "Quantity"} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
                                         </div>
                                     ))}
                                 </div>

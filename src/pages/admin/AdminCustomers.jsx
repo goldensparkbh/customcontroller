@@ -10,6 +10,7 @@ import {
 } from './adminOrderData';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
+import { adminAlign } from './adminUi.js';
 
 const LIST_COLUMNS = '1.4fr 0.7fr 0.8fr 1fr';
 
@@ -25,14 +26,17 @@ const modalOverlayStyle = {
   zIndex: 1200
 };
 
-const DetailField = ({ label, value }) => (
-  <div style={{ display: 'grid', gap: '0.2rem' }}>
-    <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-      {label}
+const DetailField = ({ label, value, isAr }) => {
+  const align = adminAlign(isAr);
+  return (
+    <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
+      <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {label}
+      </div>
+      <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
     </div>
-    <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
-  </div>
-);
+  );
+};
 
 const AdminCustomers = ({ lang = 'ar' }) => {
   const [orders, setOrders] = useState([]);
@@ -111,7 +115,8 @@ const AdminCustomers = ({ lang = 'ar' }) => {
             fontSize: '0.72rem',
             color: '#8b949e',
             textTransform: 'uppercase',
-            letterSpacing: '0.08em'
+            letterSpacing: '0.08em',
+            textAlign: adminAlign(isAr)
           }}
         >
           <div>{isAr ? "العميل" : "Customer"}</div>
@@ -137,7 +142,7 @@ const AdminCustomers = ({ lang = 'ar' }) => {
                   borderTop: '1px solid rgba(255,255,255,0.05)',
                   background: isSelected ? '#1f2937' : 'transparent',
                   color: '#e6edf3',
-                  textAlign: isAr ? 'right' : 'left',
+                  textAlign: adminAlign(isAr),
                   cursor: 'pointer'
                 }}
               >
@@ -184,7 +189,7 @@ const AdminCustomers = ({ lang = 'ar' }) => {
                 flexDirection: isAr ? 'row-reverse' : 'row'
               }}
             >
-              <div>
+              <div style={{ textAlign: adminAlign(isAr) }}>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تفاصيل العميل" : "Customer Details"}</div>
                 <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>{selectedCustomer.name}</div>
               </div>
@@ -205,23 +210,23 @@ const AdminCustomers = ({ lang = 'ar' }) => {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
+            <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr', textAlign: adminAlign(isAr) }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedCustomer.email} />
+                  <DetailField isAr={isAr} label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedCustomer.email} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label={isAr ? "الهاتف" : "Phone"} value={selectedCustomer.phone} />
+                  <DetailField isAr={isAr} label={isAr ? "الهاتف" : "Phone"} value={selectedCustomer.phone} />
                 </div>
 
                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
-                  <DetailField label={isAr ? "عدد الطلبات" : "Orders"} value={String(selectedCustomer.orders.length)} />
+                  <DetailField isAr={isAr} label={isAr ? "عدد الطلبات" : "Orders"} value={String(selectedCustomer.orders.length)} />
                   <div style={{ height: '0.75rem' }} />
-                  <DetailField label={isAr ? "إجمالي الإنفاق" : "Lifetime Spend"} value={`${selectedCustomer.totalSpend.toFixed(2)} BHD`} />
+                  <DetailField isAr={isAr} label={isAr ? "إجمالي الإنفاق" : "Lifetime Spend"} value={`${selectedCustomer.totalSpend.toFixed(2)} BHD`} />
                 </div>
               </div>
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "طلبات العميل" : "Customer Orders"}</div>
+                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{isAr ? "طلبات العميل" : "Customer Orders"}</div>
                 <div style={{ display: 'grid', gap: '0.7rem' }}>
                   {selectedCustomer.orders.map((order) => (
                     <div
@@ -234,7 +239,8 @@ const AdminCustomers = ({ lang = 'ar' }) => {
                         background: '#111827',
                         borderRadius: '8px',
                         color: '#d6d9e0',
-                        direction: isAr ? 'rtl' : 'ltr'
+                        direction: isAr ? 'rtl' : 'ltr',
+                        textAlign: adminAlign(isAr)
                       }}
                     >
                       <div>
