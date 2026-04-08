@@ -6,12 +6,6 @@ function HomePage() {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   const goToConfigurator = () => {
     navigate('/configurator');
   };
@@ -24,144 +18,6 @@ function HomePage() {
     const yearEl = document.getElementById('year');
     if (yearEl) yearEl.textContent = new Date().getFullYear().toString();
 
-    const FRONT_PARTS = [
-      { id: 'shell', side: 'front' },
-      { id: 'psButton', side: 'front' },
-      { id: 'share', side: 'front' },
-      { id: 'options', side: 'front' },
-      { id: 'faceButtons', side: 'front' },
-      { id: 'stickL', side: 'front' },
-      { id: 'stickR', side: 'front' },
-      { id: 'touchpad', side: 'front' },
-      { id: 'bumpers', side: 'front' },
-      { id: 'trimpiece', side: 'front' }
-    ];
-
-    const BACK_PARTS = [
-      { id: 'backShellMain', side: 'back' },
-      { id: 'backHandles', side: 'back' },
-      { id: 'backTriggers', side: 'back' }
-    ];
-
-    const ALL_PARTS = [...FRONT_PARTS, ...BACK_PARTS];
-
-    const PRICES = {
-      psButton: 4.0,
-      share: 3.0,
-      options: 3.0,
-      faceButtons: 6.0,
-      stickL: 5.0,
-      stickR: 5.0,
-      touchpad: 10.0,
-      bumpers: 8.0,
-      trimpiece: 12.0,
-      shell: 15.0,
-      backShellMain: 15.0,
-      backHandles: 10.0,
-      backTriggers: 8.0
-    };
-
-    const SHELL_PART_IDS = new Set([
-      'shell',
-      'trimpiece',
-      'backShellMain',
-      'backHandles'
-    ]);
-
-    const SHELL_COLORS = [
-      { hex: '#FF7A21', name_en: 'Orange', name_ar: 'برتقالي' },
-      { hex: '#E6D63A', name_en: 'Yellow', name_ar: 'أصفر' },
-      { hex: '#6ECFFF', name_en: 'Light Blue', name_ar: 'أزرق فاتح' },
-      { hex: '#8E8E8E', name_en: 'Steel Gray', name_ar: 'رمادي معدني' },
-      { hex: '#0C4BFF', name_en: 'Blue', name_ar: 'أزرق' },
-      { hex: '#001F63', name_en: 'Midnight Blue', name_ar: 'أزرق داكن' },
-      { hex: '#C2185B', name_en: 'Magenta', name_ar: 'ماجنتا' },
-      { hex: '#F5F5F5', name_en: 'Soft White', name_ar: 'أبيض ناعم' },
-      { hex: '#D400A8', name_en: 'Hot Pink', name_ar: 'وردي فاقع' },
-      { hex: '#0A0A0A', name_en: 'Matte Black', name_ar: 'أسود مطفي' }
-    ];
-
-    const ACCESSORY_COLORS = [
-      { hex: '#0A0A0A', name_en: 'Black', name_ar: 'أسود' },
-      { hex: '#D8D8D8', name_en: 'Light Gray', name_ar: 'رمادي فاتح' },
-      { hex: '#C41E2E', name_en: 'Red', name_ar: 'أحمر' },
-      { hex: '#2B2C79', name_en: 'Dark Blue-Purple', name_ar: 'أزرق بنفسجي داكن' },
-      { hex: '#F2D400', name_en: 'Yellow', name_ar: 'أصفر' },
-      { hex: '#E56A1E', name_en: 'Orange', name_ar: 'برتقالي' },
-      { hex: '#A6DA8C', name_en: 'Mint Green', name_ar: 'أخضر نعناعي' },
-      { hex: '#4A23A8', name_en: 'Royal Purple', name_ar: 'بنفسجي ملكي' },
-      { hex: '#E03875', name_en: 'Hot Pink', name_ar: 'وردي فاقع' },
-      { hex: '#77CBF7', name_en: 'Sky Blue', name_ar: 'أزرق سماوي' },
-      { hex: '#C75AC9', name_en: 'Pink-Violet', name_ar: 'بنفسجي وردي' },
-      { hex: '#5C2DAF', name_en: 'Indigo Purple', name_ar: 'نيلي بنفسجي' },
-      { hex: '#EDEDED', name_en: 'Clear Transparent', name_ar: 'شفاف' },
-      { hex: '#D43838', name_en: 'Transparent Red', name_ar: 'أحمر شفاف' },
-      { hex: '#2448B5', name_en: 'Transparent Blue', name_ar: 'أزرق شفاف' },
-      { hex: '#68D78B', name_en: 'Transparent Green', name_ar: 'أخضر شفاف' },
-      { hex: '#4E2B8C', name_en: 'Transparent Purple', name_ar: 'بنفسجي شفاف' },
-      { hex: '#4A4A4A', name_en: 'Gunmetal Gray', name_ar: 'رمادي معدني داكن' },
-      { hex: '#8C3B2F', name_en: 'Transparent Brown', name_ar: 'بني شفاف' },
-      { hex: '#E3E3E3', name_en: 'Frosted White', name_ar: 'أبيض متجمد' }
-    ];
-
-    const TRANSPARENT_HEXES = new Set([
-      '#ededed',
-      '#d43838',
-      '#2448b5',
-      '#68d78b',
-      '#4e2b8c',
-      '#8c3b2f',
-      '#e3e3e3'
-    ]);
-    const TRANSPARENT_TINT_OPACITY = 0.55;
-
-    const THUMB_PARTS = [
-      { id: 'shell', mask: '/assets/masks/leftShell.png' },
-      { id: 'trimpiece', mask: '/assets/masks/centerBody.png' },
-      { id: 'faceButtons', mask: '/assets/masks/faceButtons.png' },
-      { id: 'stickL', mask: '/assets/masks/stickL.png' },
-      { id: 'stickR', mask: '/assets/masks/stickR.png' },
-      { id: 'touchpad', mask: '/assets/masks/touchpad.png' },
-      { id: 'share', mask: '/assets/masks/share.png' },
-      { id: 'options', mask: '/assets/masks/options.png' },
-      { id: 'psButton', mask: '/assets/masks/psButton.png' },
-      { id: 'bumpers', mask: '/assets/masks/bumperL.png' }
-    ];
-
-    function getPaletteForPart(partId) {
-      return SHELL_PART_IDS.has(partId) ? SHELL_COLORS : ACCESSORY_COLORS;
-    }
-
-    function randomFrom(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
-
-    function generateRandomBuild(index, lang) {
-      const config = {};
-      let total = 0;
-
-      ALL_PARTS.forEach(part => {
-        const palette = getPaletteForPart(part.id);
-        const chosen = randomFrom(palette);
-        config[part.id] = chosen;
-        total += PRICES[part.id] || 0;
-      });
-
-      const baseName = lang === 'ar' ? 'ذزاع مخصص' : 'Custom Controller';
-
-      return {
-        id: index,
-        name: baseName + ' #' + (index + 1),
-        colors: config,
-        total
-      };
-    }
-
-    function formatMoneyBHD(v, lang) {
-      const num = v.toFixed(2);
-      return lang === 'ar' ? num + ' د.ب' : 'BHD ' + num;
-    }
-
     const translations = i18n;
 
     let currentLang = localStorage.getItem('ez_lang') || 'ar';
@@ -169,10 +25,6 @@ function HomePage() {
     function applyLangAttributes() {
       document.documentElement.lang = currentLang;
       document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-    }
-
-    function t(key) {
-      return translations[currentLang][key] || key;
     }
 
     function applyTranslations() {
@@ -192,119 +44,6 @@ function HomePage() {
       if (langToggle) langToggle.textContent = currentLang === 'ar' ? 'EN' : 'AR';
       const mobileLangToggle = document.getElementById('mobileLangToggle');
       if (mobileLangToggle) mobileLangToggle.textContent = currentLang === 'ar' ? 'EN' : 'AR';
-    }
-
-    let currentBuilds = [];
-
-    function createBuildCard(build) {
-      const dict = translations[currentLang];
-
-      const card = document.createElement('article');
-      card.className = 'build-card';
-
-      const thumb = document.createElement('div');
-      thumb.className = 'build-thumb';
-
-      const tc = document.createElement('div');
-      tc.className = 'thumb-controller';
-
-      const base = document.createElement('div');
-      base.className = 'thumb-base';
-      tc.appendChild(base);
-
-      THUMB_PARTS.forEach(p => {
-        const color = build.colors[p.id];
-        if (!color) return;
-        const layer = document.createElement('div');
-        layer.className = 'thumb-layer';
-        layer.style.setProperty('--mask-url', `url('${p.mask}')`);
-        layer.style.setProperty('--tint', color.hex);
-        if (TRANSPARENT_HEXES.has(color.hex.toLowerCase())) {
-          layer.style.setProperty('--tint-opacity', String(TRANSPARENT_TINT_OPACITY));
-        } else {
-          layer.style.setProperty('--tint-opacity', '1');
-        }
-        tc.appendChild(layer);
-      });
-
-      thumb.appendChild(tc);
-
-      const body = document.createElement('div');
-      body.className = 'build-body';
-
-      const title = document.createElement('div');
-      title.className = 'build-title';
-      title.textContent = build.name;
-
-      const price = document.createElement('div');
-      price.className = 'build-price';
-      price.innerHTML = formatMoneyBHD(build.total, currentLang);
-
-
-
-      const btnRow = document.createElement('div');
-      btnRow.className = 'build-btn-row';
-
-      const previewBtn = document.createElement('button');
-      previewBtn.className = 'build-cta secondary';
-      previewBtn.type = 'button';
-      previewBtn.textContent = i18n[currentLang].heroPremadeBtn || 'Preview';
-      previewBtn.addEventListener('click', goToConfigurator);
-
-      const addBtn = document.createElement('button');
-      addBtn.className = 'build-cta';
-      addBtn.type = 'button';
-      addBtn.setAttribute('aria-label', i18n[currentLang].addToCart || 'Add to Cart');
-      addBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="9" cy="21" r="1"></circle>
-          <circle cx="20" cy="21" r="1"></circle>
-          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-        </svg>
-      `;
-      addBtn.addEventListener('click', () => {
-        const item = {
-          id: Date.now(),
-          name: build.name,
-          colors: build.colors,
-          total: build.total,
-          preview: tc.outerHTML
-        };
-        const cart = JSON.parse(localStorage.getItem('ezCart') || '[]');
-        cart.push(item);
-        localStorage.setItem('ezCart', JSON.stringify(cart));
-        navigate('/cart');
-      });
-
-      btnRow.appendChild(previewBtn);
-      btnRow.appendChild(addBtn);
-      body.appendChild(title);
-
-      body.appendChild(price);
-      body.appendChild(btnRow);
-
-
-
-      card.appendChild(thumb);
-      card.appendChild(body);
-
-      return card;
-    }
-
-    function rebuildPremadeGrid() {
-      const grid = document.getElementById('buildGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      if (!currentBuilds.length) {
-        for (let i = 0; i < 20; i++) {
-          currentBuilds.push(generateRandomBuild(i, currentLang));
-        }
-      } else {
-        currentBuilds = currentBuilds.map((b, i) => generateRandomBuild(i, currentLang));
-      }
-
-      currentBuilds.forEach(b => grid.appendChild(createBuildCard(b)));
     }
 
     function setLanguage(lang) {
@@ -334,7 +73,6 @@ function HomePage() {
 
     applyLangAttributes();
     applyTranslations();
-    rebuildPremadeGrid();
 
     return () => {
       document.body.classList.remove('home-page-active');
@@ -344,7 +82,7 @@ function HomePage() {
       mobileLangToggle?.removeEventListener('click', handleLangToggle);
       contactForm?.removeEventListener('submit', handleContactSubmit);
     };
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle('mobile-nav-open', isMobileMenuOpen);
@@ -357,7 +95,6 @@ function HomePage() {
     <div className="home-page">
       <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
       <aside className={`mobile-nav-drawer ${isMobileMenuOpen ? 'open' : ''}`} id="mobileNavDrawer" aria-hidden={!isMobileMenuOpen}>
-        <button className="mobile-nav-link" type="button" data-i18n="navPremade" onClick={() => { scrollToSection('premadeSection'); closeMobileMenu(); }}></button>
         <button className="mobile-nav-link mobile-nav-cta" type="button" data-i18n="navBuildCta" onClick={() => { goToConfigurator(); closeMobileMenu(); }}></button>
         <button className="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
       </aside>
@@ -374,20 +111,10 @@ function HomePage() {
             <p className="hero-sub" data-i18n="heroSub"></p>
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
-              <button style={{ display: 'none' }} className="hero-btn secondary" type="button" data-i18n="heroPremadeBtn" onClick={() => scrollToSection('premadeSection')}></button>
             </div>
           </div>
         </div>
       </section>
-
-
-      <section className="section" id="premadeSection" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '60px' }}>
-        <div className="section-header">
-          <div className="section-title" data-i18n="premadeTitle"></div>
-        </div>
-        <div className="build-grid" id="buildGrid"></div>
-      </section>
-
 
       <section className="section" id="instagramSection" style={{ display: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '60px' }}>
         <div className="section-header">
