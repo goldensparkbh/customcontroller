@@ -42,6 +42,13 @@ function safeFiniteInt(n, fallback = 1) {
     return Number.isFinite(x) ? Math.trunc(x) : fallback;
 }
 
+/** Safe single-segment file name for Storage paths (avoids / and odd chars). */
+function sanitizeStorageFileName(name) {
+    const base = String(name || 'upload').split(/[/\\]/).pop();
+    const cleaned = base.replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').trim();
+    return (cleaned || 'upload').slice(0, 120);
+}
+
 const normalizeOptionRecord = (id, raw = {}) => ({
     id,
     ...raw,
@@ -323,21 +330,26 @@ const AdminParts = ({ lang = 'ar' }) => {
         try {
             let imageUrl = subImagePreview;
             if (subImageFile) {
-                const storageRef = ref(storage, `configurator/overlays/${selectedPart.id}/${Date.now()}_${subImageFile.name}`);
+                const overlayName = sanitizeStorageFileName(subImageFile.name);
+                const storageRef = ref(storage, `configurator/overlays/${selectedPart.id}/${Date.now()}_${overlayName}`);
                 await uploadBytes(storageRef, subImageFile);
                 imageUrl = await getDownloadURL(storageRef);
             }
 
             let secondImageUrl = subSecondImagePreview;
             if (subSecondImageFile) {
-                const storageRef2 = ref(storage, `configurator/overlays/second_${selectedPart.id}/${Date.now()}_${subSecondImageFile.name}`);
+                const overlay2Name = sanitizeStorageFileName(subSecondImageFile.name);
+                const storageRef2 = ref(storage, `configurator/overlays/second_${selectedPart.id}/${Date.now()}_${overlay2Name}`);
                 await uploadBytes(storageRef2, subSecondImageFile);
                 secondImageUrl = await getDownloadURL(storageRef2);
             }
 
             let iconUrl = subIconPreview;
             if (subIconFile) {
-                const iconRef = ref(storage, `configurator/icons/sub/${selectedPart.id}_${Date.now()}_${subIconFile.name}`);
+                // Use same shallow path as part icons (`configurator/icons/...`), not `icons/sub/…`,
+                // so Storage rules that only allow one segment under `icons/` still authorize.
+                const iconName = sanitizeStorageFileName(subIconFile.name);
+                const iconRef = ref(storage, `configurator/icons/${selectedPart.id}_opt_${Date.now()}_${iconName}`);
                 await uploadBytes(iconRef, subIconFile);
                 iconUrl = await getDownloadURL(iconRef);
             }
