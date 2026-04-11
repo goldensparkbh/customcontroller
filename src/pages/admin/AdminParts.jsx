@@ -15,9 +15,32 @@ import {
     allocateSequentialNumber,
     getBarcodeValue,
     getInventoryItemNumber,
+    getStableNumericFallback,
     normalizeNumericString,
     padNumericString
 } from './recordNumbers';
+
+/** Firestore rejects `undefined` in document payloads. */
+function omitUndefinedDeep(value) {
+    if (value === undefined) return undefined;
+    if (value === null || typeof value !== 'object') return value;
+    if (value instanceof Date) return value;
+    if (Array.isArray(value)) {
+        return value.map((v) => omitUndefinedDeep(v)).filter((v) => v !== undefined);
+    }
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+        if (v === undefined) continue;
+        const next = omitUndefinedDeep(v);
+        if (next !== undefined) out[k] = next;
+    }
+    return out;
+}
+
+function safeFiniteInt(n, fallback = 1) {
+    const x = Number(n);
+    return Number.isFinite(x) ? Math.trunc(x) : fallback;
+}
 
 const normalizeOptionRecord = (id, raw = {}) => ({
     id,
@@ -261,6 +284,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         setSubActive(true);
         setSubAllowsMultiple(false);
         setSubExclusiveGroup('');
+        setSubDisablesColors(false);
         setShowOptionFormModal(true);
     };
 
@@ -292,6 +316,10 @@ const AdminParts = ({ lang = 'ar' }) => {
     const handleSubitemSubmit = async (e) => {
         e.preventDefault();
         if (!selectedPart) return;
+        if (!String(subName || '').trim()) {
+            alert('Option name is required.');
+            return;
+        }
         try {
             let imageUrl = subImagePreview;
             if (subImageFile) {
@@ -324,11 +352,20 @@ const AdminParts = ({ lang = 'ar' }) => {
                     quantity: 0
                 }
             );
-            const itemNumber = normalizeNumericString(subItemNumber) || await allocateSequentialNumber(db, 'inventory_master');
+
+            let itemNumber = normalizeNumericString(subItemNumber);
+            if (!itemNumber) {
+                try {
+                    itemNumber = await allocateSequentialNumber(db, 'inventory_master');
+                } catch (allocErr) {
+                    console.warn('allocateSequentialNumber failed; using stable fallback item number', allocErr);
+                    itemNumber = getStableNumericFallback(`opt_${selectedPart.id}_${Date.now()}`);
+                }
+            }
             const barcode = normalizeNumericString(subBarcode) || itemNumber;
 
             const data = {
-                name: subName,
+                name: String(subName || '').trim(),
                 itemNumber,
                 barcode,
                 inventoryDetails: inventoryPayload.inventoryDetails,
@@ -337,37 +374,43 @@ const AdminParts = ({ lang = 'ar' }) => {
                 price: inventoryPayload.price,
                 quantity: inventoryPayload.quantity,
                 type: subType,
-                active: subActive,
-                image: imageUrl,
-                secondImage: secondImageUrl,
+                active: Boolean(subActive),
+                image: imageUrl || '',
+                secondImage: secondImageUrl || '',
                 updatedAt: new Date(),
-                disablesColors: subDisablesColors,
-                allowsMultiple: subAllowsMultiple,
-                exclusiveGroup: subExclusiveGroup,
-                incompatibleWith: subIncompatibleWith,
-                priority: Number(subPriority || 1)
+                disablesColors: Boolean(subDisablesColors),
+                allowsMultiple: Boolean(subAllowsMultiple),
+                exclusiveGroup: String(subExclusiveGroup || '').trim(),
+                incompatibleWith: Array.isArray(subIncompatibleWith) ? subIncompatibleWith.filter(Boolean) : [],
+                priority: safeFiniteInt(subPriority, 1)
             };
 
             if (subType === 'color') {
-                data.hex = subColorHex;
+                data.hex = subColorHex || '#ffffff';
                 data.icon = null;
             } else {
                 data.hex = null;
-                data.icon = iconUrl;
+                data.icon = iconUrl || '';
             }
 
+            const payload = omitUndefinedDeep(data);
+
             if (editSubId) {
-                await updateDoc(doc(db, `configurator_parts/${selectedPart.id}/options`, editSubId), data);
+                await updateDoc(doc(db, `configurator_parts/${selectedPart.id}/options`, editSubId), payload);
             } else {
-                data.createdAt = new Date();
-                await addDoc(collection(db, `configurator_parts/${selectedPart.id}/options`), data);
+                await addDoc(collection(db, `configurator_parts/${selectedPart.id}/options`), {
+                    ...payload,
+                    createdAt: new Date()
+                });
             }
 
             setShowOptionFormModal(false);
             fetchSubitems(selectedPart.id);
         } catch (error) {
             console.error(error);
-            alert("Error saving option");
+            const msg = error?.message || String(error);
+            const code = error?.code ? ` [${error.code}]` : '';
+            alert(`Error saving option: ${msg}${code}`);
         }
     };
 
