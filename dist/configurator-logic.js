@@ -1698,7 +1698,7 @@
                         price.className = isOutOfStock ? "cd-gamemode-price is-out-of-stock" : "cd-gamemode-price";
                         price.textContent = isOutOfStock ?
                             (t("outOfStock") || "Out of Stock") :
-                            (i18n[currentLang].currencyPrefix + Number(entry.price).toFixed(2));
+                            (Number(entry.price).toFixed(2) + " " + String(i18n[currentLang].currencyPrefix || "").trim());
                         label.appendChild(price);
                     }
                 } else {

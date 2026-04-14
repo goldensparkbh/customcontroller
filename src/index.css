@@ -2996,7 +2996,6 @@ body.theme-light .color-group-title {
 .cd-color-name {
   max-width: 100%;
   line-height: 1.1;
-  word-break: break-word;
   margin-top: 10px;
 }
 
@@ -3085,7 +3084,6 @@ body.theme-light .color-group-title {
   background-position: center !important;
   background-repeat: no-repeat !important;
   background-origin: content-box !important;
-  background-clip: content-box !important;
 }
 
 .cd-cell-op.is-gamemode-option.active .cd-swatch-op {
@@ -6220,4 +6218,4 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
     --mobile-parts-peek-width: 1;
   }
 }
-
+
