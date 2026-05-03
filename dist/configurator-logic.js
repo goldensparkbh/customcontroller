@@ -1254,7 +1254,7 @@
         if (overlayTouchpadImg) overlayTouchpadImg.style.display = "none";
 
         // --- BACK SIDE LOGIC ---
-        let backSrc = "/assets/controller_back.png";
+        let backSrc = "/assets/controller_back5.png";
         if (configState["backShellMain"] || optionState["backShellMain"]) {
             (layers["backShellMain"] || []).forEach(obj => {
                 if (obj.main.getAttribute("src")) obj.main.style.display = "block";

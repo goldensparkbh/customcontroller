@@ -1,4 +1,4 @@
-import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./index-nUBbxvbh.js";import{b as w}from"./inventoryPricing-CXTXwyZ6.js";const y=`
+import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./index-DqdLtH5B.js";import{b as w}from"./inventoryPricing-CXTXwyZ6.js";const y=`
 <canvas id="bgCanvas"></canvas>
 <div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
 <div class="zoho-loading-card">
@@ -20,7 +20,7 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
 <img alt="PS5 Controller Front" src="/assets/controller.png"/>
 </div>
 <div class="controller-face controller-face-back" id="controllerFaceBack">
-<img alt="PS5 Controller Back" src="/assets/controller_back.png"/>
+<img alt="PS5 Controller Back" src="/assets/controller_back5.png"/>
 </div>
 </div>
 </div>
@@ -29,7 +29,7 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
 <button class="flip-toggle" id="controllerFlipBtn" type="button" aria-label="الأمام">
 <span class="flip-toggle-preview" aria-hidden="true">
 <img class="flip-toggle-front" alt="" src="/assets/controller.png"/>
-<img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
+<img class="flip-toggle-back" alt="" src="/assets/controller_back5.png"/>
 </span>
 </button>
 </div>
@@ -106,7 +106,7 @@ import{r as c,j as d,L as h,i as p,g as v,c as g,d as u,a as m,b as A}from"./ind
 <button class="control-btn control-flip" id="flipControlBtn" data-action="flip" type="button" aria-label="الأمام">
 <span class="flip-preview" aria-hidden="true">
 <img class="flip-preview-front" alt="" src="/assets/controller.png"/>
-<img class="flip-preview-back" alt="" src="/assets/controller_back.png"/>
+<img class="flip-preview-back" alt="" src="/assets/controller_back5.png"/>
 </span>
 </button>
 <button class="control-btn control-lang" id="langSwitchBtn" type="button" aria-label="اختيار اللغة">

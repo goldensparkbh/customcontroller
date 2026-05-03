@@ -26,7 +26,7 @@ const configuratorMarkup = `
 <img alt="PS5 Controller Front" src="/assets/controller.png"/>
 </div>
 <div class="controller-face controller-face-back" id="controllerFaceBack">
-<img alt="PS5 Controller Back" src="/assets/controller_back.png"/>
+<img alt="PS5 Controller Back" src="/assets/controller_back5.png"/>
 </div>
 </div>
 </div>
@@ -35,7 +35,7 @@ const configuratorMarkup = `
 <button class="flip-toggle" id="controllerFlipBtn" type="button" aria-label="الأمام">
 <span class="flip-toggle-preview" aria-hidden="true">
 <img class="flip-toggle-front" alt="" src="/assets/controller.png"/>
-<img class="flip-toggle-back" alt="" src="/assets/controller_back.png"/>
+<img class="flip-toggle-back" alt="" src="/assets/controller_back5.png"/>
 </span>
 </button>
 </div>
@@ -112,7 +112,7 @@ const configuratorMarkup = `
 <button class="control-btn control-flip" id="flipControlBtn" data-action="flip" type="button" aria-label="الأمام">
 <span class="flip-preview" aria-hidden="true">
 <img class="flip-preview-front" alt="" src="/assets/controller.png"/>
-<img class="flip-preview-back" alt="" src="/assets/controller_back.png"/>
+<img class="flip-preview-back" alt="" src="/assets/controller_back5.png"/>
 </span>
 </button>
 <button class="control-btn control-lang" id="langSwitchBtn" type="button" aria-label="اختيار اللغة">

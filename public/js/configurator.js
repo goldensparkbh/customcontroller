@@ -1057,7 +1057,7 @@
             }
         } else {
             if (faceBackImg) {
-                faceBackImg.src = "/assets/controller_back.png";
+                faceBackImg.src = "/assets/controller_back5.png";
             }
 
             updateLayer("backShellMain", backShellHex, backShellTrans, nonce);
@@ -1223,7 +1223,7 @@
         if (side === "front") {
             ctrlSrc = "/assets/controller.png";
         } else {
-            ctrlSrc = "/assets/controller_back.png";
+            ctrlSrc = "/assets/controller_back5.png";
         }
 
         parts.forEach((part) => {
