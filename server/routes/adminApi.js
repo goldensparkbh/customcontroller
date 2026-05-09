@@ -176,7 +176,7 @@ module.exports = function createAdminApi(pool, handlers) {
         const rawId = req.body.docId != null ? String(req.body.docId).trim() : "";
         const id =
           rawId ?
-            rawId.replace(/^\/*|\/+*$/gu, "").replace(/^\.+/u, "").slice(0, 750) ||
+            rawId.replace(/^\/+|\/+$/gu, "").replace(/^\.+/u, "").slice(0, 750) ||
               (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex")) :
             (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex"));
         fullPath = `${coll}/${id}`;
