@@ -1,5 +1,8 @@
 "use strict";
 
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+
 /*
  * Creates/replaces an admin user for cookie-based authentication.
  *
@@ -9,6 +12,7 @@
 
 const bcrypt = require("bcryptjs");
 const { Pool } = require("pg");
+const { poolOptions } = require("../lib/pgPoolOptions.cjs");
 
 const [, , emailRaw, password] = process.argv;
 const email = String(emailRaw || "").trim().toLowerCase();
@@ -24,7 +28,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 (async () => {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool(poolOptions(process.env.DATABASE_URL));
   try {
     const hash = bcrypt.hashSync(password, 12);
     const { rowCount } = await pool.query(

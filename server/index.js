@@ -11,6 +11,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { Pool } = require("pg");
 
+const { poolOptions } = require("./lib/pgPoolOptions.cjs");
 const { PgFirestore } = require("./lib/commerce/pgFirestore");
 const handlers = require("./lib/commerce/handlers.generated.cjs");
 
@@ -42,7 +43,10 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL, max: Number(process.env.PG_POOL_MAX || 10) });
+const pool = new Pool({
+  ...poolOptions(DATABASE_URL),
+  max: Number(process.env.PG_POOL_MAX || 10)
+});
 
 const commerceDb = new PgFirestore(pool);
 handlers.injectCommerceDb(commerceDb);

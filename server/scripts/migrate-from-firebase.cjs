@@ -11,12 +11,19 @@
  *
  * Optional Storage → Spaces:
  *   DO_SPACES_ENDPOINT, DO_SPACES_KEY, DO_SPACES_SECRET, DO_SPACES_BUCKET
+ *   SKIP_SPACES_UPLOAD=1                     — omit Firebase Storage → Spaces step
  *   MIGRATE_REWRITE_DOWNLOAD_URL=true        — naive string rewrite in stored JSON (risky); default false.
+ *
+ * TLS (DigitalOcean Postgres — if you see SELF_SIGNED_CERT_IN_CHAIN):
+ *   DATABASE_SSL_CA_PATH=./ca-certificate.crt   — CA from DB connection page (recommended)
+ *   DATABASE_SSL_REJECT_UNAUTHORIZED=false    — migration-only; skips cert verify
  */
 
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const { Pool } = require("pg");
+const { poolOptions } = require("../lib/pgPoolOptions.cjs");
 const admin = require("firebase-admin");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
@@ -112,12 +119,15 @@ async function migrateCollection(collRef, pool) {
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
 
+  /** @type {boolean} */
+  let storageFailed = false;
+
   admin.initializeApp({
     credential: admin.credential.cert(loadServiceAccount())
   });
 
   const db = admin.firestore();
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool(poolOptions(process.env.DATABASE_URL));
 
   const roots = await db.listCollections();
 
@@ -130,52 +140,68 @@ async function main() {
   }
 
   /*
-   * Optional storage copy
+   * Optional storage copy (Spaces). Firestore is already done when this runs.
+   * InvalidAccessKeyId => wrong DO_SPACES_KEY / DO_SPACES_SECRET or stray quotes in .env.
+   * To skip: unset DO_SPACES_BUCKET or set SKIP_SPACES_UPLOAD=1
    */
-  const Bucket = process.env.FIREBASE_STORAGE_BUCKET || undefined;
-  if (Bucket && process.env.DO_SPACES_BUCKET) {
-    const bucket = admin.storage().bucket(Bucket);
-    const [files] = await bucket.getFiles();
+  const Bucket = (process.env.FIREBASE_STORAGE_BUCKET || "").trim() || undefined;
+  const spacesBucket = (process.env.DO_SPACES_BUCKET || "").trim();
+  const skipSpaces = process.env.SKIP_SPACES_UPLOAD === "1" || process.env.SKIP_SPACES_UPLOAD === "true";
 
-    const s3 = new S3Client({
-      region: "us-east-1",
-      endpoint: process.env.DO_SPACES_ENDPOINT,
-      credentials: {
-        accessKeyId: process.env.DO_SPACES_KEY,
-        secretAccessKey: process.env.DO_SPACES_SECRET
-      },
-      forcePathStyle: process.env.DO_SPACES_FORCE_PATH_STYLE !== "false"
-    });
-
-    /*
-     * Sequential to avoid blasting memory
-     */
-    for (const file of files) {
-      /*
-       * Skip directory placeholders
-       */
-      if (/\/$/u.test(file.name)) continue;
-
-      const [buf] = await file.download();
-      const Key = `${String(process.env.DO_SPACES_KEY_PREFIX || "migrated").replace(/\/+$/, "")}/${file.name.replace(/^\/+/u, "")}`;
-
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: process.env.DO_SPACES_BUCKET,
-          Key,
-          Body: Buffer.from(buf),
-          ContentType: file.metadata?.contentType || "application/octet-stream",
-          ACL: process.env.DO_SPACES_PUBLIC_ACL || "public-read"
-        })
+  if (Bucket && spacesBucket && !skipSpaces) {
+    const endpoint = (process.env.DO_SPACES_ENDPOINT || "").trim();
+    const accessKeyId = (process.env.DO_SPACES_KEY || "").trim();
+    const secretAccessKey = (process.env.DO_SPACES_SECRET || "").trim();
+    if (!endpoint || !accessKeyId || !secretAccessKey) {
+      console.warn(
+        "[storage] Skipping Spaces upload: set DO_SPACES_ENDPOINT, DO_SPACES_KEY, DO_SPACES_SECRET (or SKIP_SPACES_UPLOAD=1)."
       );
+    } else {
+      try {
+        const bucket = admin.storage().bucket(Bucket);
+        const [files] = await bucket.getFiles();
 
-      /*
-       * Optional URL rewrite omitted by default — run bespoke SQL UPDATE if URLs follow a predictable pattern.
-       */
+        const s3 = new S3Client({
+          region: "us-east-1",
+          endpoint,
+          credentials: { accessKeyId, secretAccessKey },
+          forcePathStyle: process.env.DO_SPACES_FORCE_PATH_STYLE !== "false"
+        });
+
+        for (const file of files) {
+          if (/\/$/u.test(file.name)) continue;
+
+          const [buf] = await file.download();
+          const Key = `${String(process.env.DO_SPACES_KEY_PREFIX || "migrated").replace(/\/+$/, "")}/${file.name.replace(/^\/+/u, "")}`;
+
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: spacesBucket,
+              Key,
+              Body: Buffer.from(buf),
+              ContentType: file.metadata?.contentType || "application/octet-stream",
+              ACL: process.env.DO_SPACES_PUBLIC_ACL || "public-read"
+            })
+          );
+        }
+        console.log("[storage] Copied", files.length, "objects to Spaces.");
+      } catch (err) {
+        storageFailed = true;
+        console.error(
+          "[storage] Spaces upload failed (Firestore data in Postgres is OK). Fix DO_SPACES_KEY / DO_SPACES_SECRET in DigitalOcean → API → Spaces Keys (no quotes in .env), or SKIP_SPACES_UPLOAD=1."
+        );
+        console.error(err.message || err);
+      }
     }
+  } else if (Bucket && skipSpaces) {
+    console.log("[storage] Skipped (SKIP_SPACES_UPLOAD).");
   }
 
   await pool.end();
+  if (storageFailed) {
+    console.error("Migration finished with STORAGE errors — exit code 1.");
+    process.exit(1);
+  }
   console.log("Migration finished.");
 }
 

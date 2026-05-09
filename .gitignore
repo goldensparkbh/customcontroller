@@ -12,7 +12,9 @@ firebase-debug.*.log*
 
 # Firebase cache
 .firebase/
-
+ca-certificate.crt
+run-schema.js
+schema.sql
 # Firebase config
 
 # Uncomment this if you'd like others to create their own Firebase project.
