@@ -9,6 +9,9 @@
  *   GOOGLE_APPLICATION_CREDENTIALS           — path to Firebase service-account JSON OR
  *   FIREBASE_SERVICE_ACCOUNT_JSON          — literal JSON object string
  *
+ * After migrating files set DO_SPACES_PUBLIC_BASE_URL (+ same DO_SPACES_KEY_PREFIX / migrated)
+ * on the Express server so /store-api/configurator/catalog can rewrite Firebase download URLs → Spaces URLs.
+ *
  * Optional Storage → Spaces:
  *   DO_SPACES_ENDPOINT, DO_SPACES_KEY, DO_SPACES_SECRET, DO_SPACES_BUCKET
  *   SKIP_SPACES_UPLOAD=1                     — omit Firebase Storage → Spaces step

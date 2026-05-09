@@ -170,6 +170,13 @@ const ConfiguratorPage = () => {
 
   useEffect(() => {
     const loadFirebaseData = async () => {
+      /*
+       * Legacy `configurator-logic.js` reads `__CONFIG_DATA__.i18n` at load time.
+       * Set defaults before any await so a failed catalog fetch does not leave i18n empty.
+       */
+      window.__CONFIG_DATA__ = { i18n, baseControllerPrice: 0 };
+      window.__CONFIG_FIREBASE_DATA__ = window.__CONFIG_FIREBASE_DATA__ || [];
+
       try {
         const catalog = await fetchConfiguratorCatalog();
         const partsList = (catalog.parts || []).map((part) => ({
@@ -195,6 +202,7 @@ const ConfiguratorPage = () => {
         window.__CONFIG_DATA__ = { i18n, baseControllerPrice: basePrice };
       } catch (err) {
         console.error("Configurator catalog fetch error:", err);
+        window.__CONFIG_FIREBASE_DATA__ = [];
       } finally {
         setLoading(false);
       }

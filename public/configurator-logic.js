@@ -1669,7 +1669,7 @@
                 priceLabel.className = isOutOfStock ? "swatch-price is-out-of-stock" : "swatch-price";
                 priceLabel.textContent = isOutOfStock ?
                     (t("outOfStock") || "Out of Stock") :
-                    (i18n[currentLang].currencyPrefix + entry.price);
+                    ((i18n[currentLang] || i18n.ar || i18n.en || {}).currencyPrefix || "BHD ") + entry.price);
                 swatch.appendChild(priceLabel);
             }
 
@@ -1698,7 +1698,7 @@
                         price.className = isOutOfStock ? "cd-gamemode-price is-out-of-stock" : "cd-gamemode-price";
                         price.textContent = isOutOfStock ?
                             (t("outOfStock") || "Out of Stock") :
-                            (Number(entry.price).toFixed(2) + " " + String(i18n[currentLang].currencyPrefix || "").trim());
+                            (Number(entry.price).toFixed(2) + " " + String((i18n[currentLang] || i18n.ar || i18n.en || {}).currencyPrefix || "").trim());
                         label.appendChild(price);
                     }
                 } else {
@@ -2002,7 +2002,8 @@
             total += (selectedOptionPriceByPart[p.id] || 0);
         });
 
-        const formatted = i18n[currentLang].currencyPrefix + total.toFixed(2);
+        const lc = i18n[currentLang] || i18n.ar || i18n.en || {};
+        const formatted = (lc.currencyPrefix || "BHD ") + total.toFixed(2);
         if (summaryAmountEl) summaryAmountEl.textContent = formatted;
         const alt = document.getElementById("summaryAmountAlt");
         if (alt) alt.textContent = formatted;

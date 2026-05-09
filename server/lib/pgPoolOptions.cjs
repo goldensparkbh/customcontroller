@@ -7,13 +7,29 @@ const path = require("path");
  * Options for `pg` Pool when connecting to DigitalOcean Managed Postgres.
  * Fixes SELF_SIGNED_CERT_IN_CHAIN when Node does not trust the provider CA.
  *
- * Set either:
- *   DATABASE_SSL_CA_PATH or PGSSLROOTCERT — path to CA file from DO "Connection details"
- * or (migration / dev only):
- *   DATABASE_SSL_REJECT_UNAUTHORIZED=false
+ * Set one of:
+ *   DATABASE_SSL_CA_PEM — full PEM text (App Platform secret; use real newlines or \n)
+ *   DATABASE_SSL_CA_PATH or PGSSLROOTCERT — path to CA file (local / mounted)
+ *   DATABASE_SSL_REJECT_UNAUTHORIZED=false — weaker; dev / emergency only
+ *   DATABASE_SSL_RELAX_DO=false — disable auto-relax below (when you use DATABASE_SSL_CA_PEM)
+ *
+ * App Platform / containers often have no CA file: if DATABASE_URL host is
+ * `*.db.ondigitalocean.com` and no PEM/path/builtin CA is set, we use TLS with
+ * rejectUnauthorized:false (still encrypted). Set DATABASE_SSL_RELAX_DO=false to force strict.
  *
  * If unset, uses `server/ca-certificate.crt` when that file exists (next to package root).
  */
+function isDigitalOceanManagedPostgresUrl(urlString) {
+  return typeof urlString === "string" && urlString.includes("db.ondigitalocean.com");
+}
+function resolveCaPemFromEnv() {
+  const raw = process.env.DATABASE_SSL_CA_PEM;
+  if (!raw || typeof raw !== "string") return null;
+  const normalized = raw.replace(/\r\n/g, "\n").replace(/\\n/g, "\n").trim();
+  if (!normalized.includes("BEGIN")) return null;
+  return normalized;
+}
+
 function resolveCaFilePath() {
   const raw = (process.env.DATABASE_SSL_CA_PATH || process.env.PGSSLROOTCERT || "").trim();
   if (raw) {
@@ -59,16 +75,30 @@ function stripLibpqSslQueryParams(urlString) {
 }
 
 function poolOptions(connectionString) {
+  const caPem = resolveCaPemFromEnv();
   const caPath = resolveCaFilePath();
+  const hasBuiltinCa = !!(caPath && fs.existsSync(caPath));
   const useInsecure = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "false";
+  const relaxDoManaged =
+    process.env.DATABASE_SSL_RELAX_DO !== "false" &&
+    isDigitalOceanManagedPostgresUrl(connectionString) &&
+    !caPem &&
+    !hasBuiltinCa;
 
   let conn = connectionString;
-  if ((caPath && fs.existsSync(caPath)) || useInsecure) {
+  if (caPem || hasBuiltinCa || useInsecure || relaxDoManaged) {
     conn = stripLibpqSslQueryParams(connectionString);
   }
 
   const out = { connectionString: conn };
-  if (caPath && fs.existsSync(caPath)) {
+  if (caPem) {
+    out.ssl = {
+      ca: caPem,
+      rejectUnauthorized: true
+    };
+    return out;
+  }
+  if (hasBuiltinCa) {
     out.ssl = {
       ca: fs.readFileSync(caPath),
       rejectUnauthorized: true
@@ -76,6 +106,10 @@ function poolOptions(connectionString) {
     return out;
   }
   if (useInsecure) {
+    out.ssl = { rejectUnauthorized: false };
+    return out;
+  }
+  if (relaxDoManaged) {
     out.ssl = { rejectUnauthorized: false };
     return out;
   }

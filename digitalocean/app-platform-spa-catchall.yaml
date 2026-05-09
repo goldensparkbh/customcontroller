@@ -1,0 +1,19 @@
+# -----------------------------------------------------------------------------
+# DigitalOcean App Platform — SPA refresh / deep links (e.g. /configurator)
+#
+# Add this under your STATIC SITE component (e.g. customcontroller-frontend).
+# You may use ONLY ONE of: catchall_document OR error_document (not both).
+#
+# Example (merge into your existing static_sites entry):
+#
+# static_sites:
+#   - name: customcontroller-frontend
+#     catchall_document: index.html
+#     index_document: index.html
+#     output_dir: dist
+#     source_dir: /
+#     ... (rest unchanged)
+#
+# In the DO UI: Static Site → Settings → look for “Catchall” / fallback document
+# and set it to index.html (wording varies by UI version).
+# -----------------------------------------------------------------------------

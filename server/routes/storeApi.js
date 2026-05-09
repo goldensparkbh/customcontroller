@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const express = require("express");
 const dao = require("../lib/documentsDao");
+const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
 
 module.exports = function createStoreApi(pool) {
   const r = express.Router();
@@ -51,7 +52,7 @@ module.exports = function createStoreApi(pool) {
         });
       });
 
-      res.json({ items, parts });
+      res.json(rewriteFirebaseMediaUrlsIfConfigured({ items, parts }));
     } catch (err) {
       console.error("[pos catalog]", err);
       res.status(500).json({ error: String(err.message || err) });
@@ -116,7 +117,12 @@ module.exports = function createStoreApi(pool) {
         basePrice = Number(baseRow.data.basePrice) || 0;
       }
 
-      res.json({ parts: partsList, basePrice });
+      res.json(
+        rewriteFirebaseMediaUrlsIfConfigured({
+          parts: partsList,
+          basePrice
+        })
+      );
     } catch (err) {
       console.error("[store catalog]", err);
       res.status(500).json({ error: String(err.message || err) });

@@ -9,6 +9,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const dao = require("../lib/documentsDao");
 const hooks = require("../lib/orderInventoryHooks");
+const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
 
 module.exports = function createAdminApi(pool, handlers) {
   const r = express.Router();
@@ -95,13 +96,14 @@ module.exports = function createAdminApi(pool, handlers) {
       const orderBy = String(req.query.orderBy || "");
       const orderDesc = orderBy === "createdAt";
       const rows = await dao.listPrefix(pool, prefixPath, orderDesc ? "createdAt" : null);
-      res.json({
+      const docsPayload = rewriteFirebaseMediaUrlsIfConfigured({
         docs: rows.map(({ path: docPath, data }) => ({
           path: docPath,
           id: docPath.split("/").pop(),
           ...data
         }))
       });
+      res.json({ docs: docsPayload.docs });
     } catch (err) {
       console.error("[docs list]", err);
       res.status(500).json({ error: String(err.message || err) });
@@ -114,7 +116,13 @@ module.exports = function createAdminApi(pool, handlers) {
       if (!p) return res.status(400).json({ error: "bad_path" });
       const row = await dao.getRow(pool, p);
       if (!row) return res.status(404).json({ error: "not_found" });
-      res.json({ path: row.path, id: row.path.split("/").pop(), ...row.data });
+      res.json(
+        rewriteFirebaseMediaUrlsIfConfigured({
+          path: row.path,
+          id: row.path.split("/").pop(),
+          ...row.data
+        })
+      );
     } catch (err) {
       console.error("[doc get]", err);
       res.status(500).json({ error: String(err.message || err) });
