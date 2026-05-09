@@ -1669,7 +1669,7 @@
                 priceLabel.className = isOutOfStock ? "swatch-price is-out-of-stock" : "swatch-price";
                 priceLabel.textContent = isOutOfStock ?
                     (t("outOfStock") || "Out of Stock") :
-                    ((i18n[currentLang] || i18n.ar || i18n.en || {}).currencyPrefix || "BHD ") + entry.price);
+                    ((i18n[currentLang] || i18n.ar || i18n.en || {}).currencyPrefix || "BHD ") + entry.price;
                 swatch.appendChild(priceLabel);
             }
 
