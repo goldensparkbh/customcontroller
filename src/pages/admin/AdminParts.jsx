@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../../firebase';
-import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import {
+    adminCreateDoc,
+    adminDeleteDoc,
+    adminGetDoc,
+    adminListDocs,
+    adminPatchDoc,
+    adminUploadFile
+} from '../../services/backendApi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
@@ -40,13 +45,6 @@ function omitUndefinedDeep(value) {
 function safeFiniteInt(n, fallback = 1) {
     const x = Number(n);
     return Number.isFinite(x) ? Math.trunc(x) : fallback;
-}
-
-/** Safe single-segment file name for Storage paths (avoids / and odd chars). */
-function sanitizeStorageFileName(name) {
-    const base = String(name || 'upload').split(/[/\\]/).pop();
-    const cleaned = base.replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').trim();
-    return (cleaned || 'upload').slice(0, 120);
 }
 
 const normalizeOptionRecord = (id, raw = {}) => ({
@@ -135,15 +133,28 @@ const AdminParts = ({ lang = 'ar' }) => {
     const fetchParts = async () => {
         setLoading(true);
         try {
-            const querySnapshot = await getDocs(collection(db, 'configurator_parts'));
-            const partsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const querySnapshot = await adminListDocs('configurator_parts/');
+            const partsList = querySnapshot.docs
+                .filter((d) => /^configurator_parts\/[^/]+$/u.test(d.path))
+                .map((docSnap) => {
+                    const { path, ...rest } = docSnap;
+                    void path;
+                    return { id: docSnap.id, ...rest };
+                });
             partsList.sort((a, b) => (a.priority || 0) - (b.priority || 0));
             setParts(partsList);
 
-            // Fetch Base Price
-            const basePriceDoc = await getDoc(doc(db, 'configurator_settings', 'general'));
-            if (basePriceDoc.exists()) {
-                setBasePrice(String(basePriceDoc.data().basePrice || 0));
+            let baseSnap = null;
+            try {
+                baseSnap = await adminGetDoc('configurator_settings/general');
+            } catch {
+                baseSnap = null;
+            }
+            const { path: gp, id: gid, ...gdata } = baseSnap && typeof baseSnap === 'object' ? baseSnap : {};
+            void gp;
+            void gid;
+            if (baseSnap && Object.keys(gdata).length) {
+                setBasePrice(String(gdata.basePrice || 0));
             }
         } catch (e) {
             console.error("Error fetching parts: ", e);
@@ -158,7 +169,7 @@ const AdminParts = ({ lang = 'ar' }) => {
     const handleSaveBasePrice = async () => {
         setIsSavingBasePrice(true);
         try {
-            await setDoc(doc(db, 'configurator_settings', 'general'), { basePrice: Number(basePrice) }, { merge: true });
+            await adminPatchDoc('configurator_settings/general', { basePrice: Number(basePrice), updatedAt: new Date().toISOString() });
             alert("Base price saved successfully!");
         } catch (error) {
             console.error("Error saving base price:", error);
@@ -199,21 +210,19 @@ const AdminParts = ({ lang = 'ar' }) => {
 
             let iconUrl = partIconPreview;
             if (partIconFile) {
-                const storageRef = ref(storage, `configurator/icons/${partId}_${Date.now()}`);
-                await uploadBytes(storageRef, partIconFile);
-                iconUrl = await getDownloadURL(storageRef);
+                const up = await adminUploadFile(partIconFile);
+                iconUrl = up.url;
             }
 
-            const docRef = doc(db, 'configurator_parts', partId);
             const partData = {
                 title: partTitle,
-                priority: parseInt(partPriority),
+                priority: parseInt(partPriority, 10),
                 side: partSide,
-                updatedAt: new Date()
+                updatedAt: new Date().toISOString()
             };
             if (iconUrl) partData.icon = iconUrl;
 
-            await setDoc(docRef, partData, { merge: true });
+            await adminPatchDoc(`configurator_parts/${partId}`, partData);
 
             if (selectedPart && selectedPart.id === partId) {
                 // If we edited the part that is currently 'detailed', update its state
@@ -232,11 +241,11 @@ const AdminParts = ({ lang = 'ar' }) => {
         e.stopPropagation();
         if (!window.confirm("Delete this part and all its options?")) return;
         try {
-            const subSnap = await getDocs(collection(db, `configurator_parts/${id}/options`));
-            const deletions = subSnap.docs.map(d => deleteDoc(d.ref));
+            const subSnap = await adminListDocs(`configurator_parts/${id}/options/`);
+            const deletions = subSnap.docs.map((d) => adminDeleteDoc(d.path));
             await Promise.all(deletions);
 
-            await deleteDoc(doc(db, 'configurator_parts', id));
+            await adminDeleteDoc(`configurator_parts/${id}`);
             if (selectedPart && selectedPart.id === id) {
                 setSelectedPart(null);
                 setSubitems([]);
@@ -253,8 +262,12 @@ const AdminParts = ({ lang = 'ar' }) => {
 
     const fetchSubitems = async (pid) => {
         try {
-            const querySnapshot = await getDocs(collection(db, `configurator_parts/${pid}/options`));
-            const subList = querySnapshot.docs.map(doc => normalizeOptionRecord(doc.id, doc.data()));
+            const querySnapshot = await adminListDocs(`configurator_parts/${pid}/options/`);
+            const subList = querySnapshot.docs.map((docSnap) => {
+                const { path, ...data } = docSnap;
+                void path;
+                return normalizeOptionRecord(docSnap.id, data);
+            });
             setSubitems(subList);
         } catch (e) {
             console.error("Error fetching subitems", e);
@@ -330,28 +343,20 @@ const AdminParts = ({ lang = 'ar' }) => {
         try {
             let imageUrl = subImagePreview;
             if (subImageFile) {
-                const overlayName = sanitizeStorageFileName(subImageFile.name);
-                const storageRef = ref(storage, `configurator/overlays/${selectedPart.id}/${Date.now()}_${overlayName}`);
-                await uploadBytes(storageRef, subImageFile);
-                imageUrl = await getDownloadURL(storageRef);
+                const up = await adminUploadFile(subImageFile);
+                imageUrl = up.url;
             }
 
             let secondImageUrl = subSecondImagePreview;
             if (subSecondImageFile) {
-                const overlay2Name = sanitizeStorageFileName(subSecondImageFile.name);
-                const storageRef2 = ref(storage, `configurator/overlays/second_${selectedPart.id}/${Date.now()}_${overlay2Name}`);
-                await uploadBytes(storageRef2, subSecondImageFile);
-                secondImageUrl = await getDownloadURL(storageRef2);
+                const up2 = await adminUploadFile(subSecondImageFile);
+                secondImageUrl = up2.url;
             }
 
             let iconUrl = subIconPreview;
             if (subIconFile) {
-                // Use same shallow path as part icons (`configurator/icons/...`), not `icons/sub/…`,
-                // so Storage rules that only allow one segment under `icons/` still authorize.
-                const iconName = sanitizeStorageFileName(subIconFile.name);
-                const iconRef = ref(storage, `configurator/icons/${selectedPart.id}_opt_${Date.now()}_${iconName}`);
-                await uploadBytes(iconRef, subIconFile);
-                iconUrl = await getDownloadURL(iconRef);
+                const upi = await adminUploadFile(subIconFile);
+                iconUrl = upi.url;
             }
 
             const inventoryPayload = buildInventoryPayload(
@@ -368,7 +373,7 @@ const AdminParts = ({ lang = 'ar' }) => {
             let itemNumber = normalizeNumericString(subItemNumber);
             if (!itemNumber) {
                 try {
-                    itemNumber = await allocateSequentialNumber(db, 'inventory_master');
+                    itemNumber = await allocateSequentialNumber(undefined, 'inventory_master');
                 } catch (allocErr) {
                     console.warn('allocateSequentialNumber failed; using stable fallback item number', allocErr);
                     itemNumber = getStableNumericFallback(`opt_${selectedPart.id}_${Date.now()}`);
@@ -389,7 +394,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                 active: Boolean(subActive),
                 image: imageUrl || '',
                 secondImage: secondImageUrl || '',
-                updatedAt: new Date(),
+                updatedAt: new Date().toISOString(),
                 disablesColors: Boolean(subDisablesColors),
                 allowsMultiple: Boolean(subAllowsMultiple),
                 exclusiveGroup: String(subExclusiveGroup || '').trim(),
@@ -408,11 +413,17 @@ const AdminParts = ({ lang = 'ar' }) => {
             const payload = omitUndefinedDeep(data);
 
             if (editSubId) {
-                await updateDoc(doc(db, `configurator_parts/${selectedPart.id}/options`, editSubId), payload);
+                await adminPatchDoc(`configurator_parts/${selectedPart.id}/options/${editSubId}`, payload);
             } else {
-                await addDoc(collection(db, `configurator_parts/${selectedPart.id}/options`), {
-                    ...payload,
-                    createdAt: new Date()
+                const nid =
+                    (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
+                    `opt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+                await adminCreateDoc({
+                    path: `configurator_parts/${selectedPart.id}/options/${nid}`,
+                    data: {
+                        ...payload,
+                        createdAt: new Date().toISOString()
+                    }
                 });
             }
 
@@ -429,7 +440,7 @@ const AdminParts = ({ lang = 'ar' }) => {
     const handleDeleteSubitem = async (subId) => {
         if (!window.confirm("Delete this option?")) return;
         try {
-            await deleteDoc(doc(db, `configurator_parts/${selectedPart.id}/options`, subId));
+            await adminDeleteDoc(`configurator_parts/${selectedPart.id}/options/${subId}`);
             fetchSubitems(selectedPart.id);
         } catch (error) {
             console.error(error);

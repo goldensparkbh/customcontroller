@@ -1,11 +1,11 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { adminGetDoc, adminPatchDoc } from '../../services/backendApi.js';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 
 /** Use in textareas / previews so emojis render clearly (WhatsApp payload is plain UTF-8). */
 export const WHATSAPP_BODY_FONT_STACK =
     'system-ui, "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif';
 
-const WHATSAPP_TEMPLATES_DOC = ['admin_settings', 'whatsapp_templates'];
+const WHATSAPP_TEMPLATES_PATH = 'admin_settings/whatsapp_templates';
 
 const getCustomerName = (order) => {
     const customer = order?.customer || {};
@@ -96,46 +96,38 @@ export function normalizeWhatsAppTemplatesList(templates) {
     return templates.map(normalizeTemplateEntry).filter(Boolean);
 }
 
-/**
- * @param {import('firebase/firestore').Firestore} db
- * @returns {Promise<{ id: string, label: string, body: string }[]>}
- */
-export async function loadWhatsAppTemplates(db) {
-    const ref = doc(db, ...WHATSAPP_TEMPLATES_DOC);
-    const snap = await getDoc(ref);
-    const data = snap.exists() ? snap.data() : {};
+/** @returns {Promise<{ id: string, label: string, body: string }[]>} */
+export async function loadWhatsAppTemplates() {
+    let snap = null;
+    try {
+        snap = await adminGetDoc(WHATSAPP_TEMPLATES_PATH);
+    } catch {
+        snap = null;
+    }
+    const { path, id, ...data } = snap && typeof snap === 'object' ? snap : {};
+    void path;
+    void id;
     let list = normalizeWhatsAppTemplatesList(data.templates);
 
     if (!list.length) {
         list = DEFAULT_WHATSAPP_TEMPLATES.map((t) => ({ ...t }));
-        await setDoc(
-            ref,
-            {
-                templates: list,
-                updatedAt: serverTimestamp()
-            },
-            { merge: true }
-        );
+        await adminPatchDoc(WHATSAPP_TEMPLATES_PATH, {
+            templates: list,
+            updatedAt: new Date().toISOString()
+        });
     }
 
     return list;
 }
 
-/**
- * @param {import('firebase/firestore').Firestore} db
- * @param {{ id: string, label: string, body: string }[]} templates
- */
-export async function saveWhatsAppTemplates(db, templates) {
-    const ref = doc(db, ...WHATSAPP_TEMPLATES_DOC);
+/** @param {{ id: string, label: string, body: string }[]} templates */
+export async function saveWhatsAppTemplates(_db, templates) {
+    void _db;
     const cleaned = normalizeWhatsAppTemplatesList(templates);
-    await setDoc(
-        ref,
-        {
-            templates: cleaned,
-            updatedAt: serverTimestamp()
-        },
-        { merge: true }
-    );
+    await adminPatchDoc(WHATSAPP_TEMPLATES_PATH, {
+        templates: cleaned,
+        updatedAt: new Date().toISOString()
+    });
     return cleaned;
 }
 

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { i18n } from '../i18n';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { adminLogout } from '../services/backendApi.js';
 import AdminOrders from './admin/AdminOrders';
 import AdminInvoices from './admin/AdminInvoices';
 import AdminPayments from './admin/AdminPayments';
@@ -106,7 +105,7 @@ const Admin = () => {
 
     const handleLogout = async () => {
         try {
-            await signOut(auth);
+            await adminLogout();
             navigate('/admin/login');
         } catch (error) {
             console.error('Logout error:', error);

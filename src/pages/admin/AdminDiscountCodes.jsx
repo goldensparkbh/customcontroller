@@ -1,15 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { db } from '../../firebase';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-  updateDoc
-} from 'firebase/firestore';
+import { adminDeleteDoc, adminListDocs, adminPatchDoc, adminPutDocData } from '../../services/backendApi.js';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
@@ -39,8 +29,9 @@ const sectionStyle = {
 };
 
 function tsToLocalInput(ts) {
-  if (!ts || typeof ts.toDate !== 'function') return '';
-  const d = ts.toDate();
+  if (!ts) return '';
+  const d = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -50,7 +41,7 @@ function localInputToTimestamp(value) {
   if (!v) return null;
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return null;
-  return Timestamp.fromDate(d);
+  return d.toISOString();
 }
 
 function toDateMaybe(value) {
@@ -145,8 +136,11 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'discount_codes'));
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const snap = await adminListDocs('discount_codes/');
+      const list = snap.docs.map((d) => {
+        const { path, ...rest } = d;
+        return { id: d.id, ...rest };
+      });
       list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
       setRows(list);
     } catch (e) {
@@ -221,18 +215,18 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
         discountType: form.discountType === 'fixed' ? 'fixed' : 'percent',
         discountValue,
         description: String(form.description || '').trim(),
-        updatedAt: serverTimestamp()
+        updatedAt: new Date().toISOString()
       };
 
       if (editingCode && editingCode !== code) {
-        await deleteDoc(doc(db, 'discount_codes', editingCode));
+        await adminDeleteDoc(`discount_codes/${editingCode}`);
       }
 
-      const ref = doc(db, 'discount_codes', code);
+      const docPath = `discount_codes/${code}`;
       if (existingRow) {
-        await updateDoc(ref, basePayload);
+        await adminPatchDoc(docPath, basePayload);
       } else {
-        await setDoc(ref, { ...basePayload, usesCount: 0 });
+        await adminPutDocData(docPath, { ...basePayload, usesCount: 0 });
       }
       setMessageTone('success');
       setModalOpen(false);
@@ -250,7 +244,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
   const handleDelete = async (code) => {
     if (!window.confirm(isAr ? 'حذف هذا الرمز؟' : 'Delete this code?')) return;
     try {
-      await deleteDoc(doc(db, 'discount_codes', code));
+      await adminDeleteDoc(`discount_codes/${code}`);
       await load();
       if (editingCode === code) {
         setModalOpen(false);

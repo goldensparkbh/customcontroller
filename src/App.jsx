@@ -20,8 +20,7 @@ const POSPage = lazy(() => import('./pages/POS.jsx'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy.jsx'));
 const TermsConditions = lazy(() => import('./pages/TermsConditions.jsx'));
 const ReturnPolicy = lazy(() => import('./pages/ReturnPolicy.jsx'));
-import { auth } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { adminMe } from './services/backendApi.js';
 import { gtagPageView } from './analytics.js';
 
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin.jsx'));
@@ -33,11 +32,21 @@ const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    let alive = true;
+    (async () => {
+      try {
+        const j = await adminMe();
+        if (!alive) return;
+        setUser(j && j.ok && j.email ? { email: j.email } : null);
+      } catch {
+        if (alive) setUser(null);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (loading) return <LoadingState message="Loading admin..." fullScreen />;

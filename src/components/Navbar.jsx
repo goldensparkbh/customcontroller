@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n';
-import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { adminMe } from '../services/backendApi.js';
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -33,10 +32,18 @@ const Navbar = () => {
     }, [lang]);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setIsAdminAuthenticated(Boolean(currentUser));
-        });
-        return () => unsubscribe();
+        let alive = true;
+        (async () => {
+            try {
+                const j = await adminMe();
+                if (alive) setIsAdminAuthenticated(Boolean(j && j.ok && j.email));
+            } catch {
+                if (alive) setIsAdminAuthenticated(false);
+            }
+        })();
+        return () => {
+            alive = false;
+        };
     }, []);
 
     const toggleLanguage = () => {

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { db } from '../../firebase';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { adminGetDoc, adminPatchDoc } from '../../services/backendApi.js';
 import { applyTranslationOverrideEntries, getI18nDefaultSource, i18n } from '../../i18n.js';
 import {
     TRANSLATION_OVERRIDES_DOC,
@@ -76,13 +75,20 @@ export default function AdminTranslations({ lang }) {
             setLoading(true);
             setMessage({ kind: '', text: '' });
             try {
-                const ref = doc(db, TRANSLATION_OVERRIDES_DOC[0], TRANSLATION_OVERRIDES_DOC[1]);
-                const snap = await getDoc(ref);
-                if (!cancelled && snap.exists()) {
-                    const entries = snap.data()?.entries;
-                    if (entries && typeof entries === 'object') {
-                        applyTranslationOverrideEntries(entries);
-                    }
+                const docPath = `${TRANSLATION_OVERRIDES_DOC[0]}/${TRANSLATION_OVERRIDES_DOC[1]}`;
+                let snap = null;
+                try {
+                    snap = await adminGetDoc(docPath);
+                } catch {
+                    snap = null;
+                }
+                const { path: p, id: _id, entries, ..._rest } =
+                    snap && typeof snap === 'object' ? snap : {};
+                void p;
+                void _id;
+                void _rest;
+                if (!cancelled && entries && typeof entries === 'object') {
+                    applyTranslationOverrideEntries(entries);
                 }
                 if (!cancelled) setRows(buildRowsFromCurrentI18n());
             } catch (e) {
@@ -141,11 +147,8 @@ export default function AdminTranslations({ lang }) {
         setMessage({ kind: '', text: '' });
         try {
             const entries = computeOverrideDiff(getI18nDefaultSource(), rows);
-            await setDoc(
-                doc(db, TRANSLATION_OVERRIDES_DOC[0], TRANSLATION_OVERRIDES_DOC[1]),
-                { entries, updatedAt: serverTimestamp() },
-                { merge: true }
-            );
+            const path = `${TRANSLATION_OVERRIDES_DOC[0]}/${TRANSLATION_OVERRIDES_DOC[1]}`;
+            await adminPatchDoc(path, { entries, updatedAt: new Date().toISOString() });
             applyTranslationOverrideEntries(entries);
             setMessage({ kind: 'success', text: t('admin.translationsPage.saved') });
         } catch (e) {

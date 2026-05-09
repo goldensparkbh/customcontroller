@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { db } from '../../firebase';
-import { collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
 import { getOrderNumber, padNumericString } from './recordNumbers';
+import { adminBatch, adminDeleteDoc, adminPatchDoc } from '../../services/backendApi.js';
+import { loadOrders } from './adminOrderData.js';
 import LoadingState from '../../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.jsx';
 import { i18n } from '../../i18n';
@@ -340,9 +340,7 @@ async function deleteOrderDocuments(orderIds) {
     const ids = [...new Set(orderIds.map(String).filter(Boolean))];
     for (let i = 0; i < ids.length; i += FIRESTORE_BATCH_DELETE_LIMIT) {
         const chunk = ids.slice(i, i + FIRESTORE_BATCH_DELETE_LIMIT);
-        const batch = writeBatch(db);
-        chunk.forEach((id) => batch.delete(doc(db, 'orders', id)));
-        await batch.commit();
+        await adminBatch({ deletes: chunk.map((id) => `orders/${id}`) });
     }
 }
 
@@ -401,23 +399,13 @@ const AdminOrders = ({ lang = 'ar' }) => {
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-            const querySnapshot = await getDocs(q);
-            const ordersList = querySnapshot.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }));
+            const ordersList = await loadOrders();
             setOrders(ordersList);
             setSelectedOrderId((current) => (
                 ordersList.some((order) => order.id === current) ? current : ''
             ));
         } catch (error) {
             console.error('Error fetching orders: ', error);
-            if (error.message.includes('index')) {
-                const querySnapshot = await getDocs(collection(db, 'orders'));
-                const ordersList = querySnapshot.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }));
-                setOrders(ordersList);
-                setSelectedOrderId((current) => (
-                    ordersList.some((order) => order.id === current) ? current : ''
-                ));
-            }
         }
         setLoading(false);
     };
@@ -432,7 +420,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
         (async () => {
             try {
                 setWaTemplatesLoading(true);
-                const list = await loadWhatsAppTemplates(db);
+                const list = await loadWhatsAppTemplates();
                 if (cancelled) return;
                 setWaTemplateDefs(list);
                 setSelectedTemplateKey((prev) => {
@@ -593,12 +581,15 @@ const AdminOrders = ({ lang = 'ar' }) => {
         setSaving(true);
         try {
             const trackingNumber = detailTrackingNumber.trim();
-            const updatedAt = new Date();
-            await updateDoc(doc(db, 'orders', selectedOrder.id), {
+            const updatedAt = new Date().toISOString();
+            await adminPatchDoc(`orders/${selectedOrder.id}`, {
                 status: detailStatus,
                 urgency: detailUrgency,
-                'shipping.trackingNumber': trackingNumber,
-                updatedAt
+                updatedAt,
+                shipping: {
+                    ...(selectedOrder.shipping || {}),
+                    trackingNumber
+                }
             });
 
             setOrders((current) => current.map((order) => (
@@ -737,7 +728,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
         if (!window.confirm(confirmMsg)) return;
         setDeletingOrders(true);
         try {
-            await deleteDoc(doc(db, 'orders', id));
+            await adminDeleteDoc(`orders/${id}`);
             removeOrdersFromState([id]);
         } catch (err) {
             console.error(err);
@@ -752,7 +743,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
     if (orders.length === 0) {
         return (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>
-                <p>{isAr ? "لم يتم العثور على طلبات في النظام." : "No orders found in Firebase."}</p>
+                <p>{isAr ? "لم يتم العثور على طلبات في النظام." : "No orders found."}</p>
             </div>
         );
     }

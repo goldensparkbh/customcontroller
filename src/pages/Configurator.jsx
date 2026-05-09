@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { fetchConfiguratorCatalog } from '../services/backendApi.js';
 import { i18n } from '../i18n';
 import { buildInventoryPayload } from './admin/inventoryPricing';
 import LoadingState from '../components/LoadingState.jsx';
@@ -172,15 +171,13 @@ const ConfiguratorPage = () => {
   useEffect(() => {
     const loadFirebaseData = async () => {
       try {
-        const partsSnap = await getDocs(collection(db, 'configurator_parts'));
-        const partsList = partsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        for (const part of partsList) {
-          const optSnap = await getDocs(collection(db, `configurator_parts/${part.id}/options`));
-          part.options = optSnap.docs.map((doc) => {
-            const raw = doc.data();
+        const catalog = await fetchConfiguratorCatalog();
+        const partsList = (catalog.parts || []).map((part) => ({
+          ...part,
+          options: (part.options || []).map((opt) => {
+            const raw = opt;
             return {
-              id: doc.id,
+              id: raw.id,
               ...raw,
               ...buildInventoryPayload(raw.inventoryDetails, {
                 purchasePrice: raw.purchasePrice ?? 0,
@@ -189,19 +186,15 @@ const ConfiguratorPage = () => {
                 quantity: raw.quantity ?? 0
               })
             };
-          }).filter(opt => opt.active !== false);
-        }
+          }).filter((opt) => opt.active !== false)
+        }));
 
-        const basePriceDoc = await getDoc(doc(db, 'configurator_settings', 'general'));
-        let basePrice = 0;
-        if (basePriceDoc.exists()) {
-          basePrice = Number(basePriceDoc.data().basePrice) || 0;
-        }
+        const basePrice = Number(catalog.basePrice) || 0;
 
         window.__CONFIG_FIREBASE_DATA__ = partsList;
         window.__CONFIG_DATA__ = { i18n, baseControllerPrice: basePrice };
       } catch (err) {
-        console.error("Firebase fetch error:", err);
+        console.error("Configurator catalog fetch error:", err);
       } finally {
         setLoading(false);
       }

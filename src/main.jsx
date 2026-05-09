@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
 import App from './App.jsx';
-import { db } from './firebase.js';
 import { applyTranslationOverrideEntries, i18n } from './i18n.js';
-import { TRANSLATION_OVERRIDES_DOC } from './translationMerge.js';
+import { fetchI18nOverrideEntries } from './services/backendApi.js';
 import './index.css';
 
 window.__EZ_I18N__ = i18n;
@@ -72,13 +70,9 @@ function TranslationBootstrap() {
     let cancelled = false;
     (async () => {
       try {
-        const ref = doc(db, TRANSLATION_OVERRIDES_DOC[0], TRANSLATION_OVERRIDES_DOC[1]);
-        const snap = await getDoc(ref);
-        if (!cancelled && snap.exists()) {
-          const entries = snap.data()?.entries;
-          if (entries && typeof entries === 'object') {
-            applyTranslationOverrideEntries(entries);
-          }
+        const entries = await fetchI18nOverrideEntries();
+        if (!cancelled && entries && typeof entries === 'object') {
+          applyTranslationOverrideEntries(entries);
         }
       } catch (err) {
         console.warn('[i18n] Translation overrides load failed', err);

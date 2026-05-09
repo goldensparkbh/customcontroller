@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { adminGetDoc, adminPatchDoc } from '../../services/backendApi.js';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
@@ -174,9 +173,17 @@ const AdminSettings = ({ lang = 'ar' }) => {
     const run = async () => {
       setLoading(true);
       try {
-        const snapshot = await getDoc(doc(db, 'admin_settings', 'general'));
-        if (snapshot.exists()) {
-          const data = snapshot.data() || {};
+        let snapshot = null;
+        try {
+          snapshot = await adminGetDoc('admin_settings/general');
+        } catch {
+          snapshot = null;
+        }
+        const { path, id, ...snapshotData } = snapshot && typeof snapshot === 'object' ? snapshot : {};
+        void path;
+        void id;
+        if (snapshot && Object.keys(snapshotData).length) {
+          const data = snapshotData || {};
           setHasStoredSmtpPass(Boolean(data.smtpPass));
           setFormData({
             ...defaultSettings,
@@ -230,18 +237,14 @@ const AdminSettings = ({ lang = 'ar' }) => {
       const normalizedSmtp = normalizeNamecheapSmtpForm(formData);
       const nextPayload = {
         ...normalizedSmtp,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       };
 
       if (!String(formData.smtpPass || '').trim()) {
         delete nextPayload.smtpPass;
       }
 
-      await setDoc(
-        doc(db, 'admin_settings', 'general'),
-        nextPayload,
-        { merge: true }
-      );
+      await adminPatchDoc('admin_settings/general', nextPayload);
       setHasStoredSmtpPass(hasStoredSmtpPass || Boolean(String(formData.smtpPass || '').trim()));
       setFormData((current) => ({ ...current, smtpPass: '' }));
       setMessage(isAr ? 'تم حفظ الإعدادات.' : 'Settings saved.');

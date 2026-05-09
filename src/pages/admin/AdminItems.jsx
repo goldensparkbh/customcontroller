@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { adminAlign } from './adminUi.js';
-import { db, storage } from '../../firebase';
-import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import {
+    adminCreateDoc,
+    adminDeleteDoc,
+    adminListDocs,
+    adminPatchDoc,
+    adminUploadFile
+} from '../../services/backendApi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
@@ -127,8 +131,12 @@ const AdminItems = ({ lang = 'ar' }) => {
     const fetchItems = async () => {
         setLoading(true);
         try {
-            const querySnapshot = await getDocs(collection(db, 'items'));
-            const itemsList = querySnapshot.docs.map((snapshot) => normalizeItemRecord(snapshot.id, snapshot.data()));
+            const querySnapshot = await adminListDocs('items/');
+            const itemsList = querySnapshot.docs.map((snapshot) => {
+                const { path, ...data } = snapshot;
+                void path;
+                return normalizeItemRecord(snapshot.id, data);
+            });
             setItems(itemsList);
             setSelectedItemId((current) => (itemsList.some((item) => item.id === current) ? current : ''));
         } catch (error) {
@@ -209,9 +217,8 @@ const AdminItems = ({ lang = 'ar' }) => {
         const nextUrls = [];
         for (let index = 0; index < imageFiles.length; index += 1) {
             const file = imageFiles[index];
-            const storageRef = ref(storage, `shop_items/${Date.now()}_${file.name}`);
-            await uploadBytes(storageRef, file);
-            nextUrls.push(await getDownloadURL(storageRef));
+            const { url } = await adminUploadFile(file);
+            nextUrls.push(url);
         }
         return nextUrls;
     };
@@ -230,10 +237,10 @@ const AdminItems = ({ lang = 'ar' }) => {
                 },
                 {
                     quantity: 0,
-                    createdAt: editingId ? undefined : new Date()
+                    createdAt: editingId ? undefined : new Date().toISOString()
                 }
             );
-            const nextItemNumber = itemNumber || await allocateSequentialNumber(db, 'inventory_master');
+            const nextItemNumber = itemNumber || await allocateSequentialNumber(undefined, 'inventory_master');
             const barcode = normalizeNumericString(formData.barcode) || nextItemNumber;
             const itemData = {
                 name: formData.name,
@@ -248,15 +255,18 @@ const AdminItems = ({ lang = 'ar' }) => {
                 sellPrice: inventoryPayload.sellPrice,
                 price: inventoryPayload.price,
                 quantity: inventoryPayload.quantity,
-                updatedAt: new Date()
+                updatedAt: new Date().toISOString()
             };
 
             if (editingId) {
-                await updateDoc(doc(db, 'items', editingId), itemData);
+                await adminPatchDoc(`items/${editingId}`, itemData);
             } else {
-                await addDoc(collection(db, 'items'), {
-                    ...itemData,
-                    createdAt: new Date()
+                await adminCreateDoc({
+                    collection: 'items',
+                    data: {
+                        ...itemData,
+                        createdAt: new Date().toISOString()
+                    }
                 });
             }
 
@@ -276,7 +286,7 @@ const AdminItems = ({ lang = 'ar' }) => {
     const handleDelete = async (id) => {
         if (!window.confirm(isAr ? 'هل تريد حذف هذا المنتج؟' : 'Delete this item?')) return;
         try {
-            await deleteDoc(doc(db, 'items', id));
+            await adminDeleteDoc(`items/${id}`);
             if (selectedItemId === id) {
                 setSelectedItemId('');
                 setDetailOpen(false);

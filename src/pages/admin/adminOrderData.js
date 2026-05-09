@@ -1,5 +1,4 @@
-import { db } from '../../firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { adminListDocs } from '../../services/backendApi.js';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 
 export const panelStyle = {
@@ -10,14 +9,11 @@ export const panelStyle = {
 };
 
 export async function loadOrders() {
-  try {
-    const snapshot = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
-    return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-  } catch (error) {
-    if (!error.message.includes('index')) throw error;
-    const snapshot = await getDocs(collection(db, 'orders'));
-    return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-  }
+  const snapshot = await adminListDocs('orders/', 'createdAt');
+  return snapshot.docs.map((docSnap) => {
+    const { path, ...rest } = docSnap;
+    return { id: docSnap.id, ...rest };
+  });
 }
 
 export function formatDate(value) {

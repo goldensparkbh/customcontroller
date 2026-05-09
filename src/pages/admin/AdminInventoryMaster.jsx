@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { adminListDocs, adminPatchDoc } from '../../services/backendApi.js';
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
@@ -111,23 +110,33 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
     const fetchInventory = async () => {
         setLoading(true);
         try {
-            const itemsSnapshot = await getDocs(collection(db, 'items'));
-            const itemRecords = itemsSnapshot.docs.map((snapshot) => normalizeMasterRecord({
-                id: snapshot.id,
-                raw: snapshot.data(),
-                sourceType: 'normal',
-                sourceLabel: isAr ? 'منتج عادي' : 'Normal Item'
-            }));
+            const itemsSnapshot = await adminListDocs('items/');
+            const itemRecords = itemsSnapshot.docs.map((snapshot) => {
+                const { path, ...data } = snapshot;
+                void path;
+                return normalizeMasterRecord({
+                    id: snapshot.id,
+                    raw: data,
+                    sourceType: 'normal',
+                    sourceLabel: isAr ? 'منتج عادي' : 'Normal Item'
+                });
+            });
 
-            const partsSnapshot = await getDocs(collection(db, 'configurator_parts'));
+            const partsSnapshot = await adminListDocs('configurator_parts/');
+            const rootParts = partsSnapshot.docs.filter((d) => /^configurator_parts\/[^/]+$/u.test(d.path));
+
             const partOptionsRecords = [];
-            for (const partDoc of partsSnapshot.docs) {
-                const part = { id: partDoc.id, ...partDoc.data() };
-                const optionsSnapshot = await getDocs(collection(db, `configurator_parts/${part.id}/options`));
+            for (const partDoc of rootParts) {
+                const { path, ... pdata } = partDoc;
+                void path;
+                const part = { id: partDoc.id, ...pdata };
+                const optionsSnapshot = await adminListDocs(`configurator_parts/${part.id}/options/`);
                 optionsSnapshot.docs.forEach((optDoc) => {
+                    const { path: op, ...odata } = optDoc;
+                    void op;
                     partOptionsRecords.push(normalizeMasterRecord({
                         id: optDoc.id,
-                        raw: optDoc.data(),
+                        raw: odata,
                         sourceType: 'configurator',
                         sourceLabel: `${isAr ? 'مخصص' : 'Configurator'} / ${part.title || part.id}`,
                         partId: part.id,
@@ -211,14 +220,17 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
             const payload = {
                 inventoryDetails: inventoryPayload.inventoryDetails,
                 quantity: inventoryPayload.quantity,
-                updatedAt: new Date()
+                updatedAt: new Date().toISOString()
             };
 
             if (selectedRecord.sourceType === 'normal') {
                 payload.showOnline = formState.showOnline;
-                await updateDoc(doc(db, 'items', selectedRecord.documentId), payload);
+                await adminPatchDoc(`items/${selectedRecord.documentId}`, payload);
             } else {
-                await updateDoc(doc(db, `configurator_parts/${selectedRecord.partId}/options`, selectedRecord.documentId), payload);
+                await adminPatchDoc(
+                    `configurator_parts/${selectedRecord.partId}/options/${selectedRecord.documentId}`,
+                    payload
+                );
             }
 
             await fetchInventory();

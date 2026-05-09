@@ -1,4 +1,4 @@
-import { doc, runTransaction } from 'firebase/firestore';
+import { adminAllocateCounter } from '../../services/backendApi.js';
 
 const DEFAULT_COUNTER_STARTS = {
     inventory: 100000,
@@ -41,16 +41,10 @@ export const getOrderNumber = (record = {}) => (
     getStableNumericFallback(record.id || record.paymentReference || 'order', DEFAULT_COUNTER_STARTS.orders)
 );
 
-export const allocateSequentialNumber = async (db, counterKey, startAt = DEFAULT_COUNTER_STARTS.inventory) => {
-    const counterRef = doc(db, 'system_counters', counterKey);
-    const nextValue = await runTransaction(db, async (transaction) => {
-        const snapshot = await transaction.get(counterRef);
-        const currentValue = snapshot.exists() ? Number(snapshot.data()?.current || startAt - 1) : startAt - 1;
-        const safeCurrent = Number.isFinite(currentValue) ? currentValue : startAt - 1;
-        const next = safeCurrent + 1;
-        transaction.set(counterRef, { current: next }, { merge: true });
-        return next;
-    });
-
-    return String(nextValue);
+/*
+ * Previously: Firestore transaction on `system_counters/{counterKey}`.
+ */
+export const allocateSequentialNumber = async (_db, counterKey, startAt = DEFAULT_COUNTER_STARTS.inventory) => {
+    const j = await adminAllocateCounter(counterKey, Number.isFinite(startAt) ? startAt : DEFAULT_COUNTER_STARTS.inventory);
+    return String(j?.value ?? j?.counter ?? '').trim();
 };

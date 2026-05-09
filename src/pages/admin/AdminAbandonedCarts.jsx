@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { db } from '../../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { adminListDocs } from '../../services/backendApi.js';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
@@ -46,13 +45,17 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'abandoned_carts'));
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      list.sort((a, b) => {
-        const ta = a.paymentStartedAt?.toMillis?.() || 0;
-        const tb = b.paymentStartedAt?.toMillis?.() || 0;
-        return tb - ta;
+      const snap = await adminListDocs('abandoned_carts/');
+      const list = snap.docs.map((d) => {
+        const { path, ...rest } = d;
+        return { id: d.id, ...rest };
       });
+      const ms = (v) => {
+        if (v && typeof v.toMillis === 'function') return v.toMillis();
+        const t = new Date(v || 0).getTime();
+        return Number.isFinite(t) ? t : 0;
+      };
+      list.sort((a, b) => ms(b.paymentStartedAt) - ms(a.paymentStartedAt));
       setRows(list);
     } catch (e) {
       console.error(e);

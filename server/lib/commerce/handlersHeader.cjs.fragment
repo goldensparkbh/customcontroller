@@ -1,0 +1,16 @@
+"use strict";
+
+/* eslint-disable max-len -- generated bundle */
+
+const { FieldValue } = require("./fieldValue.cjs");
+
+let __EZ_COMMERCE_DB__ = null;
+function injectCommerceDb(db) {
+  __EZ_COMMERCE_DB__ = db;
+}
+function getFirestore() {
+  if (!__EZ_COMMERCE_DB__) throw new Error("injectCommerceDb() not called before commerce handlers run");
+  return __EZ_COMMERCE_DB__;
+}
+
+exports.injectCommerceDb = injectCommerceDb;

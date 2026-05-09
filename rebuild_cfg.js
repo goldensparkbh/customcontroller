@@ -4,8 +4,7 @@ const lines = fs.readFileSync('conf_1.txt', 'utf8').split('\n');
 const markup = lines.slice(4, 201).join('\n');
 
 const template = `import React, { useEffect, useState } from 'react';
-import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { fetchConfiguratorCatalog } from '../services/backendApi.js';
 
 const configuratorMarkup = \`
 ${markup}
@@ -15,25 +14,18 @@ const ConfiguratorPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadFirebaseData = async () => {
+    const loadCatalogData = async () => {
       try {
-        const partsSnap = await getDocs(collection(db, 'configurator_parts'));
-        const partsList = partsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        for (const part of partsList) {
-          const optSnap = await getDocs(collection(db, \`configurator_parts/\${part.id}/options\`));
-          part.options = optSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
-
-        window.__CONFIG_FIREBASE_DATA__ = partsList;
+        const { parts = [] } = await fetchConfiguratorCatalog();
+        window.__CONFIG_FIREBASE_DATA__ = parts;
       } catch (err) {
-        console.error('Firebase fetch error:', err);
+        console.error('Configurator catalog fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadFirebaseData();
+    loadCatalogData();
   }, []);
 
   useEffect(() => {
@@ -71,4 +63,4 @@ export default ConfiguratorPage;
 `;
 
 fs.writeFileSync('src/pages/Configurator.jsx', template);
-console.log('Restored Configurator.jsx DOM + Firebase injected!');
+console.log('Restored Configurator.jsx DOM + backend catalog injected!');

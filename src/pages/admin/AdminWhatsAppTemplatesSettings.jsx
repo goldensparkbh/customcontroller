@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { db } from '../../firebase';
 import LoadingState from '../../components/LoadingState.jsx';
 import { adminAlign } from './adminUi.js';
 import {
@@ -61,7 +60,7 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
         setLoading(true);
         setMessage('');
         try {
-            const list = await loadWhatsAppTemplates(db);
+            const list = await loadWhatsAppTemplates();
             setRows(list.map((t) => ({ ...t })));
         } catch (error) {
             console.error(error);
@@ -128,7 +127,7 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
         setSaving(true);
         setMessage('');
         try {
-            const saved = await saveWhatsAppTemplates(db, rows);
+            const saved = await saveWhatsAppTemplates(undefined, rows);
             setRows(saved.map((t) => ({ ...t })));
             setMessage(isAr ? 'تم حفظ قوالب واتساب.' : 'WhatsApp templates saved.');
             setMessageTone('success');

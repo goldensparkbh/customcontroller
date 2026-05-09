@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from '../../firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { adminLogin } from '../../services/backendApi.js';
 import { useNavigate } from 'react-router-dom';
 import { LoadingInline } from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n.js';
@@ -30,7 +29,7 @@ const AdminLogin = () => {
         setLoading(true);
         setError('');
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await adminLogin(email.trim(), password);
             navigate('/admin');
         } catch (err) {
             console.error("Login error:", err);

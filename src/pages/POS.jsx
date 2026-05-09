@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { db } from '../firebase'; // Update with proper path if needed
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  serverTimestamp, 
-  query, 
-  where 
-} from 'firebase/firestore';
+import { fetchPosCatalog, createPosOrder } from '../services/backendApi.js';
 
 const POS = () => {
   // --- Translations ---
@@ -42,42 +34,11 @@ const POS = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch Normal Items from Firestore 'items' collection
-        const itemsSnap = await getDocs(collection(db, 'items'));
-        const firestoreNormalItems = itemsSnap.docs.map(docSnap => {
-          const it = docSnap.data();
-          return {
-            id: docSnap.id,
-            name: it.name || '',
-            sku: it.barcode || it.itemNumber || docSnap.id,
-            price: parseFloat(it.sellPrice || it.price || 0),
-            stock: it.quantity || 0,
-            category: it.category || 'General',
-            image: it.images?.[0] || null,
-            isCustom: false
-          };
-        });
-
-        // 2. Fetch Customizable Parts from Firestore 'configurator_parts' collection
-        const partsSnap = await getDocs(collection(db, 'configurator_parts'));
-        const firestoreParts = partsSnap.docs.map(docSnap => {
-          const p = docSnap.data();
-          return {
-            id: docSnap.id,
-            name: p.title || p.name || 'Custom Part',
-            sku: `PART-${docSnap.id}`,
-            price: 0, 
-            stock: 999, 
-            category: 'Customization',
-            image: p.icon || null,
-            isCustom: true
-          };
-        });
-
+        const { items: firestoreNormalItems = [], parts: firestoreParts = [] } = await fetchPosCatalog();
         setItems([...firestoreNormalItems, ...firestoreParts]);
       } catch (err) {
         console.error("POS Fetch Error:", err);
-        setError("Failed to load products from Firestore.");
+        setError("Failed to load products.");
       } finally {
         setLoading(false);
       }
@@ -155,13 +116,13 @@ const POS = () => {
         total,
         customer,
         paymentMethod,
-        timestamp: serverTimestamp(),
+        timestamp: new Date().toISOString(),
         currency: 'BHD',
         vatIncluded: true,
         source: 'POS'
       };
 
-      await addDoc(collection(db, 'pos_orders'), orderData);
+      await createPosOrder(orderData);
       
       // Print handling
       generateReceipt(orderData);
