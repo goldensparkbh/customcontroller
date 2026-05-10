@@ -165,8 +165,12 @@ const configuratorMarkup = `
 <div class="part-tooltip" id="partTooltip"></div>
 `;
 
+const CONFIGURATOR_READY_EVENT = 'ezConfiguratorReady';
+const CONFIGURATOR_READY_TIMEOUT_MS = 45000;
+
 const ConfiguratorPage = () => {
-  const [loading, setLoading] = useState(true);
+  const [catalogReady, setCatalogReady] = useState(false);
+  const [logicReady, setLogicReady] = useState(false);
 
   useEffect(() => {
     const loadFirebaseData = async () => {
@@ -204,7 +208,7 @@ const ConfiguratorPage = () => {
         console.error("Configurator catalog fetch error:", err);
         window.__CONFIG_FIREBASE_DATA__ = [];
       } finally {
-        setLoading(false);
+        setCatalogReady(true);
       }
     };
 
@@ -212,7 +216,21 @@ const ConfiguratorPage = () => {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (!catalogReady || logicReady) return;
+    const onReady = () => setLogicReady(true);
+    window.addEventListener(CONFIGURATOR_READY_EVENT, onReady);
+    const fallback = window.setTimeout(() => {
+      console.warn('[Configurator] Logic did not signal ready in time; dismissing loader.');
+      setLogicReady(true);
+    }, CONFIGURATOR_READY_TIMEOUT_MS);
+    return () => {
+      window.removeEventListener(CONFIGURATOR_READY_EVENT, onReady);
+      window.clearTimeout(fallback);
+    };
+  }, [catalogReady, logicReady]);
+
+  useEffect(() => {
+    if (!logicReady) return;
     document.body.classList.add('configurator-page-active');
     const introFrame = window.requestAnimationFrame(() => {
       document.body.classList.add('configurator-intro-active');
@@ -221,7 +239,17 @@ const ConfiguratorPage = () => {
       document.body.classList.remove('configurator-intro-active');
     }, 1350);
 
-    // Check if script is already present? Not strictly needed if unmounted correctly
+    return () => {
+      document.body.classList.remove('configurator-page-active');
+      document.body.classList.remove('configurator-intro-active');
+      window.cancelAnimationFrame(introFrame);
+      window.clearTimeout(introTimeout);
+    };
+  }, [logicReady]);
+
+  useEffect(() => {
+    if (!catalogReady) return;
+
     const existing = document.getElementById('ez-configurator-logic-script');
     if (!existing) {
       const script = document.createElement('script');
@@ -241,28 +269,36 @@ const ConfiguratorPage = () => {
       }
       document.body.classList.remove('configurator-page-active');
       document.body.classList.remove('configurator-intro-active');
-      window.cancelAnimationFrame(introFrame);
-      window.clearTimeout(introTimeout);
       const script = document.getElementById('ez-configurator-logic-script');
       if (script && document.body.contains(script)) {
         document.body.removeChild(script);
       }
     };
-  }, [loading]);
+  }, [catalogReady]);
 
-  if (loading) {
-    const currentLang = localStorage.getItem('ez_lang') || 'ar';
-    return (
-      <LoadingState
-        message={(i18n[currentLang] && i18n[currentLang].loadingConfigurator) || 'Loading configurator...'}
-        fullScreen
-      />
-    );
+  const currentLang = localStorage.getItem('ez_lang') || 'ar';
+  const loadingMessage =
+    (i18n[currentLang] && i18n[currentLang].loadingConfigurator) || 'Loading configurator...';
+
+  if (!catalogReady) {
+    return <LoadingState message={loadingMessage} fullScreen />;
   }
 
   return (
-    <div className="configurator-page">
+    <div className="configurator-page" style={{ position: 'relative' }}>
       <div dangerouslySetInnerHTML={{ __html: configuratorMarkup }} />
+      {!logicReady && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2147483000,
+            background: '#0e1117'
+          }}
+        >
+          <LoadingState message={loadingMessage} fullScreen />
+        </div>
+      )}
     </div>
   );
 };

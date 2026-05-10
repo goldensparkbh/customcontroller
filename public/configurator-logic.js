@@ -385,6 +385,61 @@
         return dynamicOptionsByPart[partId] || [];
     }
 
+    function collectAllConfiguratorImageUrls() {
+        const urls = new Set();
+        ALL_PARTS.forEach((part) => {
+            if (!part) return;
+            if (part.icon) urls.add(part.icon);
+            const masks = part.mask;
+            if (Array.isArray(masks)) {
+                masks.forEach((m) => {
+                    if (m) urls.add(m);
+                });
+            } else if (typeof masks === "string" && masks) {
+                urls.add(masks);
+            }
+            (getPaletteForPart(part.id) || []).forEach((e) => {
+                if (!e) return;
+                if (e.image) urls.add(e.image);
+                if (e.secondImage) urls.add(e.secondImage);
+                if (e.icon) urls.add(e.icon);
+            });
+            (getOptionsForPart(part.id) || []).forEach((e) => {
+                if (!e) return;
+                if (e.image) urls.add(e.image);
+                if (e.secondImage) urls.add(e.secondImage);
+                if (e.icon) urls.add(e.icon);
+            });
+        });
+        return Array.from(urls).filter((u) => typeof u === "string" && u.trim());
+    }
+
+    function preloadImageUrl(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const decodePromise = typeof img.decode === "function" ? img.decode().catch(() => { }) : Promise.resolve();
+                Promise.resolve(decodePromise).finally(resolve);
+            };
+            img.onerror = () => resolve();
+            img.src = url;
+        });
+    }
+
+    async function preloadAllCatalogImages(urls) {
+        const concurrency = 10;
+        const queue = urls.slice();
+        if (queue.length === 0) return;
+        const workerCount = Math.min(concurrency, queue.length);
+        const workers = Array.from({ length: workerCount }, async () => {
+            while (queue.length) {
+                const next = queue.shift();
+                if (next) await preloadImageUrl(next);
+            }
+        });
+        await Promise.all(workers);
+    }
+
     function addVariantToMap(targetMap, partId, variant) {
         if (!targetMap[partId]) targetMap[partId] = [];
         const variantSlug = normalizeVariant(variant.key || "");
@@ -575,7 +630,7 @@
         }
     }
 
-    function bootstrapConfigurator() {
+    async function bootstrapConfigurator() {
         setZohoLoading(true);
         try {
             const firebaseParts = window.__CONFIG_FIREBASE_DATA__ || [];
@@ -600,8 +655,8 @@
             FRONT_PART_IDS = new Set(FRONT_PARTS.map(p => p.id));
             BACK_PART_IDS = new Set(BACK_PARTS.map(p => p.id));
 
-            // Re-build mask data
-            rebuildMasks();
+            // Re-build mask data (must finish before overlays / tint logic run reliably)
+            await rebuildMasks();
             // Re-build UI layers
             buildPartLayers();
 
@@ -675,10 +730,18 @@
             saveConfigToStorage();
 
             scheduleGlobalOverlayWarmup(initialPartId);
+
+            const catalogImageUrls = collectAllConfiguratorImageUrls();
+            await preloadAllCatalogImages(catalogImageUrls);
         } catch (err) {
             console.error("[Firebase Config] Bootstrap failed:", err);
         } finally {
             setZohoLoading(false);
+            try {
+                window.dispatchEvent(new CustomEvent("ezConfiguratorReady", { bubbles: true }));
+            } catch (_e) {
+                /* ignore */
+            }
         }
     }
 
@@ -2374,7 +2437,7 @@
     }
     /* ============================================================= */
 
-    bootstrapConfigurator();
+    void bootstrapConfigurator();
     initMobileScrollButtons();
     applyLanguage();
     syncBaseImages();

@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-DOFuCrMe.js";const n=`
+import{r as t,j as a}from"./index-DkkDJ83L.js";const n=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
