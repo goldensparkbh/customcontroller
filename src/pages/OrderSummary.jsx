@@ -67,11 +67,10 @@ const summaryScript = `
     updateThemeLabel();
   }
 
-  let currentTheme = localStorage.getItem("ez_theme") || "light";
+  let currentTheme = localStorage.getItem("ez_theme") || "dark";
 
   function applyTheme() {
     document.body.classList.toggle("theme-light", currentTheme === "light");
-    document.body.classList.toggle("theme-dark", currentTheme === "dark");
   }
 
   function themeLabel() {

@@ -94,8 +94,8 @@ function TranslationBootstrap() {
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: 'system-ui, sans-serif',
-          background: 'var(--loading-screen-bg, #f1f5f9)',
-          color: 'var(--loading-screen-text, #64748b)'
+          background: 'var(--loading-screen-bg, #2a3040)',
+          color: 'var(--loading-screen-text, #94a3b8)'
         }}
       >
         …

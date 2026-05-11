@@ -61,9 +61,8 @@ function App() {
   const shouldHideNavbar = hideNavbarOn.includes(location.pathname);
 
   React.useEffect(() => {
-    const mode = localStorage.getItem('ez_theme') === 'dark' ? 'dark' : 'light';
-    document.body.classList.toggle('theme-light', mode === 'light');
-    document.body.classList.toggle('theme-dark', mode === 'dark');
+    document.body.classList.toggle('theme-light', localStorage.getItem('ez_theme') === 'light');
+    document.body.classList.remove('theme-dark');
   }, []);
 
   const gaFirstNavigation = React.useRef(true);
