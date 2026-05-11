@@ -3043,6 +3043,22 @@ body.theme-light .color-group-title {
     filter 0.12s ease-out;
 }
 
+.cd-swatch > .cd-swatch-icon-img,
+.cd-swatch-op > .cd-swatch-icon-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cd-cell-op.is-gamemode-option .cd-swatch-op > .cd-swatch-icon-img {
+  object-fit: contain;
+}
+
 .cd-swatch:hover {
   box-shadow: 0 0 0 2px rgb(255, 255, 255);
   border-color: rgba(255, 255, 255, 0.35);
@@ -5306,6 +5322,7 @@ body.configurator-page-active .cd-cell-op {
   position: absolute;
   top: 50%;
   left: 50%;
+  z-index: 1;
   transform: translate(-50%, -50%);
   color: white !important;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 0 5px rgba(0, 0, 0, 0.5);

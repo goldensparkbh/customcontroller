@@ -10,6 +10,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const dao = require("../lib/documentsDao");
 const hooks = require("../lib/orderInventoryHooks");
 const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
+const { maybeOptimizeRasterUpload } = require("../lib/uploadImageOptimize.cjs");
 
 module.exports = function createAdminApi(pool, handlers) {
   const r = express.Router();
@@ -281,7 +282,25 @@ module.exports = function createAdminApi(pool, handlers) {
 
       if (!req.file || !req.file.buffer) return res.status(400).json({ error: "missing_file" });
 
-      const ext = path.extname(req.file.originalname || "").replace(/[^.a-z0-9]/giu, "");
+      const imageProfile = String(req.body?.imageProfile || "default").trim() || "default";
+      let uploadBody = req.file.buffer;
+      let contentType = req.file.mimetype || "application/octet-stream";
+      let ext = path.extname(req.file.originalname || "").replace(/[^.a-z0-9]/giu, "");
+
+      const optimized = await maybeOptimizeRasterUpload(uploadBody, contentType, imageProfile);
+      if (optimized) {
+        uploadBody = optimized.buffer;
+        contentType = optimized.contentType;
+        ext = optimized.ext || ".webp";
+      } else if (!ext) {
+        const mt = String(contentType || "").split(";")[0].trim().toLowerCase();
+        if (mt === "image/jpeg") ext = ".jpg";
+        else if (mt === "image/png") ext = ".png";
+        else if (mt === "image/webp") ext = ".webp";
+        else if (mt === "image/gif") ext = ".gif";
+        else ext = ".bin";
+      }
+
       const fname = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`;
       const Key = `${String(process.env.DO_SPACES_UPLOAD_PREFIX || "uploads").replace(/\/+$/, "")}/${fname}`;
 
@@ -299,9 +318,10 @@ module.exports = function createAdminApi(pool, handlers) {
         new PutObjectCommand({
           Bucket,
           Key,
-          Body: req.file.buffer,
-          ContentType: req.file.mimetype || "application/octet-stream",
-          ACL: process.env.DO_SPACES_PUBLIC_ACL || "public-read"
+          Body: uploadBody,
+          ContentType: contentType,
+          ACL: process.env.DO_SPACES_PUBLIC_ACL || "public-read",
+          CacheControl: process.env.DO_SPACES_UPLOAD_CACHE_CONTROL || "public, max-age=31536000, immutable"
         })
       );
 

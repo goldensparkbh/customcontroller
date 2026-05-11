@@ -236,7 +236,7 @@
     const imageWarmupMeta = new Map();
     const imageWarmupQueue = [];
     const retainedWarmImages = new Map();
-    const IMAGE_WARMUP_CONCURRENCY = isMobile ? 2 : 4;
+    const IMAGE_WARMUP_CONCURRENCY = isMobile ? 3 : 8;
     const RETAINED_WARM_IMAGE_LIMIT = isMobile ? 8 : 16;
     let imageWarmupInFlight = 0;
     let globalOverlayWarmupScheduled = false;
@@ -1433,9 +1433,9 @@
 
         const secondaryIds = new Set(["shell", "trimpiece", "touchpad", "psButton", "allButtons"]);
 
-        ALL_PARTS.forEach(part => {
+        ALL_PARTS.forEach((part, idx) => {
             if (part.hiddenUI) return;
-            const row = createPartRow(part);
+            const row = createPartRow(part, idx);
             partsRowsById[part.id] = row;
             if (secondaryIds.has(part.id)) {
                 if (secondaryList) secondaryList.appendChild(row);
@@ -1450,7 +1450,7 @@
         return availablePartsSet.has(part.id);
     }
 
-    function createPartRow(part) {
+    function createPartRow(part, thumbIndex = 0) {
         const row = document.createElement("div");
         row.className = "parts-item";
         row.dataset.id = part.id;
@@ -1459,10 +1459,14 @@
 
         const thumb = document.createElement("div");
         thumb.className = "parts-thumb";
-        const icon = document.createElement("img");
-        icon.src = part.icon;
-        icon.alt = part.title || ""; // Accessibility
-        thumb.appendChild(icon);
+        if (part.icon) {
+            const icon = document.createElement("img");
+            icon.src = part.icon;
+            icon.alt = part.title || ""; // Accessibility
+            icon.decoding = "async";
+            icon.loading = thumbIndex < 10 ? "eager" : "lazy";
+            thumb.appendChild(icon);
+        }
 
         row.appendChild(thumb);
         // Only icon, no name or status
@@ -1701,9 +1705,13 @@
             } else {
                 if (isOutOfStock) swatch.classList.add("is-out-of-stock");
                 if (entry.icon) {
-                    swatch.style.backgroundImage = `url('${entry.icon}')`;
-                    swatch.style.backgroundSize = "cover";
-                    swatch.style.backgroundColor = "transparent";
+                    const swImg = document.createElement("img");
+                    swImg.className = "cd-swatch-icon-img";
+                    swImg.src = entry.icon;
+                    swImg.alt = "";
+                    swImg.decoding = "async";
+                    swImg.loading = "lazy";
+                    swatch.appendChild(swImg);
                 } else {
                     swatch.style.backgroundColor = entry.hex;
                 }

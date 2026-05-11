@@ -210,7 +210,7 @@ const AdminParts = ({ lang = 'ar' }) => {
 
             let iconUrl = partIconPreview;
             if (partIconFile) {
-                const up = await adminUploadFile(partIconFile);
+                const up = await adminUploadFile(partIconFile, { imageProfile: 'configurator_icon' });
                 iconUrl = up.url;
             }
 
@@ -343,19 +343,19 @@ const AdminParts = ({ lang = 'ar' }) => {
         try {
             let imageUrl = subImagePreview;
             if (subImageFile) {
-                const up = await adminUploadFile(subImageFile);
+                const up = await adminUploadFile(subImageFile, { imageProfile: 'configurator_overlay' });
                 imageUrl = up.url;
             }
 
             let secondImageUrl = subSecondImagePreview;
             if (subSecondImageFile) {
-                const up2 = await adminUploadFile(subSecondImageFile);
+                const up2 = await adminUploadFile(subSecondImageFile, { imageProfile: 'configurator_overlay' });
                 secondImageUrl = up2.url;
             }
 
             let iconUrl = subIconPreview;
             if (subIconFile) {
-                const upi = await adminUploadFile(subIconFile);
+                const upi = await adminUploadFile(subIconFile, { imageProfile: 'configurator_icon' });
                 iconUrl = upi.url;
             }
 

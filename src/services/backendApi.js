@@ -158,8 +158,15 @@ export async function adminAllocateCounter(counterKey, startAt) {
   return adminFetch("/admin-api/counter/next", { method: "POST", body: { counterKey, startAt } });
 }
 
-export async function adminUploadFile(file) {
+/**
+ * @param {File|Blob} file
+ * @param {{ imageProfile?: 'configurator_icon' | 'configurator_overlay' | 'default' }} [opts]
+ */
+export async function adminUploadFile(file, opts = {}) {
   const fd = new FormData();
   fd.append("file", file);
+  if (opts.imageProfile) {
+    fd.append("imageProfile", opts.imageProfile);
+  }
   return adminFetch("/admin-api/upload", { method: "POST", body: fd });
 }
