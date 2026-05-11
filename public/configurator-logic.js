@@ -414,32 +414,6 @@
         return Array.from(urls).filter((u) => typeof u === "string" && u.trim());
     }
 
-    function preloadImageUrl(url) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const decodePromise = typeof img.decode === "function" ? img.decode().catch(() => { }) : Promise.resolve();
-                Promise.resolve(decodePromise).finally(resolve);
-            };
-            img.onerror = () => resolve();
-            img.src = url;
-        });
-    }
-
-    async function preloadAllCatalogImages(urls) {
-        const concurrency = 10;
-        const queue = urls.slice();
-        if (queue.length === 0) return;
-        const workerCount = Math.min(concurrency, queue.length);
-        const workers = Array.from({ length: workerCount }, async () => {
-            while (queue.length) {
-                const next = queue.shift();
-                if (next) await preloadImageUrl(next);
-            }
-        });
-        await Promise.all(workers);
-    }
-
     function addVariantToMap(targetMap, partId, variant) {
         if (!targetMap[partId]) targetMap[partId] = [];
         const variantSlug = normalizeVariant(variant.key || "");
@@ -630,7 +604,7 @@
         }
     }
 
-    async function bootstrapConfigurator() {
+    function bootstrapConfigurator() {
         setZohoLoading(true);
         try {
             const firebaseParts = window.__CONFIG_FIREBASE_DATA__ || [];
@@ -655,8 +629,8 @@
             FRONT_PART_IDS = new Set(FRONT_PARTS.map(p => p.id));
             BACK_PART_IDS = new Set(BACK_PARTS.map(p => p.id));
 
-            // Re-build mask data (must finish before overlays / tint logic run reliably)
-            await rebuildMasks();
+            // Mask + tint data (async); UI stays usable while masks finish loading
+            void rebuildMasks();
             // Re-build UI layers
             buildPartLayers();
 
@@ -730,18 +704,11 @@
             saveConfigToStorage();
 
             scheduleGlobalOverlayWarmup(initialPartId);
-
-            const catalogImageUrls = collectAllConfiguratorImageUrls();
-            await preloadAllCatalogImages(catalogImageUrls);
         } catch (err) {
             console.error("[Firebase Config] Bootstrap failed:", err);
         } finally {
             setZohoLoading(false);
-            try {
-                window.dispatchEvent(new CustomEvent("ezConfiguratorReady", { bubbles: true }));
-            } catch (_e) {
-                /* ignore */
-            }
+            scheduleCatalogImagePreloadInBackground();
         }
     }
 
@@ -1098,6 +1065,23 @@
         if (task.priority === "high") imageWarmupQueue.unshift(task);
         else imageWarmupQueue.push(task);
         flushImageWarmupQueue();
+    }
+
+    function scheduleCatalogImagePreloadInBackground() {
+        try {
+            const urls = collectAllConfiguratorImageUrls();
+            if (!urls.length) return;
+            const enqueue = () => {
+                urls.forEach((url) => queueImageWarmup(url, { priority: "low", retain: false }));
+            };
+            if (typeof window.requestIdleCallback === "function") {
+                window.requestIdleCallback(enqueue, { timeout: 2500 });
+            } else {
+                window.setTimeout(enqueue, 0);
+            }
+        } catch (_e) {
+            /* ignore */
+        }
     }
 
     function collectPartOverlayUrls(partId) {
@@ -2437,7 +2421,7 @@
     }
     /* ============================================================= */
 
-    void bootstrapConfigurator();
+    bootstrapConfigurator();
     initMobileScrollButtons();
     applyLanguage();
     syncBaseImages();
