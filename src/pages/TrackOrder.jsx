@@ -190,7 +190,7 @@ const mobileThemeToggle = document.getElementById("mobileThemeToggle");
 const navMenuBtn = document.querySelector(".nav-menu-btn");
 const mobileNavOverlay = document.getElementById("mobileNavOverlay");
 const mobileNavDrawer = document.getElementById("mobileNavDrawer");
-let currentTheme = localStorage.getItem("ez_theme") || "dark";
+let currentTheme = localStorage.getItem("ez_theme") || "light";
 
 function t(key) {
   return (i18n[navLang] && i18n[navLang][key]) || key;
@@ -225,6 +225,7 @@ if (mobileLangToggle) mobileLangToggle.addEventListener("click", toggleNavLang);
 
 function applyTheme() {
   document.body.classList.toggle("theme-light", currentTheme === "light");
+  document.body.classList.toggle("theme-dark", currentTheme === "dark");
 }
 
 function themeLabel() {

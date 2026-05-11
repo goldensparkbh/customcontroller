@@ -60,6 +60,12 @@ function App() {
   const hideNavbarOn = ['/pos'];
   const shouldHideNavbar = hideNavbarOn.includes(location.pathname);
 
+  React.useEffect(() => {
+    const mode = localStorage.getItem('ez_theme') === 'dark' ? 'dark' : 'light';
+    document.body.classList.toggle('theme-light', mode === 'light');
+    document.body.classList.toggle('theme-dark', mode === 'dark');
+  }, []);
+
   const gaFirstNavigation = React.useRef(true);
   React.useEffect(() => {
     if (gaFirstNavigation.current) {

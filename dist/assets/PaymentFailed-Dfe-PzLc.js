@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-DLbO1VR0.js";const n=`
+import{r as t,j as a}from"./index-DNl7_e36.js";const n=`
 <canvas id="bgCanvas"></canvas>
 <div class="top-nav" style="display:none;"></div>
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
@@ -46,10 +46,11 @@ import{r as t,j as a}from"./index-DLbO1VR0.js";const n=`
     updateThemeLabel();
   }
 
-  let currentTheme = localStorage.getItem("ez_theme") || "dark";
+  let currentTheme = localStorage.getItem("ez_theme") || "light";
 
   function applyTheme() {
     document.body.classList.toggle("theme-light", currentTheme === "light");
+    document.body.classList.toggle("theme-dark", currentTheme === "dark");
   }
 
   function themeLabel() {

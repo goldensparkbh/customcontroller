@@ -24,8 +24,8 @@ const LoadingState = ({
       display: 'grid',
       placeItems: 'center',
       padding: '2rem',
-      background: fullScreen ? '#0e1117' : 'transparent',
-      color: '#e6edf3'
+      background: fullScreen ? 'var(--loading-screen-bg, #f1f5f9)' : 'transparent',
+      color: 'var(--loading-screen-text, #475569)'
     }}
   >
     <div style={{ display: 'grid', justifyItems: 'center', gap: '0.85rem', textAlign: 'center' }}>

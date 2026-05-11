@@ -62,8 +62,8 @@ const Navbar = () => {
             position: 'sticky',
             top: 0,
             zIndex: 1000,
-            background: 'var(--card-bg, #1a1a1a)',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            background: 'var(--navbar-bg, var(--card-bg))',
+            borderBottom: '1px solid var(--nav-border, rgba(15,23,42,0.08))',
             padding: '1rem 2rem',
             display: 'flex',
             justifyContent: 'space-between',
@@ -86,8 +86,8 @@ const Navbar = () => {
                         className="pos-nav-btn"
                         style={{
                             background: 'transparent',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            color: 'var(--color-text, #fff)',
+                            border: '1px solid var(--border-subtle, rgba(15,23,42,0.12))',
+                            color: 'var(--color-text)',
                             padding: '0.5rem 1rem',
                             borderRadius: '4px',
                             cursor: 'pointer',
@@ -102,8 +102,8 @@ const Navbar = () => {
                     className="lang-toggle-btn"
                     style={{
                         background: 'transparent',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        color: 'var(--color-text, #fff)',
+                        border: '1px solid var(--border-subtle, rgba(15,23,42,0.12))',
+                        color: 'var(--color-text)',
                         padding: '0.5rem 1rem',
                         borderRadius: '4px',
                         cursor: 'pointer',
