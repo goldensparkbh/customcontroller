@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 import { adminBatch, adminDeleteDoc, adminPatchDoc } from '../../services/backendApi.js';
-import { loadOrders } from './adminOrderData.js';
+import { getOrderTotal, loadOrders } from './adminOrderData.js';
 import LoadingState from '../../components/LoadingState.jsx';
+import ShippingAddressDisplay from '../../components/ShippingAddressDisplay.jsx';
 import ItemCustomizationSummary from '../../components/ItemCustomizationSummary.jsx';
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
@@ -126,22 +127,6 @@ const formatDate = (value) => {
     return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
 };
 
-const formatAddress = (shipping) => {
-    if (!shipping) return 'N/A';
-    return [
-        shipping.address,
-        shipping.addressLine,
-        shipping.city,
-        shipping.state,
-        shipping.country,
-        shipping.blockNumber ? `Block ${shipping.blockNumber}` : '',
-        shipping.roadNumber ? `Road ${shipping.roadNumber}` : '',
-        shipping.houseBuildingNumber ? `Building ${shipping.houseBuildingNumber}` : '',
-        shipping.flat ? `Flat ${shipping.flat}` : '',
-        shipping.saudiUnifiedAddress ? `Unified Address ${shipping.saudiUnifiedAddress}` : ''
-    ].filter(Boolean).join(', ') || 'N/A';
-};
-
 const getStatusBadgeStyle = (status) => ({
     display: 'inline-flex',
     alignItems: 'center',
@@ -199,6 +184,36 @@ const sectionCardStyle = {
     borderRadius: '10px',
     overflow: 'hidden'
 };
+
+const ORDER_STAT_ACCENT = {
+    all: '#58a6ff',
+    Paid: '#facc15',
+    'On Going': '#f97316',
+    Completed: '#4ade80',
+    Shipped: '#3b82f6',
+    Canceled: '#ef4444'
+};
+
+function buildOrderStats(orderList = []) {
+    const byStatus = Object.fromEntries(ORDER_STATUS_OPTIONS.map((status) => [status, 0]));
+    let totalRevenue = 0;
+
+    orderList.forEach((order) => {
+        const status = normalizeOrderStatus(order.status, order);
+        if (Object.prototype.hasOwnProperty.call(byStatus, status)) {
+            byStatus[status] += 1;
+        } else {
+            byStatus['On Going'] += 1;
+        }
+        totalRevenue += getOrderTotal(order);
+    });
+
+    return {
+        total: orderList.length,
+        byStatus,
+        totalRevenue
+    };
+}
 
 const listCellBase = {
     minWidth: 0
@@ -487,6 +502,15 @@ const AdminOrders = ({ lang = 'ar' }) => {
         });
     }, [orders, paymentFilter, searchTerm, statusFilter, urgencyFilter]);
 
+    const orderStats = useMemo(() => buildOrderStats(orders), [orders]);
+    const filteredStats = useMemo(() => buildOrderStats(filteredOrders), [filteredOrders]);
+
+    const hasActiveFilters =
+        statusFilter !== 'all' ||
+        paymentFilter !== 'all' ||
+        urgencyFilter !== 'all' ||
+        searchTerm.trim().length > 0;
+
     const filteredOrderIds = useMemo(() => filteredOrders.map((o) => o.id), [filteredOrders]);
     const allFilteredSelected = filteredOrderIds.length > 0 && filteredOrderIds.every((id) => selectedOrderIds.has(id));
     const someFilteredSelected = filteredOrderIds.some((id) => selectedOrderIds.has(id)) && !allFilteredSelected;
@@ -740,16 +764,100 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
     if (loading) return <LoadingState message={isAr ? "جاري تحميل الطلبات..." : "Loading orders..."} minHeight="32vh" />;
 
-    if (orders.length === 0) {
-        return (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>
-                <p>{isAr ? "لم يتم العثور على طلبات في النظام." : "No orders found."}</p>
-            </div>
+    const handleStatusCardClick = (statusKey) => {
+        if (statusKey === 'all') {
+            setStatusFilter('all');
+            return;
+        }
+        setStatusFilter((current) => (current === statusKey ? 'all' : statusKey));
+    };
+
+    const renderStatCard = (key, label, value, options = {}) => {
+        const { subtitle, accent, active, onClick } = options;
+        const accentColor = accent || ORDER_STAT_ACCENT[key] || '#e6edf3';
+        const isButton = typeof onClick === 'function';
+
+        const cardBody = (
+            <>
+                <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {label}
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: accentColor, lineHeight: 1.1, marginTop: '0.35rem' }}>
+                    {value}
+                </div>
+                {subtitle ? (
+                    <div style={{ fontSize: '0.72rem', color: '#6e7681', marginTop: '0.35rem' }}>{subtitle}</div>
+                ) : null}
+            </>
         );
-    }
+
+        const cardStyle = {
+            background: active ? 'rgba(88,166,255,0.08)' : '#0d1117',
+            borderRadius: '10px',
+            padding: '0.85rem 1rem',
+            border: `1px solid ${active ? accentColor : '#30363d'}`,
+            textAlign: adminAlign(isAr),
+            width: '100%',
+            display: 'grid',
+            gap: 0
+        };
+
+        if (!isButton) {
+            return (
+                <div key={key} style={cardStyle}>
+                    {cardBody}
+                </div>
+            );
+        }
+
+        return (
+            <button
+                key={key}
+                type="button"
+                onClick={onClick}
+                style={{
+                    ...cardStyle,
+                    cursor: 'pointer',
+                    color: 'inherit',
+                    font: 'inherit'
+                }}
+            >
+                {cardBody}
+            </button>
+        );
+    };
 
     return (
         <div>
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '0.75rem',
+                    marginBottom: '1.25rem'
+                }}
+            >
+                {renderStatCard('all', isAr ? 'إجمالي الطلبات' : 'Total orders', orderStats.total, {
+                    accent: ORDER_STAT_ACCENT.all,
+                    active: statusFilter === 'all',
+                    subtitle: hasActiveFilters
+                        ? (isAr
+                            ? `${filteredStats.total} مطابق للفلتر · ${orderStats.totalRevenue.toFixed(2)} BHD`
+                            : `${filteredStats.total} matching filters · ${orderStats.totalRevenue.toFixed(2)} BHD revenue`)
+                        : (isAr
+                            ? `${orderStats.totalRevenue.toFixed(2)} BHD إجمالي المبيعات`
+                            : `${orderStats.totalRevenue.toFixed(2)} BHD total revenue`),
+                    onClick: () => handleStatusCardClick('all')
+                })}
+                {ORDER_STATUS_OPTIONS.map((status) =>
+                    renderStatCard(status, getStatusLabelText(status), orderStats.byStatus[status] || 0, {
+                        accent: ORDER_STAT_ACCENT[status],
+                        active: statusFilter === status,
+                        onClick: () => handleStatusCardClick(status)
+                    })
+                )}
+            </div>
+
             <div
                 style={{
                     display: 'grid',
@@ -1066,7 +1174,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 borderTop: '1px solid rgba(255,255,255,0.05)'
                             }}
                         >
-                            {isAr ? "لا توجد طلبات تطابق الفلتر الحالي." : "No orders match the current filters."}
+                            {orders.length === 0
+                                ? (isAr ? "لم يتم العثور على طلبات في النظام." : "No orders found.")
+                                : (isAr ? "لا توجد طلبات تطابق الفلتر الحالي." : "No orders match the current filters.")}
                         </div>
                     )}
                 </div>
@@ -1198,7 +1308,10 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
                                     <DetailField isAr={isAr} label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "العنوان" : "Address"} value={formatAddress(selectedOrder.shipping)} />
+                                    <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', textAlign: adminAlign(isAr) }}>
+                                        {isAr ? 'عنوان الشحن' : 'Shipping address'}
+                                    </div>
+                                    <ShippingAddressDisplay shipping={selectedOrder.shipping} lang={lang} isAr={isAr} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField isAr={isAr} label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
                                 </div>

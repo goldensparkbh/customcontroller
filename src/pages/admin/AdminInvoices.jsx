@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ShippingAddressDisplay from '../../components/ShippingAddressDisplay.jsx';
 import {
-  formatAddress,
   formatDate,
   getCustomerName,
   getInvoiceNumber,
@@ -225,9 +225,7 @@ const AdminInvoices = ({ lang = 'ar' }) => {
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
                 <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{isAr ? "عنوان الشحن" : "Shipping Address"}</div>
-                <div style={{ color: '#d6d9e0', whiteSpace: 'pre-wrap', textAlign: adminAlign(isAr) }}>
-                  {formatAddress(selectedOrder.shipping)}
-                </div>
+                <ShippingAddressDisplay shipping={selectedOrder.shipping} lang={lang} isAr={isAr} />
               </div>
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>

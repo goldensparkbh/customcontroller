@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ShippingAddressDisplay from '../../components/ShippingAddressDisplay.jsx';
 import {
   buildCustomerSummaries,
-  formatAddress,
   formatDate,
   getOrderNumberLabel,
   getOrderStatus,
@@ -256,7 +256,7 @@ const AdminCustomers = ({ lang = 'ar' }) => {
 
               <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
                 <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "آخر عنوان شحن" : "Latest Shipping Address"}</div>
-                <div style={{ color: '#d6d9e0' }}>{formatAddress(selectedCustomer.orders[0]?.shipping)}</div>
+                <ShippingAddressDisplay shipping={selectedCustomer.orders[0]?.shipping} lang={lang} isAr={isAr} />
               </div>
             </div>
           </div>

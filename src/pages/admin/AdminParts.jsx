@@ -47,6 +47,35 @@ function safeFiniteInt(n, fallback = 1) {
     return Number.isFinite(x) ? Math.trunc(x) : fallback;
 }
 
+const emptyStockSummary = () => ({
+    optionCount: 0,
+    inStock: 0,
+    outOfStock: 0,
+    totalQty: 0
+});
+
+function summarizeOptionsStock(options = []) {
+    const summary = emptyStockSummary();
+    options.forEach((opt) => {
+        summary.optionCount += 1;
+        const qty = Number(opt.quantity) || 0;
+        summary.totalQty += qty;
+        if (qty > 0) summary.inStock += 1;
+        else summary.outOfStock += 1;
+    });
+    return summary;
+}
+
+function formatStockSummaryLabel(summary, isAr) {
+    const s = summary || emptyStockSummary();
+    if (!s.optionCount) {
+        return isAr ? 'لا خيارات' : 'No options';
+    }
+    return isAr
+        ? `${s.optionCount} خيار · ${s.inStock} متوفر · ${s.outOfStock} نفد`
+        : `${s.optionCount} options · ${s.inStock} in stock · ${s.outOfStock} out`;
+}
+
 const normalizeOptionRecord = (id, raw = {}) => ({
     id,
     ...raw,
@@ -95,6 +124,10 @@ const AdminParts = ({ lang = 'ar' }) => {
     const [showPartFormModal, setShowPartFormModal] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showOptionFormModal, setShowOptionFormModal] = useState(false);
+    const [showStockModal, setShowStockModal] = useState(false);
+    const [stockEditOption, setStockEditOption] = useState(null);
+    const [stockEditRows, setStockEditRows] = useState([]);
+    const [isSavingStock, setIsSavingStock] = useState(false);
 
     // Part Form State
     const [partId, setPartId] = useState('');
@@ -134,12 +167,33 @@ const AdminParts = ({ lang = 'ar' }) => {
         setLoading(true);
         try {
             const querySnapshot = await adminListDocs('configurator_parts/');
-            const partsList = querySnapshot.docs
+            const allDocs = querySnapshot.docs || [];
+            const stockByPartId = new Map();
+
+            allDocs.forEach((docSnap) => {
+                const match = String(docSnap.path || '').match(/^configurator_parts\/([^/]+)\/options\/([^/]+)$/u);
+                if (!match) return;
+                const partId = match[1];
+                const { path, id, ...data } = docSnap;
+                void path;
+                void id;
+                const opt = normalizeOptionRecord(docSnap.id, data);
+                const list = stockByPartId.get(partId) || [];
+                list.push(opt);
+                stockByPartId.set(partId, list);
+            });
+
+            const partsList = allDocs
                 .filter((d) => /^configurator_parts\/[^/]+$/u.test(d.path))
                 .map((docSnap) => {
                     const { path, ...rest } = docSnap;
                     void path;
-                    return { id: docSnap.id, ...rest };
+                    const options = stockByPartId.get(docSnap.id) || [];
+                    return {
+                        id: docSnap.id,
+                        ...rest,
+                        stockSummary: summarizeOptionsStock(options)
+                    };
                 });
             partsList.sort((a, b) => (a.priority || 0) - (b.priority || 0));
             setParts(partsList);
@@ -428,7 +482,8 @@ const AdminParts = ({ lang = 'ar' }) => {
             }
 
             setShowOptionFormModal(false);
-            fetchSubitems(selectedPart.id);
+            await fetchSubitems(selectedPart.id);
+            fetchParts();
         } catch (error) {
             console.error(error);
             const msg = error?.message || String(error);
@@ -442,11 +497,66 @@ const AdminParts = ({ lang = 'ar' }) => {
         try {
             await adminDeleteDoc(`configurator_parts/${selectedPart.id}/options/${subId}`);
             fetchSubitems(selectedPart.id);
+            fetchParts();
         } catch (error) {
             console.error(error);
             alert("Error deleting option");
         }
     };
+
+    const handleOpenStockEdit = (sub) => {
+        setStockEditOption(sub);
+        setStockEditRows(hydrateInventoryFormEntries(sub));
+        setShowStockModal(true);
+    };
+
+    const handleCloseStockModal = () => {
+        setShowStockModal(false);
+        setStockEditOption(null);
+        setStockEditRows([]);
+    };
+
+    const handleSaveStockEdit = async (e) => {
+        e.preventDefault();
+        if (!selectedPart || !stockEditOption) return;
+        setIsSavingStock(true);
+        try {
+            const inventoryPayload = buildInventoryPayload(
+                stockEditRows,
+                {
+                    purchasePrice: stockEditOption.purchasePrice,
+                    sellPrice: stockEditOption.sellPrice ?? stockEditOption.price
+                },
+                { quantity: stockEditOption.quantity ?? 0 }
+            );
+
+            await adminPatchDoc(`configurator_parts/${selectedPart.id}/options/${stockEditOption.id}`, {
+                inventoryDetails: inventoryPayload.inventoryDetails,
+                quantity: inventoryPayload.quantity,
+                updatedAt: new Date().toISOString()
+            });
+
+            handleCloseStockModal();
+            await fetchSubitems(selectedPart.id);
+            fetchParts();
+        } catch (error) {
+            console.error(error);
+            alert(isAr ? 'فشل حفظ المخزون.' : 'Failed to save stock.');
+        }
+        setIsSavingStock(false);
+    };
+
+    const stockBadgeStyle = (qty) => ({
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '2px 8px',
+        borderRadius: '999px',
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        background: Number(qty) > 0 ? 'rgba(34,197,94,0.18)' : 'rgba(248,113,113,0.16)',
+        color: Number(qty) > 0 ? '#86efac' : '#fca5a5',
+        border: `1px solid ${Number(qty) > 0 ? 'rgba(34,197,94,0.35)' : 'rgba(248,113,113,0.35)'}`
+    });
 
     if (loading) return <LoadingState message="Loading configurator parts..." minHeight="32vh" />;
 
@@ -583,8 +693,11 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 <div style={{ height: '60px', width: '60px', background: '#30363d', borderRadius: '8px', marginBottom: '1rem' }}></div>
                             )}
                             <h4 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '1.2rem' }}>{p.title}</h4>
-                            <div style={{ color: '#8b949e', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                            <div style={{ color: '#8b949e', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
                                 ID: {p.id} | {isAr ? "الجهة" : "Side"}: {p.side}
+                            </div>
+                            <div style={{ color: '#8b949e', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                                {formatStockSummaryLabel(p.stockSummary, isAr)}
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                                 <button onClick={(e) => handleEditPart(p, e)} style={{ flex: 1, background: '#1f6feb', color: '#fff', border: 'none', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
@@ -598,7 +711,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                     <div
                         style={{
                             display: 'grid',
-                            gridTemplateColumns: '0.8fr 1.5fr 0.8fr 0.8fr 0.9fr',
+                            gridTemplateColumns: '0.8fr 1.4fr 0.7fr 0.7fr 1.1fr 0.9fr',
                             gap: '0.75rem',
                             padding: '0.85rem 1rem',
                             background: '#0d1117',
@@ -614,6 +727,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                         <div>{isAr ? 'الجزء' : 'Part'}</div>
                         <div>{isAr ? 'الجهة' : 'Side'}</div>
                         <div>{isAr ? 'الأولوية' : 'Priority'}</div>
+                        <div>{isAr ? 'المخزون (الخيارات)' : 'Stock (options)'}</div>
                         <div>{isAr ? 'إجراءات' : 'Actions'}</div>
                     </div>
 
@@ -624,7 +738,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 onClick={() => handleOpenPartDetails(p)}
                                 style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '0.8fr 1.5fr 0.8fr 0.8fr 0.9fr',
+                                    gridTemplateColumns: '0.8fr 1.4fr 0.7fr 0.7fr 1.1fr 0.9fr',
                                     gap: '0.75rem',
                                     padding: '1rem',
                                     border: 'none',
@@ -648,6 +762,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 </div>
                                 <div>{p.side}</div>
                                 <div>{p.priority ?? 0}</div>
+                                <div style={{ fontSize: '0.82rem', color: '#c9d1d9' }}>{formatStockSummaryLabel(p.stockSummary, isAr)}</div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <button onClick={(e) => handleEditPart(p, e)} style={{ background: '#1f6feb', color: '#fff', border: 'none', padding: '0.4rem 0.55rem', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
                                     <button onClick={(e) => handleDeletePart(p.id, e)} style={{ background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '0.4rem 0.55rem', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
@@ -719,7 +834,11 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 {selectedPart.icon && <img src={selectedPart.icon} alt="" style={{ height: '40px' }} />}
                                 <div>
                                     <h2 style={{ margin: 0, color: '#fff' }}>{selectedPart.title} Options</h2>
-                                    <span style={{ color: '#8b949e', fontSize: '0.9rem' }}>Side: {selectedPart.side} | ID: {selectedPart.id}</span>
+                                    <span style={{ color: '#8b949e', fontSize: '0.9rem' }}>
+                                        Side: {selectedPart.side} | ID: {selectedPart.id}
+                                        {' · '}
+                                        {formatStockSummaryLabel(summarizeOptionsStock(subitems), isAr)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -818,7 +937,13 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <div style={{ fontSize: '0.82rem', color: '#8b949e' }}>#{padNumericString(sub.itemNumber)} · Barcode {sub.barcode}</div>
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Sell Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.sellPrice ?? sub.price)}</strong></div>
                                             <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Purchase Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.purchasePrice)}</strong></div>
-                                            <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Qty: {sub.quantity}</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#8b949e', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                <span>{isAr ? 'المخزون:' : 'Stock:'}</span>
+                                                <strong style={{ color: '#fff' }}>{sub.quantity ?? 0}</strong>
+                                                <span style={stockBadgeStyle(sub.quantity)}>
+                                                    {(Number(sub.quantity) || 0) > 0 ? (isAr ? 'متوفر' : 'In stock') : (isAr ? 'نفد' : 'Out')}
+                                                </span>
+                                            </div>
 
                                             {sub.image ? (
                                                 <div style={{ marginTop: '0.5rem', background: '#0d1117', borderRadius: '4px', padding: '4px', textAlign: 'center' }}>
@@ -831,9 +956,16 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             )}
                                         </div>
 
-                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                                            <button onClick={() => handleEditSubitem(sub)} style={{ flex: 1, background: '#30363d', color: '#c9d1d9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
-                                            <button onClick={() => handleDeleteSubitem(sub.id)} style={{ flex: 1, background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenStockEdit(sub)}
+                                                style={{ flex: 1, minWidth: '72px', background: '#238636', color: '#fff', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                                            >
+                                                {isAr ? 'مخزون' : 'Stock'}
+                                            </button>
+                                            <button type="button" onClick={() => handleEditSubitem(sub)} style={{ flex: 1, minWidth: '72px', background: '#30363d', color: '#c9d1d9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+                                            <button type="button" onClick={() => handleDeleteSubitem(sub.id)} style={{ flex: 1, minWidth: '72px', background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                                         </div>
                                     </div>
                                 ))}
@@ -848,7 +980,43 @@ const AdminParts = ({ lang = 'ar' }) => {
                 </div>
             )}
 
-            {/* MODAL 3: Option Form Modal (Add/Edit Option) */}
+            {/* MODAL 3: Stock-only edit for an option */}
+            {showStockModal && selectedPart && stockEditOption && (
+                <div style={{ ...overlayStyle, zIndex: 1150 }}>
+                    <div style={{ ...modalStyle, maxWidth: '640px' }}>
+                        <button type="button" onClick={handleCloseStockModal} style={closeBtnStyle}>&times;</button>
+                        <h2 style={{ marginTop: 0, marginBottom: '0.35rem', color: '#fff', textAlign: adminAlign(isAr) }}>
+                            {isAr ? 'تعديل المخزون' : 'Edit stock'}
+                        </h2>
+                        <p style={{ margin: '0 0 1.25rem', color: '#8b949e', fontSize: '0.9rem', textAlign: adminAlign(isAr) }}>
+                            {selectedPart.title} · {stockEditOption.name} · #{padNumericString(stockEditOption.itemNumber)}
+                        </p>
+                        <form onSubmit={handleSaveStockEdit}>
+                            <InventoryPricingEditor
+                                rows={stockEditRows}
+                                onChange={setStockEditRows}
+                                title={isAr ? 'حركات المخزون' : 'Stock movements'}
+                                description={
+                                    isAr
+                                        ? 'أضف كميات جديدة أو تصحيحات. الرصيد الحالي يُحسب من مجموع الحركات.'
+                                        : 'Add new quantities or corrections. On-hand stock is the sum of all movements.'
+                                }
+                                lang={lang}
+                            />
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                                <button type="button" onClick={handleCloseStockModal} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: '6px', cursor: 'pointer' }}>
+                                    {isAr ? 'إلغاء' : 'Cancel'}
+                                </button>
+                                <button type="submit" disabled={isSavingStock} style={{ padding: '0.6rem 1.2rem', background: '#238636', border: 'none', color: '#fff', borderRadius: '6px', cursor: isSavingStock ? 'wait' : 'pointer', fontWeight: 600 }}>
+                                    {isSavingStock ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ المخزون' : 'Save stock')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL 4: Option Form Modal (Add/Edit Option) */}
             {showOptionFormModal && selectedPart && (
                 <div style={{ ...overlayStyle, zIndex: 1100 }}>
                     <div style={modalStyle}>

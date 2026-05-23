@@ -277,8 +277,8 @@ if (navMenuBtn && mobileNavOverlay && mobileNavDrawer) {
 
 const statusEl = document.getElementById("trackStatus");
 const stepsListEl = document.getElementById("stepsList");
-const orderDetailsEl = document.getElementById("orderDetails");
-const orderItemsEl = document.getElementById("orderItems");
+  const orderDetailsEl = document.getElementById("orderDetails");
+  const orderItemsEl = document.getElementById("orderItems");
 
 function setStatus(msg) {
   statusEl.textContent = msg;

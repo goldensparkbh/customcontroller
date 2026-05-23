@@ -87,21 +87,7 @@ export function getOrderTotal(order) {
   return Number(order?.total || 0);
 }
 
-export function formatAddress(shipping) {
-  if (!shipping) return 'N/A';
-  return [
-    shipping.address,
-    shipping.addressLine,
-    shipping.city,
-    shipping.state,
-    shipping.country,
-    shipping.blockNumber ? `Block ${shipping.blockNumber}` : '',
-    shipping.roadNumber ? `Road ${shipping.roadNumber}` : '',
-    shipping.houseBuildingNumber ? `Building ${shipping.houseBuildingNumber}` : '',
-    shipping.flat ? `Flat ${shipping.flat}` : '',
-    shipping.saudiUnifiedAddress ? `Unified Address ${shipping.saudiUnifiedAddress}` : ''
-  ].filter(Boolean).join(', ') || 'N/A';
-}
+export { formatAddress, getShippingAddressFields } from '../../utils/shippingAddress.js';
 
 export function buildCustomerSummaries(orders) {
   const map = new Map();

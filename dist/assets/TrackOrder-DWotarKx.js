@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-DpppdNN9.js";const n=`
+import{r as t,j as a}from"./index-BLp_RFuX.js";import{I as n}from"./formatMoney-aLe5jBf-.js";const r=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
@@ -176,7 +176,9 @@ import{r as t,j as a}from"./index-DpppdNN9.js";const n=`
     100% { transform: scale(0.95); opacity: 0.6; }
   }
 </style>
-`,r=`
+`,i=`
+${n}
+
 let navLang = localStorage.getItem("ez_lang") || "ar";
 const i18n = window.__EZ_I18N__ || {};
 const navLangToggle = document.getElementById("langToggle");
@@ -270,8 +272,8 @@ if (navMenuBtn && mobileNavOverlay && mobileNavDrawer) {
 
 const statusEl = document.getElementById("trackStatus");
 const stepsListEl = document.getElementById("stepsList");
-const orderDetailsEl = document.getElementById("orderDetails");
-const orderItemsEl = document.getElementById("orderItems");
+  const orderDetailsEl = document.getElementById("orderDetails");
+  const orderItemsEl = document.getElementById("orderItems");
 
 function setStatus(msg) {
   statusEl.textContent = msg;
@@ -366,8 +368,8 @@ async function load() {
     const order = payload.order || {};
     const orderNumber = order.orderNumber ? "#" + String(order.orderNumber).padStart(6, "0") : String(order.id || orderId);
     const status = normalizeOrderStatus(order.status, order.paymentStatus);
-    const currency = order.currency || "BHD";
-    const totalText = Number.isFinite(Number(order.total)) ? (currency + " " + Number(order.total).toFixed(2)) : "";
+    const totalBhd = Number(order.total);
+    const totalText = Number.isFinite(totalBhd) ? formatEzMoney(totalBhd) : "";
 
     const details = [
       { label: t("trackOrderIdLabel"), value: orderNumber },
@@ -417,7 +419,12 @@ async function load() {
         const price = document.createElement("div");
         price.className = "item-price";
         const lineTotal = getLineTotal(li);
-        price.textContent = Number.isFinite(lineTotal) ? (currency + " " + lineTotal.toFixed(2)) : "";
+        if (Number.isFinite(lineTotal)) {
+          price.setAttribute("data-bhd-price", String(lineTotal));
+          price.textContent = formatEzMoney(lineTotal);
+        } else {
+          price.textContent = "";
+        }
         row.appendChild(name);
         row.appendChild(qty);
         row.appendChild(price);
@@ -470,4 +477,4 @@ async function load() {
 }
 
 load();
-`;function s(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=r,document.body.appendChild(e),()=>{document.body.removeChild(e)}},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:n}})}export{s as default};
+`;function l(){return t.useEffect(()=>{const e=document.createElement("script");return e.textContent=i,document.body.appendChild(e),()=>{document.body.removeChild(e)}},[]),a.jsx("div",{dangerouslySetInnerHTML:{__html:r}})}export{l as default};
