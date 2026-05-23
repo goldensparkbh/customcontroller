@@ -75,7 +75,10 @@ const defaultSettings = {
   abandonedCartReminderDays: 3,
   abandonedCartEmailSubject: '',
   abandonedCartEmailBody: '',
-  abandonedCartRecoveryCode: ''
+  abandonedCartRecoveryCode: '',
+  maintenanceMode: false,
+  maintenanceMessageAr: '',
+  maintenanceMessageEn: ''
 };
 
 const fieldStyle = {
@@ -271,12 +274,74 @@ const AdminSettings = ({ lang = 'ar' }) => {
         </div>
         <div style={{ marginTop: '0.5rem', color: '#8b949e', textAlign: adminAlign(isAr), lineHeight: 1.6, fontSize: '0.95rem' }}>
           {isAr
-            ? 'الأقسام 1–5 أدناه تُحفظ معًا بزر «حفظ الإعدادات». قسم قوالب واتساب (6) له زر حفظ منفصل.'
-            : 'Sections 1–5 below save together with “Save settings”. WhatsApp templates (section 6) use their own save button.'}
+            ? 'قسم الصيانة والأقسام 1–5 تُحفظ معًا بزر «حفظ الإعدادات». قسم قوالب واتساب (6) له زر حفظ منفصل.'
+            : 'Maintenance plus sections 1–5 save together with “Save settings”. WhatsApp templates (section 6) use their own save button.'}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '2rem' }}>
+        <section style={sectionStyle}>
+          <SettingsCategory
+            step="0"
+            title={isAr ? 'وضع الصيانة' : 'Maintenance mode'}
+            subtitle={
+              isAr
+                ? 'عند التفعيل، يرى الزوار رسالة صيانة بالعربية أو الإنجليزية. لوحة الإدارة ونقطة البيع تبقيان متاحتين.'
+                : 'When enabled, visitors see a maintenance message in Arabic or English. Admin and POS stay available.'
+            }
+            isAr={isAr}
+          />
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              cursor: 'pointer',
+              textAlign: adminAlign(isAr),
+              color: formData.maintenanceMode ? '#f85149' : '#e6edf3',
+              fontWeight: formData.maintenanceMode ? 700 : 500
+            }}
+          >
+            <input
+              type="checkbox"
+              name="maintenanceMode"
+              checked={Boolean(formData.maintenanceMode)}
+              onChange={handleChange}
+            />
+            <span>{isAr ? 'تفعيل وضع الصيانة للموقع' : 'Enable maintenance mode for the public website'}</span>
+          </label>
+
+          <div style={{ ...gridWide, marginTop: '0.5rem' }}>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
+              <span>{isAr ? 'رسالة الصيانة (عربي)' : 'Maintenance message (Arabic)'}</span>
+              <textarea
+                name="maintenanceMessageAr"
+                value={formData.maintenanceMessageAr}
+                onChange={handleChange}
+                rows={4}
+                placeholder={
+                  isAr
+                    ? 'الموقع قيد الصيانة حالياً…'
+                    : 'الموقع قيد الصيانة حالياً. نعمل على تحسين تجربتكم…'
+                }
+                style={{ ...fieldStyle, resize: 'vertical', minHeight: '6rem' }}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
+              <span>{isAr ? 'رسالة الصيانة (إنجليزي)' : 'Maintenance message (English)'}</span>
+              <textarea
+                name="maintenanceMessageEn"
+                value={formData.maintenanceMessageEn}
+                onChange={handleChange}
+                rows={4}
+                placeholder="This website is under maintenance…"
+                style={{ ...fieldStyle, resize: 'vertical', minHeight: '6rem' }}
+              />
+            </label>
+          </div>
+        </section>
+
         <section style={sectionStyle}>
           <SettingsCategory
             step={1}

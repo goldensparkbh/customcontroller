@@ -53,6 +53,7 @@ handlers.injectCommerceDb(commerceDb);
 
 const createStoreApi = require("./routes/storeApi");
 const createAdminApi = require("./routes/adminApi");
+const { createMaintenanceMiddleware } = require("./lib/maintenanceMode.cjs");
 
 const app = express();
 app.disable("x-powered-by");
@@ -76,9 +77,12 @@ app.use(
   })
 );
 
+app.get("/health", (_req, res) => res.status(200).send("ok"));
+
+app.use(createMaintenanceMiddleware(pool));
+
 app.use("/store-api", createStoreApi(pool));
 app.use("/admin-api", createAdminApi(pool, handlers));
-app.get("/health", (_req, res) => res.status(200).send("ok"));
 
 function mountHttpsHandler(fn) {
   return (req, res) => Promise.resolve(fn(req, res)).catch((err) => {

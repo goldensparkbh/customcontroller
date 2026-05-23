@@ -10,6 +10,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const dao = require("../lib/documentsDao");
 const hooks = require("../lib/orderInventoryHooks");
 const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
+const { invalidateMaintenanceCache } = require("../lib/maintenanceMode.cjs");
 const { maybeOptimizeRasterUpload } = require("../lib/uploadImageOptimize.cjs");
 
 module.exports = function createAdminApi(pool, handlers) {
@@ -137,6 +138,7 @@ module.exports = function createAdminApi(pool, handlers) {
       const prevRow = await dao.getRow(pool, p);
       const merged = await dao.mergeShallow(pool, p, req.body && typeof req.body === "object" ? req.body : {});
       await hooks.maybeRunOrderUpdate(handlers, prevRow?.data ?? null, merged, p);
+      if (p === "admin_settings/general") invalidateMaintenanceCache();
       res.json({ ok: true });
     } catch (err) {
       console.error("[doc patch]", err);
@@ -153,6 +155,7 @@ module.exports = function createAdminApi(pool, handlers) {
       await dao.replace(pool, p, incoming);
       const afterRow = await dao.getRow(pool, p);
       await hooks.maybeRunOrderUpdate(handlers, prevRow?.data ?? null, afterRow?.data ?? {}, p);
+      if (p === "admin_settings/general") invalidateMaintenanceCache();
       res.json({ ok: true });
     } catch (err) {
       console.error("[doc put]", err);

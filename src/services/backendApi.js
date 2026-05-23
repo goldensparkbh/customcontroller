@@ -86,6 +86,12 @@ export async function fetchI18nOverrideEntries() {
   return j.entries && typeof j.entries === "object" ? j.entries : {};
 }
 
+export async function fetchSiteStatus() {
+  const res = await fetch("/store-api/site/status");
+  if (!res.ok) throw new Error(await readError(res));
+  return res.json();
+}
+
 export async function fetchPosCatalog() {
   const res = await fetch("/store-api/pos/catalog");
   if (!res.ok) throw new Error(await readError(res));

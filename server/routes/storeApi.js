@@ -4,9 +4,20 @@ const crypto = require("crypto");
 const express = require("express");
 const dao = require("../lib/documentsDao");
 const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
+const { getMaintenanceStatus } = require("../lib/maintenanceMode.cjs");
 
 module.exports = function createStoreApi(pool) {
   const r = express.Router();
+
+  r.get("/site/status", async (_req, res) => {
+    try {
+      const status = await getMaintenanceStatus(pool);
+      res.json(status);
+    } catch (err) {
+      console.error("[site status]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
 
   /*
    * POS (public parity with legacy client Firestore: catalog read + single order write).

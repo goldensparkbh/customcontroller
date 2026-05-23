@@ -20,6 +20,10 @@
  * TLS (DigitalOcean Postgres — if you see SELF_SIGNED_CERT_IN_CHAIN):
  *   DATABASE_SSL_CA_PATH=./ca-certificate.crt   — CA from DB connection page (recommended)
  *   DATABASE_SSL_REJECT_UNAUTHORIZED=false    — migration-only; skips cert verify
+ *
+ * Incremental sync:
+ *   MIGRATE_COLLECTIONS=orders,items     — only these top-level collections (comma-separated)
+ *   SKIP_SPACES_UPLOAD=1                 — Firestore-only (faster for order/payment updates)
  */
 
 const fs = require("fs");
@@ -28,7 +32,10 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const { Pool } = require("pg");
 const { poolOptions } = require("../lib/pgPoolOptions.cjs");
 const admin = require("firebase-admin");
+const { FieldPath } = require("firebase-admin/firestore");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+
+const PAGE_SIZE = Math.min(Math.max(Number(process.env.MIGRATE_PAGE_SIZE || 400), 50), 1000);
 
 function loadServiceAccount() {
   const literal = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -40,18 +47,15 @@ function loadServiceAccount() {
   return JSON.parse(fs.readFileSync(abs, "utf8"));
 }
 
+function isFirestoreTimestamp(v) {
+  return v && typeof v === "object" && typeof v.toDate === "function" && typeof v.seconds === "number";
+}
+
 function coerceJsonValue(v, seen = new WeakMap()) {
   if (v == null) return v;
   if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return v;
   if (v instanceof Date) return v.toISOString();
-  if (v.toDate && typeof v.toDate === "function") return v.toDate().toISOString();
-
-  /*
-   * Firestore GeoPoint etc. skipped
-   */
-  if (v.constructor && v.constructor.name === "Timestamp" && typeof v.seconds === "number") {
-    return new Date(v.seconds * 1000 + Math.floor(v.nanoseconds / 1e6)).toISOString();
-  }
+  if (isFirestoreTimestamp(v)) return v.toDate().toISOString();
 
   if (Array.isArray(v)) return v.map((item) => coerceJsonValue(item, seen));
 
@@ -83,39 +87,59 @@ function coerceJsonValue(v, seen = new WeakMap()) {
   return String(v);
 }
 
-async function migrateCollection(collRef, pool) {
-  const snap = await collRef.get();
+function parseCollectionFilter() {
+  const raw = String(process.env.MIGRATE_COLLECTIONS || "").trim();
+  if (!raw) return null;
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return ids.length ? new Set(ids) : null;
+}
 
-  /*
-   * collection path for top-level refs
-   */
+async function upsertDocument(pool, docSnap, stats) {
+  const fp = docSnap.ref.path;
+  const data = coerceJsonValue(docSnap.data() || {});
+  const createdAt = docSnap.createTime?.toDate?.() || null;
+  const updatedAt = docSnap.updateTime?.toDate?.() || new Date();
 
-
-  /*
-   * documents stored at full path ids
-   */
-
-
-  /*
-   */ // eslint stylistic silence
-
-  for (const doc of snap.docs) {
-    const fp = doc.ref.path;
-    const data = coerceJsonValue(doc.data() || {});
-    await pool.query(
-      `
+  await pool.query(
+    `
       INSERT INTO documents(path, data, created_at, updated_at)
-      VALUES ($1,$2::jsonb, now(), now())
+      VALUES ($1, $2::jsonb, COALESCE($3, now()), COALESCE($4, now()))
       ON CONFLICT (path)
-      DO UPDATE SET data=$2::jsonb, updated_at=now()
+      DO UPDATE SET
+        data = EXCLUDED.data,
+        created_at = COALESCE(EXCLUDED.created_at, documents.created_at),
+        updated_at = EXCLUDED.updated_at
     `,
-      [fp, JSON.stringify(data)]
-    );
+    [fp, JSON.stringify(data), createdAt, updatedAt]
+  );
+  stats.docs += 1;
+}
 
-    const subs = await doc.ref.listCollections();
-    for (const sub of subs) {
-      await migrateCollection(sub, pool);
+/*
+ * Paginate — Firestore returns at most ~10k docs per query; large collections need pages.
+ */
+async function migrateCollection(collRef, pool, stats) {
+  let last = null;
+
+  for (;;) {
+    let q = collRef.orderBy(FieldPath.documentId()).limit(PAGE_SIZE);
+    if (last) q = q.startAfter(last);
+    const snap = await q.get();
+    if (snap.empty) break;
+
+    for (const doc of snap.docs) {
+      await upsertDocument(pool, doc, stats);
+      const subs = await doc.ref.listCollections();
+      for (const sub of subs) {
+        await migrateCollection(sub, pool, stats);
+      }
+      last = doc;
     }
+
+    if (snap.size < PAGE_SIZE) break;
   }
 }
 
@@ -131,6 +155,8 @@ async function main() {
 
   const db = admin.firestore();
   const pool = new Pool(poolOptions(process.env.DATABASE_URL));
+  const stats = { docs: 0 };
+  const onlyCollections = parseCollectionFilter();
 
   const roots = await db.listCollections();
 
@@ -138,9 +164,12 @@ async function main() {
    * Top-level migrations
    */
   for (const col of roots) {
+    if (onlyCollections && !onlyCollections.has(col.id)) continue;
     console.log("collection", col.id);
-    await migrateCollection(col, pool);
+    await migrateCollection(col, pool, stats);
   }
+
+  console.log("[firestore] Upserted", stats.docs, "document(s).");
 
   /*
    * Optional storage copy (Spaces). Firestore is already done when this runs.
