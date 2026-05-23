@@ -8,6 +8,7 @@ import {
     adminUploadFile
 } from '../../services/backendApi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
+import PartOptionsStockManager from './PartOptionsStockManager';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
@@ -124,10 +125,9 @@ const AdminParts = ({ lang = 'ar' }) => {
     const [showPartFormModal, setShowPartFormModal] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showOptionFormModal, setShowOptionFormModal] = useState(false);
-    const [showStockModal, setShowStockModal] = useState(false);
-    const [stockEditOption, setStockEditOption] = useState(null);
-    const [stockEditRows, setStockEditRows] = useState([]);
-    const [isSavingStock, setIsSavingStock] = useState(false);
+    const [detailsView, setDetailsView] = useState('stock');
+    const [subStockFilter, setSubStockFilter] = useState('all');
+    const [stockFocusOptionId, setStockFocusOptionId] = useState('');
 
     // Part Form State
     const [partId, setPartId] = useState('');
@@ -328,8 +328,12 @@ const AdminParts = ({ lang = 'ar' }) => {
         }
     };
 
-    const handleOpenPartDetails = (p) => {
+    const handleOpenPartDetails = (p, { view = 'stock', optionId = '' } = {}) => {
         setSelectedPart(p);
+        setDetailsView(view);
+        setStockFocusOptionId(optionId);
+        setSubFilterQuery('');
+        setSubStockFilter('all');
         fetchSubitems(p.id);
         setShowDetailsModal(true);
     };
@@ -504,46 +508,10 @@ const AdminParts = ({ lang = 'ar' }) => {
         }
     };
 
-    const handleOpenStockEdit = (sub) => {
-        setStockEditOption(sub);
-        setStockEditRows(hydrateInventoryFormEntries(sub));
-        setShowStockModal(true);
-    };
-
-    const handleCloseStockModal = () => {
-        setShowStockModal(false);
-        setStockEditOption(null);
-        setStockEditRows([]);
-    };
-
-    const handleSaveStockEdit = async (e) => {
-        e.preventDefault();
-        if (!selectedPart || !stockEditOption) return;
-        setIsSavingStock(true);
-        try {
-            const inventoryPayload = buildInventoryPayload(
-                stockEditRows,
-                {
-                    purchasePrice: stockEditOption.purchasePrice,
-                    sellPrice: stockEditOption.sellPrice ?? stockEditOption.price
-                },
-                { quantity: stockEditOption.quantity ?? 0 }
-            );
-
-            await adminPatchDoc(`configurator_parts/${selectedPart.id}/options/${stockEditOption.id}`, {
-                inventoryDetails: inventoryPayload.inventoryDetails,
-                quantity: inventoryPayload.quantity,
-                updatedAt: new Date().toISOString()
-            });
-
-            handleCloseStockModal();
-            await fetchSubitems(selectedPart.id);
-            fetchParts();
-        } catch (error) {
-            console.error(error);
-            alert(isAr ? 'فشل حفظ المخزون.' : 'Failed to save stock.');
-        }
-        setIsSavingStock(false);
+    const handleRefreshPartStock = async () => {
+        if (!selectedPart) return;
+        await fetchSubitems(selectedPart.id);
+        fetchParts();
     };
 
     const stockBadgeStyle = (qty) => ({
@@ -826,14 +794,14 @@ const AdminParts = ({ lang = 'ar' }) => {
             {/* MODAL 2: Part Details (Options Grid) */}
             {showDetailsModal && selectedPart && (
                 <div style={overlayStyle}>
-                    <div style={{ ...modalStyle, maxWidth: '1000px', height: '90vh', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ ...modalStyle, maxWidth: detailsView === 'stock' ? '1180px' : '1000px', height: '90vh', display: 'flex', flexDirection: 'column' }}>
                         <button onClick={() => setShowDetailsModal(false)} style={closeBtnStyle}>&times;</button>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--admin-border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--admin-border)', flexWrap: 'wrap', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                 {selectedPart.icon && <img src={selectedPart.icon} alt="" style={{ height: '40px' }} />}
-                                <div>
-                                    <h2 style={{ margin: 0, color: 'var(--admin-text-strong)' }}>{selectedPart.title} Options</h2>
+                                <div style={{ textAlign: adminAlign(isAr) }}>
+                                    <h2 style={{ margin: 0, color: 'var(--admin-text-strong)' }}>{selectedPart.title}</h2>
                                     <span style={{ color: 'var(--admin-muted)', fontSize: '0.9rem' }}>
                                         Side: {selectedPart.side} | ID: {selectedPart.id}
                                         {' · '}
@@ -841,9 +809,82 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     </span>
                                 </div>
                             </div>
+                            <div style={{ display: 'inline-flex', background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '999px', padding: '4px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailsView('stock')}
+                                    style={{
+                                        padding: '0.45rem 0.9rem',
+                                        borderRadius: '999px',
+                                        border: 'none',
+                                        background: detailsView === 'stock' ? '#1f6feb' : 'transparent',
+                                        color: detailsView === 'stock' ? 'var(--admin-on-primary)' : 'var(--admin-text-secondary)',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        fontSize: '0.85rem'
+                                    }}
+                                >
+                                    {isAr ? 'إدارة المخزون' : 'Stock management'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailsView('catalog')}
+                                    style={{
+                                        padding: '0.45rem 0.9rem',
+                                        borderRadius: '999px',
+                                        border: 'none',
+                                        background: detailsView === 'catalog' ? '#1f6feb' : 'transparent',
+                                        color: detailsView === 'catalog' ? 'var(--admin-on-primary)' : 'var(--admin-text-secondary)',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        fontSize: '0.85rem'
+                                    }}
+                                >
+                                    {isAr ? 'كتالوج الخيارات' : 'Option catalog'}
+                                </button>
+                            </div>
                         </div>
 
-                        <div style={{ marginTop: '2rem' }}>
+                        {detailsView === 'stock' ? (
+                            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                                    <input
+                                        value={subFilterQuery}
+                                        onChange={(e) => setSubFilterQuery(e.target.value)}
+                                        placeholder={isAr ? 'بحث بالاسم أو الباركود...' : 'Search name, barcode, item #...'}
+                                        style={{ ...fieldStyle, minWidth: '220px', flex: '1 1 220px', maxWidth: '360px' }}
+                                    />
+                                    <select
+                                        value={subStockFilter}
+                                        onChange={(e) => setSubStockFilter(e.target.value)}
+                                        style={{ ...fieldStyle, width: 'auto', minWidth: '140px' }}
+                                    >
+                                        <option value="all">{isAr ? 'كل المخزون' : 'All stock'}</option>
+                                        <option value="in">{isAr ? 'متوفر' : 'In stock'}</option>
+                                        <option value="low">{isAr ? 'منخفض (≤5)' : 'Low (≤5)'}</option>
+                                        <option value="out">{isAr ? 'نفد' : 'Out of stock'}</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenAddOption}
+                                        style={{ padding: '0.55rem 1rem', background: '#238636', border: 'none', color: 'var(--admin-on-primary)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                                    >
+                                        + {isAr ? 'خيار جديد' : 'New option'}
+                                    </button>
+                                </div>
+                                <PartOptionsStockManager
+                                    partId={selectedPart.id}
+                                    partTitle={selectedPart.title}
+                                    options={subitems}
+                                    lang={lang}
+                                    searchQuery={subFilterQuery}
+                                    stockFilter={subStockFilter}
+                                    focusOptionId={stockFocusOptionId}
+                                    onSaved={handleRefreshPartStock}
+                                />
+                            </div>
+                        ) : (
+                        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                                 <h3 style={{ margin: 0, color: 'var(--admin-text-strong)', fontSize: '1.4rem', fontWeight: 600 }}>Options ({subitems.length})</h3>
                                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -959,7 +1000,10 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
                                             <button
                                                 type="button"
-                                                onClick={() => handleOpenStockEdit(sub)}
+                                                onClick={() => {
+                                                    setStockFocusOptionId(sub.id);
+                                                    setDetailsView('stock');
+                                                }}
                                                 style={{ flex: 1, minWidth: '72px', background: '#238636', color: 'var(--admin-on-primary)', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
                                             >
                                                 {isAr ? 'مخزون' : 'Stock'}
@@ -976,47 +1020,12 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 )}
                             </div>
                         </div>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* MODAL 3: Stock-only edit for an option */}
-            {showStockModal && selectedPart && stockEditOption && (
-                <div style={{ ...overlayStyle, zIndex: 1150 }}>
-                    <div style={{ ...modalStyle, maxWidth: '640px' }}>
-                        <button type="button" onClick={handleCloseStockModal} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '0.35rem', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr) }}>
-                            {isAr ? 'تعديل المخزون' : 'Edit stock'}
-                        </h2>
-                        <p style={{ margin: '0 0 1.25rem', color: 'var(--admin-muted)', fontSize: '0.9rem', textAlign: adminAlign(isAr) }}>
-                            {selectedPart.title} · {stockEditOption.name} · #{padNumericString(stockEditOption.itemNumber)}
-                        </p>
-                        <form onSubmit={handleSaveStockEdit}>
-                            <InventoryPricingEditor
-                                rows={stockEditRows}
-                                onChange={setStockEditRows}
-                                title={isAr ? 'حركات المخزون' : 'Stock movements'}
-                                description={
-                                    isAr
-                                        ? 'أضف كميات جديدة أو تصحيحات. الرصيد الحالي يُحسب من مجموع الحركات.'
-                                        : 'Add new quantities or corrections. On-hand stock is the sum of all movements.'
-                                }
-                                lang={lang}
-                            />
-                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                                <button type="button" onClick={handleCloseStockModal} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)', borderRadius: '6px', cursor: 'pointer' }}>
-                                    {isAr ? 'إلغاء' : 'Cancel'}
-                                </button>
-                                <button type="submit" disabled={isSavingStock} style={{ padding: '0.6rem 1.2rem', background: '#238636', border: 'none', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: isSavingStock ? 'wait' : 'pointer', fontWeight: 600 }}>
-                                    {isSavingStock ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ المخزون' : 'Save stock')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL 4: Option Form Modal (Add/Edit Option) */}
+            {/* MODAL 3: Option Form Modal (Add/Edit Option) */}
             {showOptionFormModal && selectedPart && (
                 <div style={{ ...overlayStyle, zIndex: 1100 }}>
                     <div style={modalStyle}>

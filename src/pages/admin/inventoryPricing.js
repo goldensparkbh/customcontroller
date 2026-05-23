@@ -133,3 +133,76 @@ export const getInventoryReasonLabel = (reason, lang = 'en') => {
     if (!labels) return lang === 'ar' ? 'تحديث المخزون' : 'Inventory Update';
     return labels[lang] || labels['en'] || 'Inventory Update';
 };
+
+/** Quick stock actions for admin UI (maps to signed movement rows). */
+export const STOCK_QUICK_ACTIONS = {
+    receive: {
+        reason: 'supplier_restock',
+        sign: 1,
+        labelEn: 'Receive',
+        labelAr: 'استلام',
+        hintEn: 'Add stock received from supplier or production',
+        hintAr: 'إضافة مخزون مستلم من المورد أو الإنتاج'
+    },
+    issue: {
+        reason: 'manual_adjustment',
+        sign: -1,
+        labelEn: 'Issue / Decrease',
+        labelAr: 'صرف / خصم',
+        hintEn: 'Remove units (damage, loss, samples)',
+        hintAr: 'خصم وحدات (تلف، فقدان، عينات)'
+    },
+    return: {
+        reason: 'returned_items',
+        sign: 1,
+        labelEn: 'Return',
+        labelAr: 'إرجاع',
+        hintEn: 'Customer or internal returns back to stock',
+        hintAr: 'إرجاع من العميل أو داخلي إلى المخزون'
+    },
+    adjust: {
+        reason: 'stock_correction',
+        sign: 0,
+        labelEn: 'Adjust',
+        labelAr: 'تعديل',
+        hintEn: 'Set correction (+ or −) after count or audit',
+        hintAr: 'تصحيح (+ أو −) بعد الجرد أو التدقيق'
+    }
+};
+
+/**
+ * Append a movement from a quick-action key. Quantity is always entered as a positive
+ * number except for adjust, which may be signed.
+ */
+export function appendStockMovement(rows, { actionKey, quantity, note = '', date } = {}) {
+    const action = STOCK_QUICK_ACTIONS[actionKey];
+    if (!action) return Array.isArray(rows) ? [...rows] : [];
+
+    const raw = toFiniteNumber(quantity, Number.NaN);
+    if (!Number.isFinite(raw) || raw === 0) return Array.isArray(rows) ? [...rows] : [];
+
+    let signed = raw;
+    if (actionKey === 'adjust') {
+        signed = raw;
+    } else if (action.sign === -1) {
+        signed = -Math.abs(raw);
+    } else {
+        signed = Math.abs(raw);
+    }
+
+    const safeRows = Array.isArray(rows) ? rows : [];
+    return [
+        ...safeRows,
+        createInventoryEntry({
+            quantity: signed,
+            date: date || getTodayInputValue(),
+            reason: action.reason,
+            source: 'manual',
+            note: String(note || '').trim()
+        })
+    ];
+}
+
+export function getOnHandFromRows(rows, fallback = {}) {
+    return getInventoryQuantity(rows, fallback);
+}
