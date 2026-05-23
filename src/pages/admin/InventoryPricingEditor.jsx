@@ -8,8 +8,8 @@ import {
 import { adminAlign } from './adminUi.js';
 
 const sectionStyle = {
-    background: '#0d1117',
-    border: '1px solid #30363d',
+    background: 'var(--admin-raised)',
+    border: '1px solid var(--admin-border)',
     borderRadius: '8px',
     padding: '1rem',
     display: 'grid',
@@ -20,15 +20,15 @@ const fieldStyle = {
     width: '100%',
     padding: '0.7rem 0.8rem',
     borderRadius: '8px',
-    border: '1px solid #30363d',
-    background: '#0d1117',
-    color: '#e6edf3'
+    border: '1px solid var(--admin-border)',
+    background: 'var(--admin-raised)',
+    color: 'var(--admin-text)'
 };
 
 const overlayStyle = {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(3, 7, 18, 0.78)',
+    background: 'var(--admin-overlay-soft)',
     backdropFilter: 'blur(6px)',
     display: 'flex',
     alignItems: 'center',
@@ -39,8 +39,8 @@ const overlayStyle = {
 
 const modalStyle = {
     width: 'min(520px, 100%)',
-    background: '#161b22',
-    border: '1px solid #30363d',
+    background: 'var(--admin-surface)',
+    border: '1px solid var(--admin-border)',
     borderRadius: '12px',
     boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
     overflow: 'hidden'
@@ -103,8 +103,8 @@ const InventoryPricingEditor = ({
         <div style={{ ...sectionStyle, direction: isAr ? 'rtl' : 'ltr' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                 <div style={{ textAlign: adminAlign(isAr) }}>
-                    <div style={{ fontWeight: 700, color: '#e6edf3' }}>{title}</div>
-                    <div style={{ marginTop: '0.2rem', fontSize: '0.82rem', color: '#8b949e' }}>{description}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--admin-text)' }}>{title}</div>
+                    <div style={{ marginTop: '0.2rem', fontSize: '0.82rem', color: 'var(--admin-muted)' }}>{description}</div>
                 </div>
 
                 <button
@@ -113,9 +113,9 @@ const InventoryPricingEditor = ({
                     style={{
                         padding: '0.6rem 0.9rem',
                         borderRadius: '8px',
-                        border: '1px solid #3b4452',
-                        background: '#111827',
-                        color: '#e6edf3',
+                        border: '1px solid var(--admin-border-strong)',
+                        background: 'var(--admin-hover-alt)',
+                        color: 'var(--admin-text)',
                         cursor: 'pointer'
                     }}
                 >
@@ -135,20 +135,20 @@ const InventoryPricingEditor = ({
                                 gap: '0.8rem',
                                 padding: '0.9rem',
                                 borderRadius: '8px',
-                                border: isOutgoing ? '1px solid rgba(248, 113, 113, 0.35)' : '1px solid #30363d',
-                                background: isOutgoing ? 'rgba(127, 29, 29, 0.18)' : '#111827'
+                                border: isOutgoing ? '1px solid rgba(248, 113, 113, 0.35)' : '1px solid var(--admin-border)',
+                                background: isOutgoing ? 'rgba(127, 29, 29, 0.18)' : 'var(--admin-hover-alt)'
                             }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                 <div style={{ display: 'grid', gap: '0.2rem', textAlign: adminAlign(isAr) }}>
-                                    <div style={{ fontSize: '0.85rem', color: '#e6edf3', fontWeight: 600 }}>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--admin-text)', fontWeight: 600 }}>
                                         {getInventoryReasonLabel(row.reason, lang)}
                                     </div>
-                                    <div style={{ fontSize: '0.78rem', color: '#8b949e' }}>
+                                    <div style={{ fontSize: '0.78rem', color: 'var(--admin-muted)' }}>
                                         {formatInventoryDate(row.date)}{row.source === 'system' ? (isAr ? ' · نظام' : ' · System') : ''}
                                     </div>
                                     {row.note && (
-                                        <div style={{ fontSize: '0.78rem', color: '#8b949e', fontStyle: 'italic', marginTop: '0.15rem' }}>
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--admin-muted)', fontStyle: 'italic', marginTop: '0.15rem' }}>
                                             {row.note}
                                         </div>
                                     )}
@@ -177,7 +177,7 @@ const InventoryPricingEditor = ({
                         </div>
                     );
                 }) : (
-                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed #30363d', color: '#8b949e', background: '#111827', textAlign: adminAlign(isAr) }}>
+                    <div style={{ padding: '0.95rem', borderRadius: '8px', border: '1px dashed var(--admin-border)', color: 'var(--admin-muted)', background: 'var(--admin-hover-alt)', textAlign: adminAlign(isAr) }}>
                         {isAr ? "لا توجد حركات مخزون مسجلة بعد." : "No inventory movements recorded yet."}
                     </div>
                 )}
@@ -198,8 +198,8 @@ const InventoryPricingEditor = ({
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                 <div style={{ textAlign: adminAlign(isAr) }}>
-                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "إضافة مخزون" : "Add Inventory"}</div>
-                                    <div style={{ marginTop: '0.25rem', fontSize: '0.82rem', color: '#8b949e' }}>
+                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--admin-text)' }}>{isAr ? "إضافة مخزون" : "Add Inventory"}</div>
+                                    <div style={{ marginTop: '0.25rem', fontSize: '0.82rem', color: 'var(--admin-muted)' }}>
                                         {isAr ? "إضافة حركة مخزون مؤرخة. تتم إضافة الكمية إلى المخزون الحالي." : "Add a dated stock movement. Quantity is added to current stock."}
                                     </div>
                                 </div>
@@ -210,9 +210,9 @@ const InventoryPricingEditor = ({
                                     style={{
                                         padding: '0.5rem 0.75rem',
                                         borderRadius: '6px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: 'pointer'
                                     }}
                                 >
@@ -269,9 +269,9 @@ const InventoryPricingEditor = ({
                                     style={{
                                         padding: '0.65rem 0.9rem',
                                         borderRadius: '8px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: 'pointer'
                                     }}
                                 >
@@ -286,7 +286,7 @@ const InventoryPricingEditor = ({
                                         borderRadius: '8px',
                                         border: 'none',
                                         background: '#238636',
-                                        color: '#fff',
+                                        color: 'var(--admin-on-primary)',
                                         fontWeight: 700,
                                         cursor: canAddRow ? 'pointer' : 'not-allowed',
                                         opacity: canAddRow ? 1 : 0.6

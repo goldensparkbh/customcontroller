@@ -5,8 +5,8 @@ import { i18n } from '../../i18n';
 import { adminAlign } from './adminUi.js';
 
 const sectionStyle = {
-  background: '#161b22',
-  border: '1px solid #30363d',
+  background: 'var(--admin-surface)',
+  border: '1px solid var(--admin-border)',
   borderRadius: '10px',
   padding: '1.25rem 1.5rem',
   display: 'grid',
@@ -87,7 +87,7 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
     <div style={{ display: 'grid', gap: '1.25rem', direction: isAr ? 'rtl' : 'ltr' }}>
       <div style={sectionStyle}>
         <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{t('admin.abandoned.heading')}</div>
-        <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>{t('admin.abandoned.blurb')}</p>
+        <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '0.9rem' }}>{t('admin.abandoned.blurb')}</p>
         <div
           style={{
             display: 'grid',
@@ -96,16 +96,16 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
             marginTop: '0.5rem'
           }}
         >
-          <div style={{ background: '#0d1117', borderRadius: '8px', padding: '0.75rem', border: '1px solid #30363d' }}>
-            <div style={{ fontSize: '0.75rem', color: '#8b949e' }}>{t('admin.abandoned.awaiting')}</div>
+          <div style={{ background: 'var(--admin-raised)', borderRadius: '8px', padding: '0.75rem', border: '1px solid var(--admin-border)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)' }}>{t('admin.abandoned.awaiting')}</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>{counts.payment_started}</div>
           </div>
-          <div style={{ background: '#0d1117', borderRadius: '8px', padding: '0.75rem', border: '1px solid #30363d' }}>
-            <div style={{ fontSize: '0.75rem', color: '#8b949e' }}>{t('admin.abandoned.reminded')}</div>
+          <div style={{ background: 'var(--admin-raised)', borderRadius: '8px', padding: '0.75rem', border: '1px solid var(--admin-border)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)' }}>{t('admin.abandoned.reminded')}</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>{counts.reminder_sent}</div>
           </div>
-          <div style={{ background: '#0d1117', borderRadius: '8px', padding: '0.75rem', border: '1px solid #30363d' }}>
-            <div style={{ fontSize: '0.75rem', color: '#8b949e' }}>{t('admin.abandoned.recovered')}</div>
+          <div style={{ background: 'var(--admin-raised)', borderRadius: '8px', padding: '0.75rem', border: '1px solid var(--admin-border)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)' }}>{t('admin.abandoned.recovered')}</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>{counts.recovered}</div>
           </div>
         </div>
@@ -115,7 +115,7 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
         <div style={{ fontWeight: 700 }}>{t('admin.abandoned.list')}</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
           <thead>
-            <tr style={{ textAlign: adminAlign(isAr), color: '#8b949e' }}>
+            <tr style={{ textAlign: adminAlign(isAr), color: 'var(--admin-muted)' }}>
               <th style={{ padding: '0.5rem' }}>{t('admin.abandoned.status')}</th>
               <th style={{ padding: '0.5rem' }}>{t('admin.abandoned.email')}</th>
               <th style={{ padding: '0.5rem' }}>{t('admin.abandoned.total')}</th>
@@ -126,13 +126,13 @@ const AdminAbandonedCarts = ({ lang = 'ar' }) => {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: '1rem', color: '#8b949e' }}>
+                <td colSpan={5} style={{ padding: '1rem', color: 'var(--admin-muted)' }}>
                   {t('admin.abandoned.empty')}
                 </td>
               </tr>
             )}
               {rows.map((row) => (
-                <tr key={row.id} style={{ borderTop: '1px solid #30363d', textAlign: adminAlign(isAr) }}>
+                <tr key={row.id} style={{ borderTop: '1px solid var(--admin-border)', textAlign: adminAlign(isAr) }}>
                   <td style={{ padding: '0.5rem' }}>{String(row.status || '—')}</td>
                 <td style={{ padding: '0.5rem' }}>{row.email || '—'}</td>
                 <td style={{ padding: '0.5rem' }}>

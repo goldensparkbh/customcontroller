@@ -19,9 +19,9 @@ const textareaStyle = {
     minHeight: '72px',
     padding: '0.65rem 0.75rem',
     borderRadius: '8px',
-    border: '1px solid #30363d',
-    background: '#0d1117',
-    color: '#e6edf3',
+    border: '1px solid var(--admin-border)',
+    background: 'var(--admin-raised)',
+    color: 'var(--admin-text)',
     fontSize: '0.88rem',
     lineHeight: 1.45,
     resize: 'vertical',
@@ -31,7 +31,7 @@ const textareaStyle = {
 
 const keyCellStyle = {
     fontSize: '0.78rem',
-    color: '#8b949e',
+    color: 'var(--admin-muted)',
     wordBreak: 'break-word',
     fontFamily: 'ui-monospace, monospace'
 };
@@ -165,7 +165,7 @@ export default function AdminTranslations({ lang }) {
 
     if (loading) {
         return (
-            <div style={{ color: '#8b949e', textAlign: adminAlign(isAr) }}>
+            <div style={{ color: 'var(--admin-muted)', textAlign: adminAlign(isAr) }}>
                 {t('admin.translationsPage.loading')}
             </div>
         );
@@ -176,7 +176,7 @@ export default function AdminTranslations({ lang }) {
             <p
                 style={{
                     margin: 0,
-                    color: '#8b949e',
+                    color: 'var(--admin-muted)',
                     fontSize: '0.95rem',
                     lineHeight: 1.55,
                     textAlign: adminAlign(isAr)
@@ -205,9 +205,9 @@ export default function AdminTranslations({ lang }) {
                         maxWidth: '420px',
                         padding: '0.65rem 0.85rem',
                         borderRadius: '8px',
-                        border: '1px solid #30363d',
-                        background: '#0d1117',
-                        color: '#e6edf3'
+                        border: '1px solid var(--admin-border)',
+                        background: 'var(--admin-raised)',
+                        color: 'var(--admin-text)'
                     }}
                 />
                 <button
@@ -218,8 +218,8 @@ export default function AdminTranslations({ lang }) {
                         padding: '0.65rem 1.25rem',
                         borderRadius: '8px',
                         border: 'none',
-                        background: saving ? '#30363d' : 'var(--button-primary-bg, #238636)',
-                        color: '#fff',
+                        background: saving ? 'var(--admin-border)' : 'var(--button-primary-bg, #238636)',
+                        color: 'var(--admin-text-strong)',
                         fontWeight: 700,
                         cursor: saving ? 'not-allowed' : 'pointer'
                     }}
@@ -242,7 +242,7 @@ export default function AdminTranslations({ lang }) {
                 </div>
             ) : null}
 
-            <div style={{ color: '#8b949e', fontSize: '0.85rem', textAlign: adminAlign(isAr) }}>{countLabel}</div>
+            <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', textAlign: adminAlign(isAr) }}>{countLabel}</div>
 
             <div style={{ overflowX: 'auto' }}>
                 <table
@@ -253,12 +253,12 @@ export default function AdminTranslations({ lang }) {
                     }}
                 >
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #30363d' }}>
+                        <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
                             <th
                                 style={{
                                     textAlign: adminAlign(isAr),
                                     padding: '0.5rem 0.75rem',
-                                    color: '#c9d1d9',
+                                    color: 'var(--admin-text-secondary)',
                                     width: '22%'
                                 }}
                             >
@@ -268,7 +268,7 @@ export default function AdminTranslations({ lang }) {
                                 style={{
                                     textAlign: adminAlign(isAr),
                                     padding: '0.5rem 0.75rem',
-                                    color: '#c9d1d9',
+                                    color: 'var(--admin-text-secondary)',
                                     width: '39%'
                                 }}
                             >
@@ -278,7 +278,7 @@ export default function AdminTranslations({ lang }) {
                                 style={{
                                     textAlign: adminAlign(isAr),
                                     padding: '0.5rem 0.75rem',
-                                    color: '#c9d1d9',
+                                    color: 'var(--admin-text-secondary)',
                                     width: '39%'
                                 }}
                             >
@@ -288,7 +288,7 @@ export default function AdminTranslations({ lang }) {
                     </thead>
                     <tbody>
                         {visible.map((r) => (
-                            <tr key={r.key} style={{ borderBottom: '1px solid #21262d', verticalAlign: 'top' }}>
+                            <tr key={r.key} style={{ borderBottom: '1px solid var(--admin-hover)', verticalAlign: 'top' }}>
                                 <td style={{ padding: '0.65rem 0.75rem' }}>
                                     <div style={keyCellStyle}>{r.key}</div>
                                     <button
@@ -299,9 +299,9 @@ export default function AdminTranslations({ lang }) {
                                             padding: '4px 8px',
                                             fontSize: '0.72rem',
                                             borderRadius: '6px',
-                                            border: '1px solid #30363d',
+                                            border: '1px solid var(--admin-border)',
                                             background: 'transparent',
-                                            color: '#8b949e',
+                                            color: 'var(--admin-muted)',
                                             cursor: 'pointer'
                                         }}
                                     >
@@ -338,9 +338,9 @@ export default function AdminTranslations({ lang }) {
                         style={{
                             padding: '0.55rem 1rem',
                             borderRadius: '8px',
-                            border: '1px solid #30363d',
-                            background: '#21262d',
-                            color: '#c9d1d9',
+                            border: '1px solid var(--admin-border)',
+                            background: 'var(--admin-hover)',
+                            color: 'var(--admin-text-secondary)',
                             cursor: 'pointer',
                             fontWeight: 600
                         }}

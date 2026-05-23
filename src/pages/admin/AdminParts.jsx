@@ -93,9 +93,9 @@ const fieldStyle = {
     width: '100%',
     padding: '0.7rem 0.8rem',
     borderRadius: '8px',
-    border: '1px solid #30363d',
-    background: '#0d1117',
-    color: '#e6edf3'
+    border: '1px solid var(--admin-border)',
+    background: 'var(--admin-raised)',
+    color: 'var(--admin-text)'
 };
 
 const AdminParts = ({ lang = 'ar' }) => {
@@ -564,7 +564,7 @@ const AdminParts = ({ lang = 'ar' }) => {
     const overlayStyle = {
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.8)',
+        backgroundColor: 'var(--admin-overlay)',
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
@@ -573,15 +573,15 @@ const AdminParts = ({ lang = 'ar' }) => {
     };
 
     const modalStyle = {
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--admin-surface)',
+        border: '1px solid var(--admin-border)',
         borderRadius: '12px',
         padding: '2rem',
         maxWidth: '800px',
         width: '100%',
         maxHeight: '90vh',
         overflowY: 'auto',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--admin-shadow-lg)',
         position: 'relative'
     };
 
@@ -591,7 +591,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         right: '1.5rem',
         background: 'transparent',
         border: 'none',
-        color: '#8b949e',
+        color: 'var(--admin-muted)',
         fontSize: '1.5rem',
         cursor: 'pointer'
     };
@@ -599,13 +599,13 @@ const AdminParts = ({ lang = 'ar' }) => {
     return (
         <div>
             {/* BASE PRICE SETTINGS */}
-            <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+            <div style={{ background: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                 <div style={{ flex: 1, minWidth: '250px', textAlign: adminAlign(isAr) }}>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff' }}>{isAr ? "سعر وحدة التحكم الأساسي" : "Base Controller Price"}</h3>
-                    <p style={{ margin: 0, color: '#8b949e', fontSize: '0.9rem' }}>{isAr ? "هذا هو السعر الأولي لوحدة التحكم قبل تطبيق أي تخصيصات." : "This is the initial price of the controller before any customizations are applied."}</p>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--admin-text-strong)' }}>{isAr ? "سعر وحدة التحكم الأساسي" : "Base Controller Price"}</h3>
+                    <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '0.9rem' }}>{isAr ? "هذا هو السعر الأولي لوحدة التحكم قبل تطبيق أي تخصيصات." : "This is the initial price of the controller before any customizations are applied."}</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                    <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 600 }}>BHD</span>
+                    <span style={{ color: 'var(--admin-text-strong)', fontSize: '1.2rem', fontWeight: 600 }}>BHD</span>
                     <input 
                         type="number" 
                         min="0" 
@@ -617,7 +617,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                     <button 
                         onClick={handleSaveBasePrice} 
                         disabled={isSavingBasePrice}
-                        style={{ padding: '0.7rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: '#fff', borderRadius: '6px', cursor: isSavingBasePrice ? 'wait' : 'pointer', fontWeight: 600 }}
+                        style={{ padding: '0.7rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: isSavingBasePrice ? 'wait' : 'pointer', fontWeight: 600 }}
                     >
                         {isSavingBasePrice ? (isAr ? "جاري الحفظ..." : "Saving...") : (isAr ? "حفظ السعر" : "Save Price")}
                     </button>
@@ -627,8 +627,8 @@ const AdminParts = ({ lang = 'ar' }) => {
             {/* MAIN VIEW */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                    <h3 style={{ margin: 0, color: '#fff' }}>{isAr ? "أجزاء المصمم" : "Configurator Parts"}</h3>
-                    <div style={{ display: 'inline-flex', background: '#0d1117', border: '1px solid #30363d', borderRadius: '999px', padding: '4px', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                    <h3 style={{ margin: 0, color: 'var(--admin-text-strong)' }}>{isAr ? "أجزاء المصمم" : "Configurator Parts"}</h3>
+                    <div style={{ display: 'inline-flex', background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '999px', padding: '4px', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                         <button
                             type="button"
                             onClick={() => setViewMode('list')}
@@ -637,7 +637,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 borderRadius: '999px',
                                 border: 'none',
                                 background: viewMode === 'list' ? '#1f6feb' : 'transparent',
-                                color: '#fff',
+                                color: viewMode === 'list' ? 'var(--admin-on-primary)' : 'var(--admin-text-secondary)',
                                 cursor: 'pointer'
                             }}
                         >
@@ -651,7 +651,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 borderRadius: '999px',
                                 border: 'none',
                                 background: viewMode === 'grid' ? '#1f6feb' : 'transparent',
-                                color: '#fff',
+                                color: viewMode === 'grid' ? 'var(--admin-on-primary)' : 'var(--admin-text-secondary)',
                                 cursor: 'pointer'
                             }}
                         >
@@ -661,7 +661,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                 </div>
                 <button
                     onClick={handleOpenAddPart}
-                    style={{ padding: '0.6rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ padding: '0.6rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                 >
                     {isAr ? "+ إضافة جزء جديد" : "+ Add New Part"}
                 </button>
@@ -674,8 +674,8 @@ const AdminParts = ({ lang = 'ar' }) => {
                             key={p.id}
                             onClick={() => handleOpenPartDetails(p)}
                             style={{
-                                background: '#21262d',
-                                border: '1px solid #30363d',
+                                background: 'var(--admin-hover)',
+                                border: '1px solid var(--admin-border)',
                                 borderRadius: '8px',
                                 padding: '1.5rem',
                                 cursor: 'pointer',
@@ -684,40 +684,40 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 alignItems: 'center',
                                 transition: 'transform 0.2s, border-color 0.2s'
                             }}
-                            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#8b949e'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#30363d'; e.currentTarget.style.transform = 'translateY(0)' }}
+                            onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--admin-muted)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                            onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--admin-border)'; e.currentTarget.style.transform = 'translateY(0)' }}
                         >
                             {p.icon ? (
                                 <img src={p.icon} alt="" style={{ height: '60px', width: '60px', objectFit: 'contain', marginBottom: '1rem' }} />
                             ) : (
-                                <div style={{ height: '60px', width: '60px', background: '#30363d', borderRadius: '8px', marginBottom: '1rem' }}></div>
+                                <div style={{ height: '60px', width: '60px', background: 'var(--admin-border)', borderRadius: '8px', marginBottom: '1rem' }}></div>
                             )}
-                            <h4 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '1.2rem' }}>{p.title}</h4>
-                            <div style={{ color: '#8b949e', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--admin-text-strong)', fontSize: '1.2rem' }}>{p.title}</h4>
+                            <div style={{ color: 'var(--admin-muted)', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
                                 ID: {p.id} | {isAr ? "الجهة" : "Side"}: {p.side}
                             </div>
-                            <div style={{ color: '#8b949e', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                            <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
                                 {formatStockSummaryLabel(p.stockSummary, isAr)}
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-                                <button onClick={(e) => handleEditPart(p, e)} style={{ flex: 1, background: '#1f6feb', color: '#fff', border: 'none', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                                <button onClick={(e) => handleEditPart(p, e)} style={{ flex: 1, background: '#1f6feb', color: 'var(--admin-on-primary)', border: 'none', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                                 <button onClick={(e) => handleDeletePart(p.id, e)} style={{ flex: 1, background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : (
-                <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ background: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: '10px', overflow: 'hidden' }}>
                     <div
                         style={{
                             display: 'grid',
                             gridTemplateColumns: '0.8fr 1.4fr 0.7fr 0.7fr 1.1fr 0.9fr',
                             gap: '0.75rem',
                             padding: '0.85rem 1rem',
-                            background: '#0d1117',
-                            borderBottom: '1px solid #30363d',
+                            background: 'var(--admin-raised)',
+                            borderBottom: '1px solid var(--admin-border)',
                             fontSize: '0.72rem',
-                            color: '#8b949e',
+                            color: 'var(--admin-muted)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.08em',
                             textAlign: adminAlign(isAr)
@@ -744,7 +744,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     border: 'none',
                                     borderTop: '1px solid rgba(255,255,255,0.05)',
                                     background: 'transparent',
-                                    color: '#e6edf3',
+                                    color: 'var(--admin-text)',
                                     textAlign: adminAlign(isAr),
                                     cursor: 'pointer'
                                 }}
@@ -753,18 +753,18 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     {p.icon ? (
                                         <img src={p.icon} alt="" style={{ height: '40px', width: '40px', objectFit: 'contain' }} />
                                     ) : (
-                                        <div style={{ height: '40px', width: '40px', borderRadius: '8px', background: '#30363d' }}></div>
+                                        <div style={{ height: '40px', width: '40px', borderRadius: '8px', background: 'var(--admin-border)' }}></div>
                                     )}
                                 </div>
                                 <div>
                                     <div>{p.title}</div>
-                                    <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>ID: {p.id}</div>
+                                    <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>ID: {p.id}</div>
                                 </div>
                                 <div>{p.side}</div>
                                 <div>{p.priority ?? 0}</div>
-                                <div style={{ fontSize: '0.82rem', color: '#c9d1d9' }}>{formatStockSummaryLabel(p.stockSummary, isAr)}</div>
+                                <div style={{ fontSize: '0.82rem', color: 'var(--admin-text-secondary)' }}>{formatStockSummaryLabel(p.stockSummary, isAr)}</div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button onClick={(e) => handleEditPart(p, e)} style={{ background: '#1f6feb', color: '#fff', border: 'none', padding: '0.4rem 0.55rem', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+                                    <button onClick={(e) => handleEditPart(p, e)} style={{ background: '#1f6feb', color: 'var(--admin-on-primary)', border: 'none', padding: '0.4rem 0.55rem', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
                                     <button onClick={(e) => handleDeletePart(p.id, e)} style={{ background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '0.4rem 0.55rem', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                                 </div>
                             </div>
@@ -774,7 +774,7 @@ const AdminParts = ({ lang = 'ar' }) => {
             )}
 
             {parts.length === 0 && (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#8b949e', border: '1px dashed #30363d', borderRadius: '8px' }}>
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--admin-muted)', border: '1px dashed var(--admin-border)', borderRadius: '8px' }}>
                     {isAr ? "لم يتم إنشاء أي أجزاء حتى الآن. انقر فوق \"إضافة جزء جديد\" للبدء." : "No parts have been created yet. Click \"Add New Part\" to start."}
                 </div>
             )}
@@ -785,38 +785,38 @@ const AdminParts = ({ lang = 'ar' }) => {
                 <div style={{ ...overlayStyle, zIndex: 1050 }}>
                     <div style={modalStyle}>
                         <button onClick={() => setShowPartFormModal(false)} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#fff', textAlign: adminAlign(isAr) }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
+                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr) }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
                         <form onSubmit={handlePartSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Part ID (e.g. shell, trimpiece): </label>
-                                <input value={partId} onChange={e => setPartId(e.target.value)} required disabled={!!selectedPart && selectedPart.id === partId} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
-                                {!!selectedPart && selectedPart.id === partId && <span style={{ fontSize: '0.8rem', color: '#8b949e' }}>ID cannot be changed after creation.</span>}
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Part ID (e.g. shell, trimpiece): </label>
+                                <input value={partId} onChange={e => setPartId(e.target.value)} required disabled={!!selectedPart && selectedPart.id === partId} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
+                                {!!selectedPart && selectedPart.id === partId && <span style={{ fontSize: '0.8rem', color: 'var(--admin-muted)' }}>ID cannot be changed after creation.</span>}
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Title Display: </label>
-                                <input value={partTitle} onChange={e => setPartTitle(e.target.value)} required style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Title Display: </label>
+                                <input value={partTitle} onChange={e => setPartTitle(e.target.value)} required style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Priority (Z-Index order): </label>
-                                    <input type="number" value={partPriority} onChange={e => setPartPriority(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Priority (Z-Index order): </label>
+                                    <input type="number" value={partPriority} onChange={e => setPartPriority(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Side (front/back): </label>
-                                    <select value={partSide} onChange={e => setPartSide(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Side (front/back): </label>
+                                    <select value={partSide} onChange={e => setPartSide(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }}>
                                         <option value="front">Front</option>
                                         <option value="back">Back</option>
                                     </select>
                                 </div>
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Icon Image: </label>
-                                <input type="file" accept="image/*" onChange={e => setPartIconFile(e.target.files[0])} style={{ color: '#fff' }} />
-                                {partIconPreview && !partIconFile && <img src={partIconPreview} alt="Preview" style={{ height: '60px', marginTop: '1rem', display: 'block', background: '#21262d', padding: '0.5rem', borderRadius: '4px' }} />}
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Icon Image: </label>
+                                <input type="file" accept="image/*" onChange={e => setPartIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
+                                {partIconPreview && !partIconFile && <img src={partIconPreview} alt="Preview" style={{ height: '60px', marginTop: '1rem', display: 'block', background: 'var(--admin-hover)', padding: '0.5rem', borderRadius: '4px' }} />}
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setShowPartFormModal(false)} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" style={{ padding: '0.6rem 1.2rem', background: '#238636', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Save Part</button>
+                                <button type="button" onClick={() => setShowPartFormModal(false)} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+                                <button type="submit" style={{ padding: '0.6rem 1.2rem', background: '#238636', border: 'none', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Save Part</button>
                             </div>
                         </form>
                     </div>
@@ -829,12 +829,12 @@ const AdminParts = ({ lang = 'ar' }) => {
                     <div style={{ ...modalStyle, maxWidth: '1000px', height: '90vh', display: 'flex', flexDirection: 'column' }}>
                         <button onClick={() => setShowDetailsModal(false)} style={closeBtnStyle}>&times;</button>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #30363d' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--admin-border)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 {selectedPart.icon && <img src={selectedPart.icon} alt="" style={{ height: '40px' }} />}
                                 <div>
-                                    <h2 style={{ margin: 0, color: '#fff' }}>{selectedPart.title} Options</h2>
-                                    <span style={{ color: '#8b949e', fontSize: '0.9rem' }}>
+                                    <h2 style={{ margin: 0, color: 'var(--admin-text-strong)' }}>{selectedPart.title} Options</h2>
+                                    <span style={{ color: 'var(--admin-muted)', fontSize: '0.9rem' }}>
                                         Side: {selectedPart.side} | ID: {selectedPart.id}
                                         {' · '}
                                         {formatStockSummaryLabel(summarizeOptionsStock(subitems), isAr)}
@@ -845,7 +845,7 @@ const AdminParts = ({ lang = 'ar' }) => {
 
                         <div style={{ marginTop: '2rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.4rem', fontWeight: 600 }}>Options ({subitems.length})</h3>
+                                <h3 style={{ margin: 0, color: 'var(--admin-text-strong)', fontSize: '1.4rem', fontWeight: 600 }}>Options ({subitems.length})</h3>
                                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     {/* --- Search Filter --- */}
                                     <div style={{ position: 'relative' }}>
@@ -854,9 +854,9 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             onChange={e => setSubFilterQuery(e.target.value)}
                                             placeholder="Search name, barcode, item #"
                                             style={{ 
-                                                background: '#0d1117', 
-                                                border: '1px solid #30363d', 
-                                                color: '#e6edf3', 
+                                                background: 'var(--admin-raised)', 
+                                                border: '1px solid var(--admin-border)', 
+                                                color: 'var(--admin-text)', 
                                                 padding: '0.5rem 0.75rem', 
                                                 borderRadius: '6px', 
                                                 fontSize: '0.85rem',
@@ -869,7 +869,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     <select 
                                         value={subFilterType}
                                         onChange={e => setSubFilterType(e.target.value)}
-                                        style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3', padding: '0.45rem', borderRadius: '6px', fontSize: '0.85rem' }}
+                                        style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', color: 'var(--admin-text)', padding: '0.45rem', borderRadius: '6px', fontSize: '0.85rem' }}
                                     >
                                         <option value="all">All Types</option>
                                         <option value="color">Colors Only</option>
@@ -880,7 +880,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     <select 
                                         value={subFilterActive}
                                         onChange={e => setSubFilterActive(e.target.value)}
-                                        style={{ background: '#0d1117', border: '1px solid #30363d', color: '#e6edf3', padding: '0.45rem', borderRadius: '6px', fontSize: '0.85rem' }}
+                                        style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', color: 'var(--admin-text)', padding: '0.45rem', borderRadius: '6px', fontSize: '0.85rem' }}
                                     >
                                         <option value="all">All Status</option>
                                         <option value="active">Active Only</option>
@@ -889,7 +889,7 @@ const AdminParts = ({ lang = 'ar' }) => {
 
                                     <button
                                         onClick={handleOpenAddOption}
-                                        style={{ padding: '0.5rem 1rem', background: '#238636', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                                        style={{ padding: '0.5rem 1rem', background: '#238636', border: 'none', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
                                     >
                                         + Add Option
                                     </button>
@@ -918,7 +918,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         return matchesQuery && matchesActive && matchesType;
                                     })
                                     .map((sub) => (
-                                    <div key={sub.id} style={{ background: '#21262d', padding: '1rem', borderRadius: '8px', border: '1px solid #30363d', display: 'flex', flexDirection: 'column' }}>
+                                    <div key={sub.id} style={{ background: 'var(--admin-hover)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--admin-border)', display: 'flex', flexDirection: 'column' }}>
 
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
@@ -927,31 +927,31 @@ const AdminParts = ({ lang = 'ar' }) => {
                                                 ) : (
                                                     sub.icon ? <img src={sub.icon} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /> : <div style={{ width: '32px', height: '32px', background: '#333', borderRadius: '4px' }}></div>
                                                 )}
-                                                <span style={{ fontSize: '0.75rem', padding: '2px 6px', background: '#30363d', borderRadius: '12px', color: '#c9d1d9' }}>{sub.type}</span>
+                                                <span style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'var(--admin-border)', borderRadius: '12px', color: 'var(--admin-text-secondary)' }}>{sub.type}</span>
                                             </div>
 
-                                            <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--admin-text-strong)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 {sub.name}
                                                 {sub.active === false && <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: '#f8514933', color: '#ff7b72', borderRadius: '12px' }}>Inactive</span>}
                                             </div>
-                                            <div style={{ fontSize: '0.82rem', color: '#8b949e' }}>#{padNumericString(sub.itemNumber)} · Barcode {sub.barcode}</div>
-                                            <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Sell Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.sellPrice ?? sub.price)}</strong></div>
-                                            <div style={{ fontSize: '0.9rem', color: '#8b949e' }}>Purchase Price: <strong style={{ color: '#fff' }}>{formatInventoryMoney(sub.purchasePrice)}</strong></div>
-                                            <div style={{ fontSize: '0.9rem', color: '#8b949e', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <div style={{ fontSize: '0.82rem', color: 'var(--admin-muted)' }}>#{padNumericString(sub.itemNumber)} · Barcode {sub.barcode}</div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--admin-muted)' }}>Sell Price: <strong style={{ color: 'var(--admin-text-strong)' }}>{formatInventoryMoney(sub.sellPrice ?? sub.price)}</strong></div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--admin-muted)' }}>Purchase Price: <strong style={{ color: 'var(--admin-text-strong)' }}>{formatInventoryMoney(sub.purchasePrice)}</strong></div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--admin-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                                 <span>{isAr ? 'المخزون:' : 'Stock:'}</span>
-                                                <strong style={{ color: '#fff' }}>{sub.quantity ?? 0}</strong>
+                                                <strong style={{ color: 'var(--admin-text-strong)' }}>{sub.quantity ?? 0}</strong>
                                                 <span style={stockBadgeStyle(sub.quantity)}>
                                                     {(Number(sub.quantity) || 0) > 0 ? (isAr ? 'متوفر' : 'In stock') : (isAr ? 'نفد' : 'Out')}
                                                 </span>
                                             </div>
 
                                             {sub.image ? (
-                                                <div style={{ marginTop: '0.5rem', background: '#0d1117', borderRadius: '4px', padding: '4px', textAlign: 'center' }}>
-                                                    <span style={{ fontSize: '0.7rem', color: '#8b949e', display: 'block' }}>Overlay Present</span>
+                                                <div style={{ marginTop: '0.5rem', background: 'var(--admin-raised)', borderRadius: '4px', padding: '4px', textAlign: 'center' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--admin-muted)', display: 'block' }}>Overlay Present</span>
                                                 </div>
                                             ) : (
-                                                <div style={{ marginTop: '0.5rem', border: '1px dashed #30363d', borderRadius: '4px', padding: '4px', textAlign: 'center' }}>
-                                                    <span style={{ fontSize: '0.7rem', color: '#8b949e', display: 'block' }}>No Overlay Image</span>
+                                                <div style={{ marginTop: '0.5rem', border: '1px dashed var(--admin-border)', borderRadius: '4px', padding: '4px', textAlign: 'center' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--admin-muted)', display: 'block' }}>No Overlay Image</span>
                                                 </div>
                                             )}
                                         </div>
@@ -960,17 +960,17 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <button
                                                 type="button"
                                                 onClick={() => handleOpenStockEdit(sub)}
-                                                style={{ flex: 1, minWidth: '72px', background: '#238636', color: '#fff', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                                                style={{ flex: 1, minWidth: '72px', background: '#238636', color: 'var(--admin-on-primary)', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
                                             >
                                                 {isAr ? 'مخزون' : 'Stock'}
                                             </button>
-                                            <button type="button" onClick={() => handleEditSubitem(sub)} style={{ flex: 1, minWidth: '72px', background: '#30363d', color: '#c9d1d9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+                                            <button type="button" onClick={() => handleEditSubitem(sub)} style={{ flex: 1, minWidth: '72px', background: 'var(--admin-border)', color: 'var(--admin-text-secondary)', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
                                             <button type="button" onClick={() => handleDeleteSubitem(sub.id)} style={{ flex: 1, minWidth: '72px', background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                                         </div>
                                     </div>
                                 ))}
                                 {subitems.length === 0 && (
-                                    <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#8b949e', background: '#21262d', borderRadius: '8px', border: '1px dashed #30363d' }}>
+                                    <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: 'var(--admin-muted)', background: 'var(--admin-hover)', borderRadius: '8px', border: '1px dashed var(--admin-border)' }}>
                                         No options created for this part yet.
                                     </div>
                                 )}
@@ -985,10 +985,10 @@ const AdminParts = ({ lang = 'ar' }) => {
                 <div style={{ ...overlayStyle, zIndex: 1150 }}>
                     <div style={{ ...modalStyle, maxWidth: '640px' }}>
                         <button type="button" onClick={handleCloseStockModal} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '0.35rem', color: '#fff', textAlign: adminAlign(isAr) }}>
+                        <h2 style={{ marginTop: 0, marginBottom: '0.35rem', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr) }}>
                             {isAr ? 'تعديل المخزون' : 'Edit stock'}
                         </h2>
-                        <p style={{ margin: '0 0 1.25rem', color: '#8b949e', fontSize: '0.9rem', textAlign: adminAlign(isAr) }}>
+                        <p style={{ margin: '0 0 1.25rem', color: 'var(--admin-muted)', fontSize: '0.9rem', textAlign: adminAlign(isAr) }}>
                             {selectedPart.title} · {stockEditOption.name} · #{padNumericString(stockEditOption.itemNumber)}
                         </p>
                         <form onSubmit={handleSaveStockEdit}>
@@ -1004,10 +1004,10 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 lang={lang}
                             />
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                                <button type="button" onClick={handleCloseStockModal} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: '6px', cursor: 'pointer' }}>
+                                <button type="button" onClick={handleCloseStockModal} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)', borderRadius: '6px', cursor: 'pointer' }}>
                                     {isAr ? 'إلغاء' : 'Cancel'}
                                 </button>
-                                <button type="submit" disabled={isSavingStock} style={{ padding: '0.6rem 1.2rem', background: '#238636', border: 'none', color: '#fff', borderRadius: '6px', cursor: isSavingStock ? 'wait' : 'pointer', fontWeight: 600 }}>
+                                <button type="submit" disabled={isSavingStock} style={{ padding: '0.6rem 1.2rem', background: '#238636', border: 'none', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: isSavingStock ? 'wait' : 'pointer', fontWeight: 600 }}>
                                     {isSavingStock ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ المخزون' : 'Save stock')}
                                 </button>
                             </div>
@@ -1021,25 +1021,25 @@ const AdminParts = ({ lang = 'ar' }) => {
                 <div style={{ ...overlayStyle, zIndex: 1100 }}>
                     <div style={modalStyle}>
                         <button onClick={() => setShowOptionFormModal(false)} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#fff' }}>{editSubId ? 'Edit Option' : 'Add New Option'} <span style={{ fontSize: '1rem', color: '#8b949e', fontWeight: 'normal' }}>- {selectedPart.title}</span></h2>
+                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: 'var(--admin-text-strong)' }}>{editSubId ? 'Edit Option' : 'Add New Option'} <span style={{ fontSize: '1rem', color: 'var(--admin-muted)', fontWeight: 'normal' }}>- {selectedPart.title}</span></h2>
 
                         <form onSubmit={handleSubitemSubmit}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Item Number:</label>
-                                    <input value={padNumericString(subItemNumber) || 'Auto-generated on save'} readOnly style={{ ...fieldStyle, color: '#8b949e' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Item Number:</label>
+                                    <input value={padNumericString(subItemNumber) || 'Auto-generated on save'} readOnly style={{ ...fieldStyle, color: 'var(--admin-muted)' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Barcode:</label>
-                                    <input value={padNumericString(subBarcode) || padNumericString(subItemNumber) || 'Matches item number on save'} readOnly style={{ ...fieldStyle, color: '#8b949e' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Barcode:</label>
+                                    <input value={padNumericString(subBarcode) || padNumericString(subItemNumber) || 'Matches item number on save'} readOnly style={{ ...fieldStyle, color: 'var(--admin-muted)' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Option Name (e.g. Red, Turbo):</label>
-                                    <input value={subName} onChange={e => setSubName(e.target.value)} required style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Option Name (e.g. Red, Turbo):</label>
+                                    <input value={subName} onChange={e => setSubName(e.target.value)} required style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Type:</label>
-                                    <select value={subType} onChange={e => setSubType(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Type:</label>
+                                    <select value={subType} onChange={e => setSubType(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }}>
                                         <option value="color">Color</option>
                                         <option value="gamemode">Game Mode / Performance</option>
                                     </select>
@@ -1052,30 +1052,30 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         onChange={e => setSubActive(e.target.checked)} 
                                         style={{ width: '18px', height: '18px', cursor: 'pointer' }} 
                                     />
-                                    <label htmlFor="subActiveCheck" style={{ color: '#c9d1d9', cursor: 'pointer', userSelect: 'none' }}>Active (Visible to users)</label>
+                                    <label htmlFor="subActiveCheck" style={{ color: 'var(--admin-text-secondary)', cursor: 'pointer', userSelect: 'none' }}>Active (Visible to users)</label>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Purchase Price:</label>
-                                    <input type="number" step="0.01" min="0" value={subPurchasePrice} onChange={e => setSubPurchasePrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Purchase Price:</label>
+                                    <input type="number" step="0.01" min="0" value={subPurchasePrice} onChange={e => setSubPurchasePrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Sell Price:</label>
-                                    <input type="number" step="0.01" min="0" value={subSellPrice} onChange={e => setSubSellPrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Sell Price:</label>
+                                    <input type="number" step="0.01" min="0" value={subSellPrice} onChange={e => setSubSellPrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                                 </div>
 
                                 {subType === 'color' ? (
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Color Hex (Palette Swatch):</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Color Hex (Palette Swatch):</label>
                                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                             <input type="color" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '40px', height: '40px', padding: '0', cursor: 'pointer', border: 'none', borderRadius: '4px' }} />
-                                            <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #30363d', background: '#0d1117', color: '#fff' }} placeholder="#RRGGBB" />
+                                            <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} placeholder="#RRGGBB" />
                                         </div>
                                     </div>
                                 ) : (
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Gamemode Icon Image:</label>
-                                        <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: '#fff' }} />
-                                        {subIconPreview && !subIconFile && <img src={subIconPreview} alt="Preview" style={{ height: '40px', marginTop: '0.5rem', display: 'block', background: '#21262d', padding: '4px', borderRadius: '4px' }} />}
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Gamemode Icon Image:</label>
+                                        <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
+                                        {subIconPreview && !subIconFile && <img src={subIconPreview} alt="Preview" style={{ height: '40px', marginTop: '0.5rem', display: 'block', background: 'var(--admin-hover)', padding: '4px', borderRadius: '4px' }} />}
                                     </div>
                                 )}
                             </div>
@@ -1091,8 +1091,8 @@ const AdminParts = ({ lang = 'ar' }) => {
                             </div>
 
                             {subType === 'gamemode' && (
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ marginTop: 0, color: '#fff', fontSize: '1.1rem', marginBottom: '1rem' }}>Gamemode Dependencies & Rules</h3>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                    <h3 style={{ marginTop: 0, color: 'var(--admin-text-strong)', fontSize: '1.1rem', marginBottom: '1rem' }}>Gamemode Dependencies & Rules</h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1103,9 +1103,9 @@ const AdminParts = ({ lang = 'ar' }) => {
                                                     onChange={e => setSubAllowsMultiple(e.target.checked)} 
                                                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                                                 />
-                                                <label htmlFor="subAllowsMultiple" style={{ color: '#c9d1d9', cursor: 'pointer' }}>Allow Multiple Selections</label>
+                                                <label htmlFor="subAllowsMultiple" style={{ color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>Allow Multiple Selections</label>
                                             </div>
-                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#8b949e' }}>If enabled, this option won't automatically deselect other gamemodes unless they share the same group.</p>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--admin-muted)' }}>If enabled, this option won't automatically deselect other gamemodes unless they share the same group.</p>
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -1117,24 +1117,24 @@ const AdminParts = ({ lang = 'ar' }) => {
                                                     onChange={e => setSubDisablesColors(e.target.checked)} 
                                                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                                                 />
-                                                <label htmlFor="subDisablesColors" style={{ color: '#c9d1d9', cursor: 'pointer' }}>Disable Color Customization</label>
+                                                <label htmlFor="subDisablesColors" style={{ color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>Disable Color Customization</label>
                                             </div>
-                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#8b949e' }}>If enabled, selecting this option will hide the color palettes for this part.</p>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--admin-muted)' }}>If enabled, selecting this option will hide the color palettes for this part.</p>
                                         </div>
 
                                         <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#c9d1d9' }}>Exclusive Group Name:</label>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Exclusive Group Name:</label>
                                             <input 
                                                 value={subExclusiveGroup} 
                                                 onChange={e => setSubExclusiveGroup(e.target.value)} 
                                                 placeholder="e.g. TriggerMechanism"
                                                 style={{ ...fieldStyle }} 
                                             />
-                                            <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#8b949e' }}>Options in the same group are mutually exclusive (Standard radio button behavior).</p>
+                                            <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--admin-muted)' }}>Options in the same group are mutually exclusive (Standard radio button behavior).</p>
                                         </div>
                                         <div>
-                                            <label style={{ display: 'block', marginBottom: '0.8rem', color: '#c9d1d9', fontWeight: 600 }}>Incompatible with:</label>
-                                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.8rem', color: 'var(--admin-text-secondary)', fontWeight: 600 }}>Incompatible with:</label>
+                                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem' }}>
                                                 {subitems
                                                     .filter(item => item.id !== editSubId && item.type === 'gamemode') // Show only gamemode options
                                                     .map(item => (
@@ -1152,42 +1152,42 @@ const AdminParts = ({ lang = 'ar' }) => {
                                                                 }}
                                                                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                                                             />
-                                                            <label htmlFor={`incompat-${item.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3', cursor: 'pointer', flex: 1 }}>
-                                                                {item.icon && <img src={item.icon} alt="" style={{ height: '24px', width: '24px', objectFit: 'contain', background: '#21262d', borderRadius: '3px' }} />}
+                                                            <label htmlFor={`incompat-${item.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--admin-text)', cursor: 'pointer', flex: 1 }}>
+                                                                {item.icon && <img src={item.icon} alt="" style={{ height: '24px', width: '24px', objectFit: 'contain', background: 'var(--admin-hover)', borderRadius: '3px' }} />}
                                                                 <span style={{ fontSize: '0.85rem' }}>{item.name}</span>
-                                                                <span style={{ fontSize: '0.7rem', color: '#8b949e' }}>({item.id})</span>
+                                                                <span style={{ fontSize: '0.7rem', color: 'var(--admin-muted)' }}>({item.id})</span>
                                                             </label>
                                                         </div>
                                                     ))
                                                 }
                                                 {subitems.filter(item => item.id !== editSubId && item.type === 'gamemode').length === 0 && (
-                                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#8b949e', fontSize: '0.85rem' }}>No other gamemode options available for this part.</div>
+                                                    <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--admin-muted)', fontSize: '0.85rem' }}>No other gamemode options available for this part.</div>
                                                 )}
                                             </div>
-                                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#8b949e' }}>Select items that cannot be active at the same time as this one.</p>
+                                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: 'var(--admin-muted)' }}>Select items that cannot be active at the same time as this one.</p>
                                         </div>
 
                                     </div>
                                 </div>
                             )}
 
-                            <div style={{ background: '#0d1117', padding: '1rem', borderRadius: '8px', border: '1px solid #30363d', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                            <div style={{ background: 'var(--admin-raised)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--admin-border)', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                                 <div style={{ flex: 1, minWidth: '250px' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.25rem', color: '#c9d1d9', fontWeight: 600 }}>Primary Overlay Image (.png):</label>
-                                    <span style={{ fontSize: '0.8rem', color: '#8b949e', display: 'block', marginBottom: '1rem' }}>Applied to the <strong>{selectedPart.side}</strong> side of the controller.</span>
-                                    <input type="file" accept="image/png,image/*" onChange={e => setSubImageFile(e.target.files[0])} style={{ color: '#fff' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', color: 'var(--admin-text-secondary)', fontWeight: 600 }}>Primary Overlay Image (.png):</label>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--admin-muted)', display: 'block', marginBottom: '1rem' }}>Applied to the <strong>{selectedPart.side}</strong> side of the controller.</span>
+                                    <input type="file" accept="image/png,image/*" onChange={e => setSubImageFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
                                     {subImagePreview && !subImageFile && <img src={subImagePreview} alt="Preview" style={{ height: '80px', marginTop: '1rem', display: 'block', background: '#000', padding: '0.5rem', borderRadius: '4px' }} />}
                                 </div>
                                 <div style={{ flex: 1, minWidth: '250px' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.25rem', color: '#c9d1d9', fontWeight: 600 }}>Secondary Overlay Image (.png):</label>
-                                    <span style={{ fontSize: '0.8rem', color: '#8b949e', display: 'block', marginBottom: '1rem' }}>Applied to the <strong>{selectedPart.side === 'front' ? 'back' : 'front'}</strong> side of the controller.</span>
-                                    <input type="file" accept="image/png,image/*" onChange={e => setSubSecondImageFile(e.target.files[0])} style={{ color: '#fff' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.25rem', color: 'var(--admin-text-secondary)', fontWeight: 600 }}>Secondary Overlay Image (.png):</label>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--admin-muted)', display: 'block', marginBottom: '1rem' }}>Applied to the <strong>{selectedPart.side === 'front' ? 'back' : 'front'}</strong> side of the controller.</span>
+                                    <input type="file" accept="image/png,image/*" onChange={e => setSubSecondImageFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
                                     {subSecondImagePreview && !subSecondImageFile && <img src={subSecondImagePreview} alt="Preview" style={{ height: '80px', marginTop: '1rem', display: 'block', background: '#000', padding: '0.5rem', borderRadius: '4px' }} />}
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setShowOptionFormModal(false)} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" style={{ padding: '0.6rem 1.2rem', background: '#1f6feb', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                                <button type="button" onClick={() => setShowOptionFormModal(false)} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+                                <button type="submit" style={{ padding: '0.6rem 1.2rem', background: '#1f6feb', border: 'none', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
                                     {editSubId ? 'Update Option' : 'Save Option'}
                                 </button>
                             </div>

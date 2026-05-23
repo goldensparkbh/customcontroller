@@ -8,9 +8,9 @@ const fieldStyle = {
   width: '100%',
   padding: '0.75rem 0.85rem',
   borderRadius: '8px',
-  border: '1px solid #30363d',
-  background: '#0d1117',
-  color: '#e6edf3'
+  border: '1px solid var(--admin-border)',
+  background: 'var(--admin-raised)',
+  color: 'var(--admin-text)'
 };
 
 /** Light calendar icon on dark inputs (WebKit/Blink); color-scheme helps Firefox. */
@@ -20,8 +20,8 @@ const datetimeLocalFieldStyle = {
 };
 
 const sectionStyle = {
-  background: '#161b22',
-  border: '1px solid #30363d',
+  background: 'var(--admin-surface)',
+  border: '1px solid var(--admin-border)',
   borderRadius: '10px',
   padding: '1.25rem 1.5rem',
   display: 'grid',
@@ -291,7 +291,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
       }
     } else {
       parts.push(
-        <span key="n" style={{ color: '#8b949e' }}>
+        <span key="n" style={{ color: 'var(--admin-muted)' }}>
           {t('admin.discounts.noDateLimits')}
         </span>
       );
@@ -407,9 +407,9 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
           style={{
             padding: '0.65rem 1rem',
             borderRadius: '8px',
-            border: '1px solid #30363d',
+            border: '1px solid var(--admin-border)',
             background: 'transparent',
-            color: '#e6edf3',
+            color: 'var(--admin-text)',
             fontWeight: 600,
             cursor: 'pointer'
           }}
@@ -424,7 +424,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
             borderRadius: '8px',
             border: 'none',
             background: '#238636',
-            color: '#fff',
+            color: 'var(--admin-on-primary)',
             fontWeight: 700,
             cursor: saving ? 'wait' : 'pointer'
           }}
@@ -450,7 +450,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
       >
         <div>
           <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{t('admin.discounts.heading')}</div>
-          <p style={{ margin: '0.35rem 0 0', color: '#8b949e', fontSize: '0.9rem' }}>{t('admin.discounts.blurb')}</p>
+          <p style={{ margin: '0.35rem 0 0', color: 'var(--admin-muted)', fontSize: '0.9rem' }}>{t('admin.discounts.blurb')}</p>
         </div>
         <button
           type="button"
@@ -460,7 +460,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
             borderRadius: '8px',
             border: 'none',
             background: 'var(--button-primary-bg, #238636)',
-            color: '#fff',
+            color: 'var(--admin-text-strong)',
             fontWeight: 700,
             cursor: 'pointer',
             whiteSpace: 'nowrap'
@@ -490,7 +490,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
             <thead>
-              <tr style={{ textAlign: adminAlign(isAr), color: '#8b949e' }}>
+              <tr style={{ textAlign: adminAlign(isAr), color: 'var(--admin-muted)' }}>
                 <th style={{ padding: '0.5rem' }}>{t('admin.discounts.code')}</th>
                 <th style={{ padding: '0.5rem' }}>{t('admin.discounts.active')}</th>
                 <th style={{ padding: '0.5rem' }}>{t('admin.discounts.type')}</th>
@@ -504,7 +504,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ padding: '1rem', color: '#8b949e' }}>
+                  <td colSpan={8} style={{ padding: '1rem', color: 'var(--admin-muted)' }}>
                     {t('admin.discounts.empty')}
                   </td>
                 </tr>
@@ -513,9 +513,9 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
                 const d = getCodeDerived(row);
                 const leftDisplay =
                   d.remaining == null ? (
-                    <span style={{ color: '#8b949e' }}>{t('admin.discounts.unlimited')}</span>
+                    <span style={{ color: 'var(--admin-muted)' }}>{t('admin.discounts.unlimited')}</span>
                   ) : (
-                    <span style={{ color: d.remaining === 0 ? '#f85149' : '#e6edf3', fontWeight: d.remaining === 0 ? 700 : 400 }}>
+                    <span style={{ color: d.remaining === 0 ? '#f85149' : 'var(--admin-text)', fontWeight: d.remaining === 0 ? 700 : 400 }}>
                       {d.remaining}
                       {d.hasCap ? ` / ${d.maxUses}` : ''}
                     </span>
@@ -527,7 +527,7 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
                   <tr
                     key={row.id}
                     style={{
-                      borderTop: '1px solid #30363d',
+                      borderTop: '1px solid var(--admin-border)',
                       opacity: notUsable ? 0.72 : 1,
                       textAlign: adminAlign(isAr)
                     }}
@@ -590,8 +590,8 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
               maxWidth: '640px',
               maxHeight: 'min(90vh, 900px)',
               overflow: 'auto',
-              background: '#161b22',
-              border: '1px solid #30363d',
+              background: 'var(--admin-surface)',
+              border: '1px solid var(--admin-border)',
               borderRadius: '12px',
               padding: '1.35rem 1.5rem',
               boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
@@ -623,9 +623,9 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
                   width: '36px',
                   height: '36px',
                   borderRadius: '8px',
-                  border: '1px solid #30363d',
-                  background: '#0d1117',
-                  color: '#e6edf3',
+                  border: '1px solid var(--admin-border)',
+                  background: 'var(--admin-raised)',
+                  color: 'var(--admin-text)',
                   cursor: 'pointer',
                   fontSize: '1.25rem',
                   lineHeight: 1

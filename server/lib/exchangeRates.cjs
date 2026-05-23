@@ -1,6 +1,6 @@
 "use strict";
 
-const SUPPORTED = ["BHD", "USD", "EUR", "GBP", "SAR", "AED", "KWD", "OMR", "QAR"];
+const SUPPORTED = ["BHD", "USD", "SAR", "AED", "KWD", "OMR", "QAR"];
 const CACHE_MS = Number(process.env.EXCHANGE_RATES_CACHE_MS || 6 * 60 * 60 * 1000);
 
 /** @type {{ at: number, base: string, rates: Record<string, number>, source: string } | null} */
@@ -66,7 +66,7 @@ async function getExchangeRates() {
     }
     return {
       base: "BHD",
-      rates: { BHD: 1, USD: 2.65, EUR: 2.45, GBP: 2.1, SAR: 9.95, AED: 9.73, KWD: 0.81, OMR: 1.02, QAR: 9.63 },
+      rates: { BHD: 1, USD: 2.65, SAR: 9.95, AED: 9.73, KWD: 0.81, OMR: 1.02, QAR: 9.63 },
       source: "fallback",
       fetchedAt: new Date().toISOString(),
       stale: true

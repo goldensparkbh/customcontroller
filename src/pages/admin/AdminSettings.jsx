@@ -6,8 +6,8 @@ import { adminAlign } from './adminUi.js';
 import AdminWhatsAppTemplatesSettings from './AdminWhatsAppTemplatesSettings';
 
 const sectionStyleLarge = {
-  background: '#161b22',
-  border: '1px solid #30363d',
+  background: 'var(--admin-surface)',
+  border: '1px solid var(--admin-border)',
   borderRadius: '12px',
   padding: '1.5rem 1.75rem',
   display: 'grid',
@@ -20,7 +20,7 @@ function SettingsCategory({ step, title, subtitle, isAr, children }) {
       <div
         style={{
           textAlign: adminAlign(isAr),
-          borderBottom: '1px solid #30363d',
+          borderBottom: '1px solid var(--admin-border)',
           paddingBottom: '1rem',
           marginBottom: '0.15rem'
         }}
@@ -36,9 +36,9 @@ function SettingsCategory({ step, title, subtitle, isAr, children }) {
         >
           {isAr ? `القسم ${step}` : `Section ${step}`}
         </div>
-        <div style={{ fontSize: '1.12rem', fontWeight: 700, color: '#e6edf3', marginTop: '0.4rem' }}>{title}</div>
+        <div style={{ fontSize: '1.12rem', fontWeight: 700, color: 'var(--admin-text)', marginTop: '0.4rem' }}>{title}</div>
         {subtitle ? (
-          <div style={{ marginTop: '0.45rem', color: '#8b949e', fontSize: '0.92rem', lineHeight: 1.55 }}>{subtitle}</div>
+          <div style={{ marginTop: '0.45rem', color: 'var(--admin-muted)', fontSize: '0.92rem', lineHeight: 1.55 }}>{subtitle}</div>
         ) : null}
       </div>
       {children}
@@ -85,9 +85,9 @@ const fieldStyle = {
   width: '100%',
   padding: '0.75rem 0.85rem',
   borderRadius: '8px',
-  border: '1px solid #30363d',
-  background: '#0d1117',
-  color: '#e6edf3'
+  border: '1px solid var(--admin-border)',
+  background: 'var(--admin-raised)',
+  color: 'var(--admin-text)'
 };
 
 const sectionStyle = sectionStyleLarge;
@@ -269,10 +269,10 @@ const AdminSettings = ({ lang = 'ar' }) => {
   return (
     <div style={{ display: 'grid', gap: '2rem', direction: isAr ? 'rtl' : 'ltr', maxWidth: '1100px' }}>
       <div style={{ ...sectionStyle, padding: '1.35rem 1.6rem' }}>
-        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e6edf3', textAlign: adminAlign(isAr) }}>
+        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--admin-text)', textAlign: adminAlign(isAr) }}>
           {isAr ? 'إعدادات المتجر' : 'Store settings'}
         </div>
-        <div style={{ marginTop: '0.5rem', color: '#8b949e', textAlign: adminAlign(isAr), lineHeight: 1.6, fontSize: '0.95rem' }}>
+        <div style={{ marginTop: '0.5rem', color: 'var(--admin-muted)', textAlign: adminAlign(isAr), lineHeight: 1.6, fontSize: '0.95rem' }}>
           {isAr
             ? 'قسم الصيانة والأقسام 1–5 تُحفظ معًا بزر «حفظ الإعدادات». قسم قوالب واتساب (6) له زر حفظ منفصل.'
             : 'Maintenance plus sections 1–5 save together with “Save settings”. WhatsApp templates (section 6) use their own save button.'}
@@ -299,7 +299,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               gap: '0.65rem',
               cursor: 'pointer',
               textAlign: adminAlign(isAr),
-              color: formData.maintenanceMode ? '#f85149' : '#e6edf3',
+              color: formData.maintenanceMode ? '#f85149' : 'var(--admin-text)',
               fontWeight: formData.maintenanceMode ? 700 : 500
             }}
           >
@@ -587,7 +587,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             </label>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#e6edf3', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--admin-text)', flexDirection: isAr ? 'row-reverse' : 'row' }}>
             <input
               type="checkbox"
               name="smtpSecure"
@@ -599,7 +599,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
           </label>
 
           {hasStoredSmtpPass && !formData.smtpPass && (
-            <div style={{ color: '#8b949e', fontSize: '0.88rem', textAlign: adminAlign(isAr) }}>
+            <div style={{ color: 'var(--admin-muted)', fontSize: '0.88rem', textAlign: adminAlign(isAr) }}>
               {isAr ? "توجد كلمة مرور SMTP محفوظة بالفعل في إعدادات المسؤول." : "A saved SMTP password already exists in admin settings."}
             </div>
           )}
@@ -663,7 +663,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
             />
           </label>
 
-          <div style={{ fontSize: '0.82rem', color: '#8b949e', textAlign: adminAlign(isAr) }}>
+          <div style={{ fontSize: '0.82rem', color: 'var(--admin-muted)', textAlign: adminAlign(isAr) }}>
             {isAr
               ? 'عناصر: {{customerName}} {{cartTotal}} {{currency}} {{cartLink}} {{recoveryOffer}} {{discountCode}} {{discountDetails}} {{storeName}}'
               : 'Placeholders: {{customerName}} {{cartTotal}} {{currency}} {{cartLink}} {{recoveryOffer}} {{discountCode}} {{discountDetails}} {{storeName}}'}
@@ -679,7 +679,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
               borderRadius: '8px',
               border: 'none',
               background: '#238636',
-              color: '#fff',
+              color: 'var(--admin-on-primary)',
               fontWeight: 700,
               cursor: saving ? 'not-allowed' : 'pointer',
               opacity: saving ? 0.7 : 1

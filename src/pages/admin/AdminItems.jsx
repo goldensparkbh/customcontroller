@@ -43,7 +43,7 @@ const createEmptyFormData = () => ({
 const modalOverlayStyle = {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(3, 7, 18, 0.78)',
+    background: 'var(--admin-overlay-soft)',
     backdropFilter: 'blur(6px)',
     display: 'flex',
     alignItems: 'center',
@@ -53,8 +53,8 @@ const modalOverlayStyle = {
 };
 
 const panelStyle = {
-    background: '#161b22',
-    border: '1px solid #30363d',
+    background: 'var(--admin-surface)',
+    border: '1px solid var(--admin-border)',
     borderRadius: '10px',
     overflow: 'hidden'
 };
@@ -63,9 +63,9 @@ const fieldStyle = {
     width: '100%',
     padding: '0.7rem 0.8rem',
     borderRadius: '8px',
-    border: '1px solid #30363d',
-    background: '#0d1117',
-    color: '#e6edf3'
+    border: '1px solid var(--admin-border)',
+    background: 'var(--admin-raised)',
+    color: 'var(--admin-text)'
 };
 
 const listCellBase = {
@@ -95,10 +95,10 @@ const DetailField = ({ label, value, isAr }) => {
     const align = adminAlign(isAr);
     return (
         <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
-            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {label}
             </div>
-            <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
+            <div style={{ color: 'var(--admin-text)', lineHeight: 1.45 }}>{value || 'N/A'}</div>
         </div>
     );
 };
@@ -303,7 +303,7 @@ const AdminItems = ({ lang = 'ar' }) => {
     return (
         <div style={{ display: 'grid', gap: '1rem', direction: isAr ? 'rtl' : 'ltr' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ color: '#8b949e' }}>{isAr ? "إدارة مخزون المنتجات العادية من قائمة واحدة. انقر فوق صف الصنف لمزيد من التفاصيل." : "Manage normal inventory items from a single list. Click an item row for full details."}</div>
+                <div style={{ color: 'var(--admin-muted)' }}>{isAr ? "إدارة مخزون المنتجات العادية من قائمة واحدة. انقر فوق صف الصنف لمزيد من التفاصيل." : "Manage normal inventory items from a single list. Click an item row for full details."}</div>
                 <button
                     type="button"
                     onClick={openCreateModal}
@@ -312,7 +312,7 @@ const AdminItems = ({ lang = 'ar' }) => {
                         borderRadius: '8px',
                         border: 'none',
                         background: '#238636',
-                        color: '#fff',
+                        color: 'var(--admin-on-primary)',
                         fontWeight: 700,
                         cursor: 'pointer'
                     }}
@@ -328,10 +328,10 @@ const AdminItems = ({ lang = 'ar' }) => {
                         gridTemplateColumns: LIST_COLUMNS,
                         gap: '0.75rem',
                         padding: '0.85rem 1rem',
-                        background: '#0d1117',
-                        borderBottom: '1px solid #30363d',
+                        background: 'var(--admin-raised)',
+                        borderBottom: '1px solid var(--admin-border)',
                         fontSize: '0.72rem',
-                        color: '#8b949e',
+                        color: 'var(--admin-muted)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em'
                     }}
@@ -360,7 +360,7 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     border: 'none',
                                     borderTop: '1px solid rgba(255,255,255,0.05)',
                                     background: isSelected ? '#1f2937' : 'transparent',
-                                    color: '#e6edf3',
+                                    color: 'var(--admin-text)',
                                     textAlign: adminAlign(isAr),
                                     cursor: 'pointer'
                                 }}
@@ -373,11 +373,11 @@ const AdminItems = ({ lang = 'ar' }) => {
                                             style={{ width: '54px', height: '54px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
                                         />
                                     ) : (
-                                        <div style={{ width: '54px', height: '54px', borderRadius: '8px', background: '#111827', flexShrink: 0 }} />
+                                        <div style={{ width: '54px', height: '54px', borderRadius: '8px', background: 'var(--admin-hover-alt)', flexShrink: 0 }} />
                                     )}
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                                    <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             #{padNumericString(item.itemNumber)} · {item.description || (isAr ? 'بدون وصف' : 'No description')}
                                     </div>
                                 </div>
@@ -401,8 +401,8 @@ const AdminItems = ({ lang = 'ar' }) => {
                             width: 'min(980px, 100%)',
                             maxHeight: '90vh',
                             overflowY: 'auto',
-                            background: '#161b22',
-                            border: '1px solid #30363d',
+                            background: 'var(--admin-surface)',
+                            border: '1px solid var(--admin-border)',
                             borderRadius: '14px',
                             boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
                         }}
@@ -418,14 +418,14 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 flexWrap: 'wrap',
                                 alignItems: 'center',
                                 padding: '1.25rem 1.5rem',
-                                borderBottom: '1px solid #30363d',
-                                background: '#161b22',
+                                borderBottom: '1px solid var(--admin-border)',
+                                background: 'var(--admin-surface)',
                                 flexDirection: isAr ? 'row-reverse' : 'row'
                             }}
                         >
                             <div>
-                                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{selectedItem.name}</div>
-                                <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>{selectedItem.category || (isAr ? 'بدون تصنيف' : 'Uncategorized')}</div>
+                                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--admin-text)' }}>{selectedItem.name}</div>
+                                <div style={{ marginTop: '0.3rem', color: 'var(--admin-muted)' }}>{selectedItem.category || (isAr ? 'بدون تصنيف' : 'Uncategorized')}</div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -437,7 +437,7 @@ const AdminItems = ({ lang = 'ar' }) => {
                                         borderRadius: '6px',
                                         border: 'none',
                                         background: '#1f6feb',
-                                        color: '#fff',
+                                        color: 'var(--admin-on-primary)',
                                         cursor: 'pointer'
                                     }}
                                 >
@@ -463,9 +463,9 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     style={{
                                         padding: '0.55rem 0.8rem',
                                         borderRadius: '6px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: 'pointer'
                                     }}
                                 >
@@ -476,7 +476,7 @@ const AdminItems = ({ lang = 'ar' }) => {
 
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
                                     <DetailField isAr={isAr} label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedItem.itemNumber)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField isAr={isAr} label={isAr ? "الباركود" : "Barcode"} value={selectedItem.barcode} />
@@ -490,7 +490,7 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     <DetailField isAr={isAr} label={isAr ? "الحالة" : "Visibility"} value={selectedItem.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
                                     <DetailField isAr={isAr} label={isAr ? "تاريخ الإنشاء" : "Created"} value={formatDate(selectedItem.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField isAr={isAr} label={isAr ? "تاريخ التحديث" : "Updated"} value={formatDate(selectedItem.updatedAt)} />
@@ -499,8 +499,8 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "التسعير والمخزون" : "Platform Pricing & Stock"}</div>
+                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem' }}>{isAr ? "التسعير والمخزون" : "Platform Pricing & Stock"}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
                                     <DetailField isAr={isAr} label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedItem.purchasePrice)} />
                                     <DetailField isAr={isAr} label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedItem.sellPrice ?? selectedItem.price)} />
@@ -508,8 +508,8 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "تاريخ المخزون" : "Inventory History"}</div>
+                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem' }}>{isAr ? "تاريخ المخزون" : "Inventory History"}</div>
                                 <div style={{ display: 'grid', gap: '0.75rem' }}>
                                     {(selectedItem.inventoryDetails || []).map((row, index) => (
                                         <div
@@ -520,8 +520,8 @@ const AdminItems = ({ lang = 'ar' }) => {
                                                 gap: '0.75rem',
                                                 padding: '0.85rem',
                                                 borderRadius: '8px',
-                                                border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid #30363d',
-                                                background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : '#111827'
+                                                border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid var(--admin-border)',
+                                                background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : 'var(--admin-hover-alt)'
                                             }}
                                         >
                                             <DetailField isAr={isAr} label={isAr ? "إدخال" : "Entry"} value={`${isAr ? "سجل مخزون" : "Inventory Entry"} ${index + 1}`} />
@@ -533,19 +533,19 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "الوصف" : "Description"}</div>
+                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem' }}>{isAr ? "الوصف" : "Description"}</div>
                                 <div style={{ color: '#d6d9e0', lineHeight: 1.6 }}>{selectedItem.description || (isAr ? 'لا يوجد وصف.' : 'No description provided.')}</div>
                             </div>
 
-                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem' }}>{isAr ? "الصور" : "Images"}</div>
+                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem' }}>{isAr ? "الصور" : "Images"}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
                                     {(selectedItem.images || []).map((image, index) => (
                                         <img key={`${selectedItem.id}-image-${index}`} src={image} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
                                     ))}
                                     {(!selectedItem.images || selectedItem.images.length === 0) && (
-                                        <div style={{ color: '#8b949e' }}>{isAr ? "لا توجد صور." : "No images uploaded."}</div>
+                                        <div style={{ color: 'var(--admin-muted)' }}>{isAr ? "لا توجد صور." : "No images uploaded."}</div>
                                     )}
                                 </div>
                             </div>
@@ -562,8 +562,8 @@ const AdminItems = ({ lang = 'ar' }) => {
                             width: 'min(860px, 100%)',
                             maxHeight: '90vh',
                             overflowY: 'auto',
-                            background: '#161b22',
-                            border: '1px solid #30363d',
+                            background: 'var(--admin-surface)',
+                            border: '1px solid var(--admin-border)',
                             borderRadius: '14px',
                             boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
                         }}
@@ -571,10 +571,10 @@ const AdminItems = ({ lang = 'ar' }) => {
                         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                                 <div>
-                                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>
+                                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--admin-text)' }}>
                                         {editingId ? (isAr ? 'تعديل صنف' : 'Edit Item') : (isAr ? 'إضافة صنف جديد' : 'Add New Item')}
                                     </div>
-                                    <div style={{ marginTop: '0.3rem', color: '#8b949e' }}>
+                                    <div style={{ marginTop: '0.3rem', color: 'var(--admin-muted)' }}>
                                         {editingId ? (isAr ? 'تحديث الأسعار وحركات المخزون لهذا المنتج.' : 'Update pricing and stock movements for this item.') : (isAr ? 'إنشاء منتج جديد للمتجر.' : 'Create a new normal item for the shop.')}
                                     </div>
                                 </div>
@@ -585,9 +585,9 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     style={{
                                         padding: '0.55rem 0.8rem',
                                         borderRadius: '6px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: 'pointer'
                                     }}
                                 >
@@ -664,16 +664,16 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 lang={lang}
                             />
 
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#e6edf3' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--admin-text)' }}>
                                 <input type="checkbox" name="showOnline" checked={formData.showOnline} onChange={handleFormChange} />
                                 {isAr ? "عرض في المتجر" : "Show Online"}
                             </label>
 
                             <div style={{ display: 'grid', gap: '0.5rem' }}>
                                 <span>{isAr ? "الصور" : "Images"}</span>
-                                <input type="file" multiple accept="image/*" onChange={(event) => setImageFiles(event.target.files)} style={{ color: '#e6edf3' }} />
+                                <input type="file" multiple accept="image/*" onChange={(event) => setImageFiles(event.target.files)} style={{ color: 'var(--admin-text)' }} />
                                 {editingId && (
-                                    <div style={{ fontSize: '0.8rem', color: '#8b949e' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--admin-muted)' }}>
                                         {isAr ? "رفع صور جديدة يستبدل مجموعة الصور الحالية." : "Uploading new images replaces the existing image set."}
                                     </div>
                                 )}
@@ -693,9 +693,9 @@ const AdminItems = ({ lang = 'ar' }) => {
                                     style={{
                                         padding: '0.7rem 1rem',
                                         borderRadius: '8px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: 'pointer'
                                     }}
                                 >
@@ -709,7 +709,7 @@ const AdminItems = ({ lang = 'ar' }) => {
                                         borderRadius: '8px',
                                         border: 'none',
                                         background: '#238636',
-                                        color: '#fff',
+                                        color: 'var(--admin-on-primary)',
                                         fontWeight: 700,
                                         cursor: saving ? 'not-allowed' : 'pointer',
                                         opacity: saving ? 0.7 : 1

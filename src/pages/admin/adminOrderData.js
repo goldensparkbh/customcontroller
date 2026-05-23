@@ -2,8 +2,8 @@ import { adminListDocs } from '../../services/backendApi.js';
 import { getOrderNumber, padNumericString } from './recordNumbers';
 
 export const panelStyle = {
-  background: '#161b22',
-  border: '1px solid #30363d',
+  background: 'var(--admin-surface)',
+  border: '1px solid var(--admin-border)',
   borderRadius: '10px',
   overflow: 'hidden'
 };

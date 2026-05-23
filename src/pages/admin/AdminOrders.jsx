@@ -179,8 +179,8 @@ const getInventorySyncLabel = (status, isAr) => {
 };
 
 const sectionCardStyle = {
-    background: '#161b22',
-    border: '1px solid #30363d',
+    background: 'var(--admin-surface)',
+    border: '1px solid var(--admin-border)',
     borderRadius: '10px',
     overflow: 'hidden'
 };
@@ -224,7 +224,7 @@ const PreviewStack = ({ layers, fallbackSrc, alt }) => (
         style={{
             position: 'relative',
             aspectRatio: '1.5',
-            background: '#11141b',
+            background: 'var(--admin-preview-bg)',
             borderRadius: '8px',
             overflow: 'hidden',
             border: '1px solid rgba(255,255,255,0.1)'
@@ -260,7 +260,7 @@ const PreviewStack = ({ layers, fallbackSrc, alt }) => (
 
 const PreviewPanel = ({ label, children }) => (
     <div style={{ display: 'grid', gap: '0.35rem' }}>
-        <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <div style={{ fontSize: '0.74rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {label}
         </div>
         {children}
@@ -275,7 +275,7 @@ const ItemPreview = ({ item }) => {
                     style={{
                         position: 'relative',
                         aspectRatio: '1.5',
-                        background: '#11141b',
+                        background: 'var(--admin-preview-bg)',
                         borderRadius: '8px',
                         overflow: 'hidden',
                         border: '1px solid rgba(255,255,255,0.1)'
@@ -312,10 +312,10 @@ const DetailField = ({ label, value, isAr }) => {
     const align = adminAlign(isAr);
     return (
         <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
-            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {label}
             </div>
-            <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
+            <div style={{ color: 'var(--admin-text)', lineHeight: 1.45 }}>{value || 'N/A'}</div>
         </div>
     );
 };
@@ -324,7 +324,7 @@ const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }
     const align = adminAlign(isAr);
     return (
         <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
-            <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {label}
             </div>
             <button
@@ -335,7 +335,7 @@ const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }
                     padding: 0,
                     border: 'none',
                     background: 'transparent',
-                    color: disabled ? '#8b949e' : '#58a6ff',
+                    color: disabled ? 'var(--admin-muted)' : '#58a6ff',
                     lineHeight: 1.45,
                     textAlign: align,
                     font: 'inherit',
@@ -344,7 +344,7 @@ const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }
             >
                 {value || 'N/A'}
             </button>
-            <div style={{ fontSize: '0.76rem', color: '#8b949e' }}>
+            <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)' }}>
                 {helperText}
             </div>
         </div>
@@ -774,28 +774,28 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
     const renderStatCard = (key, label, value, options = {}) => {
         const { subtitle, accent, active, onClick } = options;
-        const accentColor = accent || ORDER_STAT_ACCENT[key] || '#e6edf3';
+        const accentColor = accent || ORDER_STAT_ACCENT[key] || 'var(--admin-text)';
         const isButton = typeof onClick === 'function';
 
         const cardBody = (
             <>
-                <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: '0.74rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     {label}
                 </div>
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: accentColor, lineHeight: 1.1, marginTop: '0.35rem' }}>
                     {value}
                 </div>
                 {subtitle ? (
-                    <div style={{ fontSize: '0.72rem', color: '#6e7681', marginTop: '0.35rem' }}>{subtitle}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted-dim)', marginTop: '0.35rem' }}>{subtitle}</div>
                 ) : null}
             </>
         );
 
         const cardStyle = {
-            background: active ? 'rgba(88,166,255,0.08)' : '#0d1117',
+            background: active ? 'rgba(88,166,255,0.08)' : 'var(--admin-raised)',
             borderRadius: '10px',
             padding: '0.85rem 1rem',
-            border: `1px solid ${active ? accentColor : '#30363d'}`,
+            border: `1px solid ${active ? accentColor : 'var(--admin-border)'}`,
             textAlign: adminAlign(isAr),
             width: '100%',
             display: 'grid',
@@ -868,7 +868,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                 }}
             >
                 <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
-                    <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "بحث" : "Search"}
                     </div>
                     <input
@@ -879,15 +879,15 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         style={{
                             padding: '0.72rem 0.8rem',
                             borderRadius: '8px',
-                            border: '1px solid #30363d',
-                            background: '#0d1117',
-                            color: '#e6edf3'
+                            border: '1px solid var(--admin-border)',
+                            background: 'var(--admin-raised)',
+                            color: 'var(--admin-text)'
                         }}
                     />
                 </div>
 
                 <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
-                    <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "الحالة" : "Status"}
                     </div>
                     <select
@@ -896,9 +896,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         style={{
                             padding: '0.72rem 0.8rem',
                             borderRadius: '8px',
-                            border: '1px solid #30363d',
-                            background: '#0d1117',
-                            color: '#e6edf3'
+                            border: '1px solid var(--admin-border)',
+                            background: 'var(--admin-raised)',
+                            color: 'var(--admin-text)'
                         }}
                     >
                         <option value="all">{isAr ? "جميع الحالات" : "All Statuses"}</option>
@@ -909,7 +909,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                 </div>
 
                 <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
-                    <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "الدفع" : "Payment"}
                     </div>
                     <select
@@ -918,9 +918,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         style={{
                             padding: '0.72rem 0.8rem',
                             borderRadius: '8px',
-                            border: '1px solid #30363d',
-                            background: '#0d1117',
-                            color: '#e6edf3'
+                            border: '1px solid var(--admin-border)',
+                            background: 'var(--admin-raised)',
+                            color: 'var(--admin-text)'
                         }}
                     >
                         <option value="all">{isAr ? "جميع المدفوعات" : "All Payments"}</option>
@@ -931,7 +931,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                 </div>
 
                 <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
-                    <div style={{ fontSize: '0.74rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {isAr ? "الأهمية" : "Urgency"}
                     </div>
                     <select
@@ -940,9 +940,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         style={{
                             padding: '0.72rem 0.8rem',
                             borderRadius: '8px',
-                            border: '1px solid #30363d',
-                            background: '#0d1117',
-                            color: '#e6edf3'
+                            border: '1px solid var(--admin-border)',
+                            background: 'var(--admin-raised)',
+                            color: 'var(--admin-text)'
                         }}
                     >
                         <option value="all">{isAr ? "جميع الأهميات" : "All Urgency"}</option>
@@ -958,9 +958,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     style={{
                         padding: '0.72rem 0.95rem',
                         borderRadius: '8px',
-                        border: '1px solid #3b4452',
-                        background: '#111827',
-                        color: '#e6edf3',
+                        border: '1px solid var(--admin-border-strong)',
+                        background: 'var(--admin-hover-alt)',
+                        color: 'var(--admin-text)',
                         cursor: 'pointer'
                     }}
                 >
@@ -977,12 +977,12 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         alignItems: 'center',
                         marginBottom: '0.75rem',
                         padding: '0.75rem 1rem',
-                        background: '#161b22',
-                        border: '1px solid #30363d',
+                        background: 'var(--admin-surface)',
+                        border: '1px solid var(--admin-border)',
                         borderRadius: '10px'
                     }}
                 >
-                    <span style={{ color: '#e6edf3', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--admin-text)', fontWeight: 600 }}>
                         {isAr ? `${selectedOrderIds.size} طلب محدد` : `${selectedOrderIds.size} order(s) selected`}
                     </span>
                     <button
@@ -1010,9 +1010,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         style={{
                             padding: '0.55rem 0.85rem',
                             borderRadius: '8px',
-                            border: '1px solid #3b4452',
-                            background: '#0d1117',
-                            color: '#e6edf3',
+                            border: '1px solid var(--admin-border-strong)',
+                            background: 'var(--admin-raised)',
+                            color: 'var(--admin-text)',
                             cursor: deletingOrders ? 'not-allowed' : 'pointer'
                         }}
                     >
@@ -1026,8 +1026,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     style={{
                         display: 'flex',
                         alignItems: 'stretch',
-                        borderBottom: '1px solid #30363d',
-                        background: '#0d1117'
+                        borderBottom: '1px solid var(--admin-border)',
+                        background: 'var(--admin-raised)'
                     }}
                 >
                     <div
@@ -1057,7 +1057,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             gap: '0.75rem',
                             padding: '0.85rem 1rem',
                             fontSize: '0.72rem',
-                            color: '#8b949e',
+                            color: 'var(--admin-muted)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.08em'
                         }}
@@ -1115,7 +1115,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         padding: '1rem',
                                         border: 'none',
                                         background: 'transparent',
-                                        color: '#e6edf3',
+                                        color: 'var(--admin-text)',
                                         textAlign: adminAlign(isAr),
                                         cursor: deletingOrders ? 'not-allowed' : 'pointer',
                                         opacity: deletingOrders ? 0.65 : 1
@@ -1125,7 +1125,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.82rem' }}>
                                             {getOrderNumberLabel(order)}
                                         </div>
-                                        <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                        <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>
                                             {formatDate(order.createdAt)}
                                         </div>
                                     </div>
@@ -1134,7 +1134,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {getCustomerName(order)}
                                         </div>
-                                        <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                        <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>
                                             {(order.items || []).length} {isAr ? "عنصر" : "item(s)"}
                                         </div>
                                     </div>
@@ -1145,7 +1145,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
                                     <div style={listCellStyle}>
                                         <div>{getPaymentMethod(order)}</div>
-                                        <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                        <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>
                                             {getPaymentStatus(order)}
                                         </div>
                                     </div>
@@ -1170,7 +1170,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         <div
                             style={{
                                 padding: '1.25rem 1rem',
-                                color: '#8b949e',
+                                color: 'var(--admin-muted)',
                                 borderTop: '1px solid rgba(255,255,255,0.05)'
                             }}
                         >
@@ -1188,7 +1188,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(3, 7, 18, 0.78)',
+                        background: 'var(--admin-overlay-soft)',
                         backdropFilter: 'blur(6px)',
                         display: 'flex',
                         alignItems: 'center',
@@ -1203,8 +1203,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             width: 'min(1180px, 100%)',
                             maxHeight: '90vh',
                             overflowY: 'auto',
-                            background: '#161b22',
-                            border: '1px solid #30363d',
+                            background: 'var(--admin-surface)',
+                            border: '1px solid var(--admin-border)',
                             borderRadius: '14px',
                             boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
                         }}
@@ -1220,15 +1220,15 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 gap: '1rem',
                                 flexWrap: 'wrap',
                                 padding: '1.25rem 1.5rem',
-                                borderBottom: '1px solid #30363d',
-                                background: '#161b22'
+                                borderBottom: '1px solid var(--admin-border)',
+                                background: 'var(--admin-surface)'
                             }}
                         >
                             <div style={{ textAlign: adminAlign(isAr) }}>
-                                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>
+                                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--admin-text)' }}>
                                     {isAr ? "تفاصيل الطلب" : "Order Details"}
                                 </div>
-                                <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: '#8b949e' }}>
+                                <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: 'var(--admin-muted)' }}>
                                     {getOrderNumberLabel(selectedOrder)}
                                 </div>
                             </div>
@@ -1244,9 +1244,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     style={{
                                         padding: '0.55rem 0.8rem',
                                         borderRadius: '6px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: deletingOrders ? 'not-allowed' : 'pointer',
                                         opacity: deletingOrders ? 0.6 : 1
                                     }}
@@ -1276,9 +1276,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     style={{
                                         padding: '0.55rem 0.8rem',
                                         borderRadius: '6px',
-                                        border: '1px solid #3b4452',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         cursor: deletingOrders ? 'not-allowed' : 'pointer',
                                         opacity: deletingOrders ? 0.6 : 1
                                     }}
@@ -1290,7 +1290,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', textAlign: adminAlign(isAr) }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
                                     <DetailField isAr={isAr} label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField isAr={isAr} label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
@@ -1305,10 +1305,10 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
                                     <DetailField isAr={isAr} label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', textAlign: adminAlign(isAr) }}>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', textAlign: adminAlign(isAr) }}>
                                         {isAr ? 'عنوان الشحن' : 'Shipping address'}
                                     </div>
                                     <ShippingAddressDisplay shipping={selectedOrder.shipping} lang={lang} isAr={isAr} />
@@ -1316,7 +1316,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     <DetailField isAr={isAr} label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
                                     <DetailField isAr={isAr} label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField isAr={isAr} label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
@@ -1324,7 +1324,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     <DetailField isAr={isAr} label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
                                 </div>
 
-                                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
                                     <DetailField isAr={isAr} label={isAr ? "أنشئ في" : "Created"} value={formatDate(selectedOrder.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
@@ -1347,9 +1347,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
+                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                                    <div style={{ fontWeight: 800, color: '#e6edf3' }}>
+                                    <div style={{ fontWeight: 800, color: 'var(--admin-text)' }}>
                                         {isAr ? 'المخزون (خصم العناصر)' : 'Inventory (Stock Deduction)'}
                                     </div>
                                     <span style={getInventorySyncBadgeStyle(getInventorySyncStatus(selectedOrder))}>
@@ -1390,7 +1390,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                     gap: '0.75rem',
                                                     padding: '0.75rem 0.9rem',
                                                     background: '#0b1220',
-                                                    color: '#8b949e',
+                                                    color: 'var(--admin-muted)',
                                                     fontSize: '0.72rem',
                                                     textTransform: 'uppercase',
                                                     letterSpacing: '0.08em',
@@ -1413,7 +1413,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                             padding: '0.8rem 0.9rem',
                                                             borderTop: '1px solid rgba(255,255,255,0.06)',
                                                             background: 'transparent',
-                                                            color: '#e6edf3',
+                                                            color: 'var(--admin-text)',
                                                             fontFamily: 'inherit',
                                                             textAlign: adminAlign(isAr)
                                                         }}
@@ -1422,7 +1422,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                             <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                                 {row?.path || 'N/A'}
                                                             </div>
-                                                            <div style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: '0.2rem' }}>
+                                                            <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>
                                                                 {row?.sourceType || ''}
                                                             </div>
                                                         </div>
@@ -1438,7 +1438,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     )}
 
                                     {getInventoryAdjustments(selectedOrder).length === 0 && (
-                                        <div style={{ color: '#8b949e' }}>
+                                        <div style={{ color: 'var(--admin-muted)' }}>
                                             {isAr
                                                 ? 'لا توجد حركات مخزون مسجلة لهذا الطلب.'
                                                 : 'No inventory movements recorded for this order.'}
@@ -1447,10 +1447,10 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
+                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تحديث الحالة" : "Update Status"}</div>
+                                        <div style={{ fontWeight: 700, color: 'var(--admin-text)' }}>{isAr ? "تحديث الحالة" : "Update Status"}</div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1461,9 +1461,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                 minWidth: '180px',
                                                 padding: '0.6rem 0.7rem',
                                                 borderRadius: '6px',
-                                                border: '1px solid #3b4452',
-                                                background: '#111827',
-                                                color: '#e6edf3'
+                                                border: '1px solid var(--admin-border-strong)',
+                                                background: 'var(--admin-hover-alt)',
+                                                color: 'var(--admin-text)'
                                             }}
                                         >
                                             {ORDER_STATUS_OPTIONS.map((status) => (
@@ -1478,9 +1478,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                 minWidth: '170px',
                                                 padding: '0.6rem 0.7rem',
                                                 borderRadius: '6px',
-                                                border: '1px solid #3b4452',
-                                                background: '#111827',
-                                                color: '#e6edf3'
+                                                border: '1px solid var(--admin-border-strong)',
+                                                background: 'var(--admin-hover-alt)',
+                                                color: 'var(--admin-text)'
                                             }}
                                         >
                                             {ORDER_URGENCY_OPTIONS.map((urgency) => (
@@ -1497,9 +1497,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                 minWidth: '220px',
                                                 padding: '0.6rem 0.7rem',
                                                 borderRadius: '6px',
-                                                border: '1px solid #3b4452',
-                                                background: '#111827',
-                                                color: '#e6edf3'
+                                                border: '1px solid var(--admin-border-strong)',
+                                                background: 'var(--admin-hover-alt)',
+                                                color: 'var(--admin-text)'
                                             }}
                                         />
 
@@ -1512,7 +1512,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                                 borderRadius: '6px',
                                                 border: 'none',
                                                 background: '#238636',
-                                                color: '#fff',
+                                                color: 'var(--admin-on-primary)',
                                                 fontWeight: 700,
                                                 cursor: saving ? 'not-allowed' : 'pointer',
                                                 opacity: saving || !hasOrderChanges ? 0.6 : 1
@@ -1525,7 +1525,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             </div>
 
                             <div style={{ display: 'grid', gap: '0.9rem' }}>
-                                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "عناصر الطلب" : "Order Items"}</div>
+                                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--admin-text)' }}>{isAr ? "عناصر الطلب" : "Order Items"}</div>
 
                                 {(selectedOrder.items || []).map((item, idx) => (
                                     <div
@@ -1534,8 +1534,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             display: 'grid',
                                             gridTemplateColumns: 'minmax(240px, 280px) minmax(0, 1fr)',
                                             gap: '1rem',
-                                            background: '#0d1117',
-                                            border: '1px solid #30363d',
+                                            background: 'var(--admin-raised)',
+                                            border: '1px solid var(--admin-border)',
                                             borderRadius: '10px',
                                             padding: '1rem'
                                         }}
@@ -1564,7 +1564,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(3, 7, 18, 0.78)',
+                        background: 'var(--admin-overlay-soft)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1581,8 +1581,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             width: 'min(640px, 100%)',
                             maxHeight: 'min(90vh, 820px)',
                             overflowY: 'auto',
-                            background: '#161b22',
-                            border: '1px solid #30363d',
+                            background: 'var(--admin-surface)',
+                            border: '1px solid var(--admin-border)',
                             borderRadius: '16px',
                             boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
                             padding: 'clamp(1.25rem, 3vw, 2rem)'
@@ -1599,10 +1599,10 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             }}
                         >
                             <div style={{ flex: '1 1 200px' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e6edf3', lineHeight: 1.3 }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--admin-text)', lineHeight: 1.3 }}>
                                     {isAr ? 'رسالة واتساب' : 'WhatsApp message'}
                                 </div>
-                                <div style={{ fontSize: '0.95rem', color: '#8b949e', marginTop: '0.5rem', lineHeight: 1.45 }}>
+                                <div style={{ fontSize: '0.95rem', color: 'var(--admin-muted)', marginTop: '0.5rem', lineHeight: 1.45 }}>
                                     {selectedOrder.customer?.phone || 'N/A'}
                                 </div>
                             </div>
@@ -1613,9 +1613,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 style={{
                                     padding: '0.6rem 1rem',
                                     borderRadius: '8px',
-                                    border: '1px solid #3b4452',
-                                    background: '#0d1117',
-                                    color: '#e6edf3',
+                                    border: '1px solid var(--admin-border-strong)',
+                                    background: 'var(--admin-raised)',
+                                    color: 'var(--admin-text)',
                                     cursor: 'pointer',
                                     fontWeight: 600
                                 }}
@@ -1626,7 +1626,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
                         <div style={{ display: 'grid', gap: '1.5rem' }}>
                             {waTemplatesLoading && (
-                                <div style={{ color: '#8b949e', fontSize: '1rem', padding: '0.5rem 0' }}>
+                                <div style={{ color: 'var(--admin-muted)', fontSize: '1rem', padding: '0.5rem 0' }}>
                                     {isAr ? 'جاري تحميل القوالب…' : 'Loading templates…'}
                                 </div>
                             )}
@@ -1644,7 +1644,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     <span
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#8b949e',
+                                            color: 'var(--admin-muted)',
                                             fontWeight: 600,
                                             textAlign: adminAlign(isAr)
                                         }}
@@ -1660,9 +1660,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         style={{
                                             padding: '0.85rem 1rem',
                                             borderRadius: '10px',
-                                            border: '1px solid #30363d',
-                                            background: '#0d1117',
-                                            color: '#e6edf3',
+                                            border: '1px solid var(--admin-border)',
+                                            background: 'var(--admin-raised)',
+                                            color: 'var(--admin-text)',
                                             fontSize: '1rem',
                                             textAlign: adminAlign(isAr)
                                         }}
@@ -1680,7 +1680,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 style={{
                                     margin: 0,
                                     fontSize: '0.88rem',
-                                    color: '#8b949e',
+                                    color: 'var(--admin-muted)',
                                     lineHeight: 1.55,
                                     textAlign: adminAlign(isAr)
                                 }}
@@ -1692,8 +1692,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
                             <details
                                 style={{
-                                    background: '#0d1117',
-                                    border: '1px solid #30363d',
+                                    background: 'var(--admin-raised)',
+                                    border: '1px solid var(--admin-border)',
                                     borderRadius: '10px',
                                     padding: '0.9rem 1.1rem',
                                     textAlign: adminAlign(isAr)
@@ -1703,7 +1703,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     style={{
                                         cursor: 'pointer',
                                         fontWeight: 600,
-                                        color: '#c9d1d9',
+                                        color: 'var(--admin-text-secondary)',
                                         fontSize: '0.92rem'
                                     }}
                                 >
@@ -1711,9 +1711,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 </summary>
                                 <div style={{ marginTop: '0.85rem', display: 'grid', gap: '0.45rem' }}>
                                     {WHATSAPP_TEMPLATE_TAGS.map((row) => (
-                                        <div key={row.tag} style={{ color: '#c9d1d9', fontSize: '0.84rem', lineHeight: 1.5 }}>
+                                        <div key={row.tag} style={{ color: 'var(--admin-text-secondary)', fontSize: '0.84rem', lineHeight: 1.5 }}>
                                             <code style={{ color: '#79c0ff' }}>{row.tag}</code>
-                                            <span style={{ color: '#8b949e', marginInlineStart: '0.4rem' }}>
+                                            <span style={{ color: 'var(--admin-muted)', marginInlineStart: '0.4rem' }}>
                                                 {isAr ? row.ar : row.en}
                                             </span>
                                         </div>
@@ -1725,7 +1725,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 <div
                                     style={{
                                         fontSize: '0.8rem',
-                                        color: '#8b949e',
+                                        color: 'var(--admin-muted)',
                                         fontWeight: 600,
                                         textAlign: adminAlign(isAr)
                                     }}
@@ -1740,9 +1740,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         resize: 'vertical',
                                         padding: '1.1rem 1.15rem',
                                         borderRadius: '12px',
-                                        border: '1px solid #30363d',
-                                        background: '#0d1117',
-                                        color: '#e6edf3',
+                                        border: '1px solid var(--admin-border)',
+                                        background: 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
                                         lineHeight: 1.65,
                                         fontSize: '1.02rem',
                                         fontFamily: WHATSAPP_BODY_FONT_STACK
@@ -1760,8 +1760,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             style={{
                                                 padding: '0.65rem 1rem',
                                                 borderRadius: '8px',
-                                                border: '1px solid #3b4452',
-                                                background: '#0d1117',
+                                                border: '1px solid var(--admin-border-strong)',
+                                                background: 'var(--admin-raised)',
                                                 color: '#58a6ff',
                                                 textDecoration: 'none',
                                                 fontWeight: 600
@@ -1778,8 +1778,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             style={{
                                                 padding: '0.65rem 1rem',
                                                 borderRadius: '8px',
-                                                border: '1px solid #3b4452',
-                                                background: '#0d1117',
+                                                border: '1px solid var(--admin-border-strong)',
+                                                background: 'var(--admin-raised)',
                                                 color: '#58a6ff',
                                                 textDecoration: 'none',
                                                 fontWeight: 600
@@ -1795,7 +1795,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 style={{
                                     margin: 0,
                                     fontSize: '0.86rem',
-                                    color: '#8b949e',
+                                    color: 'var(--admin-muted)',
                                     lineHeight: 1.55,
                                     textAlign: adminAlign(isAr)
                                 }}
@@ -1859,7 +1859,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     borderRadius: '10px',
                                     border: 'none',
                                     background: 'linear-gradient(135deg, #f6d365 0%, #f5b942 100%)',
-                                    color: '#0d1117',
+                                    color: 'var(--admin-raised)',
                                     fontWeight: 800,
                                     fontSize: '1.02rem',
                                     cursor:

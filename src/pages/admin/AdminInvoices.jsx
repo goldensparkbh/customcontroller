@@ -18,7 +18,7 @@ const LIST_COLUMNS = '1.1fr 1.3fr 0.8fr 0.9fr';
 const modalOverlayStyle = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(3, 7, 18, 0.78)',
+  background: 'var(--admin-overlay-soft)',
   backdropFilter: 'blur(6px)',
   display: 'flex',
   alignItems: 'center',
@@ -31,10 +31,10 @@ const DetailField = ({ label, value, isAr }) => {
   const align = adminAlign(isAr);
   return (
     <div style={{ display: 'grid', gap: '0.2rem', textAlign: align }}>
-      <div style={{ fontSize: '0.72rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {label}
       </div>
-      <div style={{ color: '#e6edf3', lineHeight: 1.45 }}>{value || 'N/A'}</div>
+      <div style={{ color: 'var(--admin-text)', lineHeight: 1.45 }}>{value || 'N/A'}</div>
     </div>
   );
 };
@@ -98,7 +98,7 @@ const AdminInvoices = ({ lang = 'ar' }) => {
   };
 
   if (loading) return <LoadingState message={isAr ? "جاري تحميل الفواتير..." : "Loading invoices..."} minHeight="32vh" />;
-  if (!orders.length) return <p style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>{isAr ? "لا توجد فواتير حالياً." : "No invoices available."}</p>;
+  if (!orders.length) return <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--admin-muted)' }}>{isAr ? "لا توجد فواتير حالياً." : "No invoices available."}</p>;
 
   return (
     <div>
@@ -109,10 +109,10 @@ const AdminInvoices = ({ lang = 'ar' }) => {
             gridTemplateColumns: LIST_COLUMNS,
             gap: '0.75rem',
             padding: '0.85rem 1rem',
-            background: '#0d1117',
-            borderBottom: '1px solid #30363d',
+            background: 'var(--admin-raised)',
+            borderBottom: '1px solid var(--admin-border)',
             fontSize: '0.72rem',
-            color: '#8b949e',
+            color: 'var(--admin-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
             textAlign: adminAlign(isAr)
@@ -140,7 +140,7 @@ const AdminInvoices = ({ lang = 'ar' }) => {
                   border: 'none',
                   borderTop: '1px solid rgba(255,255,255,0.05)',
                   background: isSelected ? '#1f2937' : 'transparent',
-                  color: '#e6edf3',
+                  color: 'var(--admin-text)',
                   textAlign: adminAlign(isAr),
                   cursor: 'pointer'
                 }}
@@ -163,8 +163,8 @@ const AdminInvoices = ({ lang = 'ar' }) => {
               width: 'min(760px, 100%)',
               maxHeight: '90vh',
               overflowY: 'auto',
-              background: '#161b22',
-              border: '1px solid #30363d',
+              background: 'var(--admin-surface)',
+              border: '1px solid var(--admin-border)',
               borderRadius: '14px',
               boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
             }}
@@ -180,14 +180,14 @@ const AdminInvoices = ({ lang = 'ar' }) => {
                 flexWrap: 'wrap',
                 alignItems: 'center',
                 padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid #30363d',
-                background: '#161b22',
+                borderBottom: '1px solid var(--admin-border)',
+                background: 'var(--admin-surface)',
                 flexDirection: isAr ? 'row-reverse' : 'row'
               }}
             >
               <div style={{ textAlign: adminAlign(isAr) }}>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e6edf3' }}>{isAr ? "تفاصيل الفاتورة" : "Invoice details"}</div>
-                <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: '#8b949e' }}>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--admin-text)' }}>{isAr ? "تفاصيل الفاتورة" : "Invoice details"}</div>
+                <div style={{ marginTop: '0.3rem', fontFamily: 'Consolas, monospace', color: 'var(--admin-muted)' }}>
                   {getInvoiceNumber(selectedOrder)}
                 </div>
               </div>
@@ -198,9 +198,9 @@ const AdminInvoices = ({ lang = 'ar' }) => {
                 style={{
                   padding: '0.55rem 0.8rem',
                   borderRadius: '6px',
-                  border: '1px solid #3b4452',
-                  background: '#0d1117',
-                  color: '#e6edf3',
+                  border: '1px solid var(--admin-border-strong)',
+                  background: 'var(--admin-raised)',
+                  color: 'var(--admin-text)',
                   cursor: 'pointer'
                 }}
               >
@@ -210,26 +210,26 @@ const AdminInvoices = ({ lang = 'ar' }) => {
 
             <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr', textAlign: adminAlign(isAr) }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
-                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
+                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
                   <DetailField isAr={isAr} label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
                   <div style={{ height: '0.75rem' }} />
                   <DetailField isAr={isAr} label={isAr ? "الحالة" : "Status"} value={getInvoiceStatus(selectedOrder)} />
                 </div>
 
-                <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '0.9rem' }}>
+                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
                   <DetailField isAr={isAr} label={isAr ? "التاريخ" : "Date"} value={formatDate(selectedOrder.createdAt)} />
                   <div style={{ height: '0.75rem' }} />
                   <DetailField isAr={isAr} label={isAr ? "المجموع" : "Total Amount"} value={`${getOrderTotal(selectedOrder).toFixed(2)} BHD`} />
                 </div>
               </div>
 
-              <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{isAr ? "عنوان الشحن" : "Shipping Address"}</div>
+              <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{isAr ? "عنوان الشحن" : "Shipping Address"}</div>
                 <ShippingAddressDisplay shipping={selectedOrder.shipping} lang={lang} isAr={isAr} />
               </div>
 
-              <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{isAr ? "العناصر" : "Items"}</div>
+              <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{isAr ? "العناصر" : "Items"}</div>
                 <div style={{ display: 'grid', gap: '0.6rem' }}>
                   {(selectedOrder.items || []).map((item, idx) => (
                     <div
@@ -243,9 +243,9 @@ const AdminInvoices = ({ lang = 'ar' }) => {
                       }}
                     >
                       <div style={{ color: '#d6d9e0', flex: 1, textAlign: adminAlign(isAr) }}>
-                        {item.name} <span style={{ color: '#8b949e', fontSize: '0.85rem' }}>x{item.quantity || 1}</span>
+                        {item.name} <span style={{ color: 'var(--admin-muted)', fontSize: '0.85rem' }}>x{item.quantity || 1}</span>
                       </div>
-                      <div style={{ color: '#e6edf3', textAlign: adminAlign(isAr), whiteSpace: 'nowrap' }}>{Number(item.price || 0).toFixed(2)} BHD</div>
+                      <div style={{ color: 'var(--admin-text)', textAlign: adminAlign(isAr), whiteSpace: 'nowrap' }}>{Number(item.price || 0).toFixed(2)} BHD</div>
                     </div>
                   ))}
                 </div>

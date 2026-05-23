@@ -12,9 +12,9 @@ const fieldStyle = {
     width: '100%',
     padding: '0.75rem 0.85rem',
     borderRadius: '8px',
-    border: '1px solid #30363d',
-    background: '#0d1117',
-    color: '#e6edf3'
+    border: '1px solid var(--admin-border)',
+    background: 'var(--admin-raised)',
+    color: 'var(--admin-text)'
 };
 
 const QUICK_EMOJIS = [
@@ -26,9 +26,9 @@ const toolbarBtn = {
     padding: '0.35rem 0.55rem',
     minWidth: '2.25rem',
     borderRadius: '6px',
-    border: '1px solid #3b4452',
-    background: '#21262d',
-    color: '#e6edf3',
+    border: '1px solid var(--admin-border-strong)',
+    background: 'var(--admin-hover)',
+    color: 'var(--admin-text)',
     cursor: 'pointer',
     fontSize: '1.05rem',
     lineHeight: 1.2,
@@ -205,8 +205,8 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
     return (
         <section
             style={{
-                background: '#161b22',
-                border: '1px solid #30363d',
+                background: 'var(--admin-surface)',
+                border: '1px solid var(--admin-border)',
                 borderRadius: '12px',
                 padding: '1.5rem 1.75rem',
                 display: 'grid',
@@ -217,7 +217,7 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
             <div
                 style={{
                     textAlign: adminAlign(isAr),
-                    borderBottom: '1px solid #30363d',
+                    borderBottom: '1px solid var(--admin-border)',
                     paddingBottom: '1.1rem'
                 }}
             >
@@ -232,10 +232,10 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                 >
                     {isAr ? 'القسم 6' : 'Section 6'}
                 </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#e6edf3', marginTop: '0.4rem' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--admin-text)', marginTop: '0.4rem' }}>
                     {isAr ? 'قوالب رسائل واتساب (الطلبات)' : 'WhatsApp message templates (orders)'}
                 </div>
-                <div style={{ marginTop: '0.45rem', color: '#8b949e', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                <div style={{ marginTop: '0.45rem', color: 'var(--admin-muted)', fontSize: '0.95rem', lineHeight: 1.55 }}>
                     {isAr
                         ? 'تُستخدم هذه القوالب عند إرسال رسالة واتساب من تفاصيل الطلب. يمكنك إضافة وتعديل وحذف القوالب هنا.'
                         : 'Used when sending a WhatsApp message from an order. Add, edit, or delete templates here.'}
@@ -244,8 +244,8 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
 
             <details
                 style={{
-                    background: '#0d1117',
-                    border: '1px solid #30363d',
+                    background: 'var(--admin-raised)',
+                    border: '1px solid var(--admin-border)',
                     borderRadius: '10px',
                     padding: '0.85rem 1rem',
                     textAlign: adminAlign(isAr)
@@ -255,16 +255,16 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                     style={{
                         cursor: 'pointer',
                         fontWeight: 600,
-                        color: '#c9d1d9'
+                        color: 'var(--admin-text-secondary)'
                     }}
                 >
                     {isAr ? 'الوسوم المتاحة في نص القالب' : 'Available placeholders in template text'}
                 </summary>
                 <div style={{ marginTop: '0.85rem', display: 'grid', gap: '0.5rem', fontSize: '0.88rem' }}>
                     {WHATSAPP_TEMPLATE_TAGS.map((row) => (
-                        <div key={row.tag} style={{ color: '#c9d1d9', lineHeight: 1.5 }}>
+                        <div key={row.tag} style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.5 }}>
                             <code style={{ color: '#79c0ff', fontSize: '0.85rem' }}>{row.tag}</code>
-                            <span style={{ color: '#8b949e', marginInlineStart: '0.5rem' }}>
+                            <span style={{ color: 'var(--admin-muted)', marginInlineStart: '0.5rem' }}>
                                 {isAr ? row.ar : row.en}
                             </span>
                         </div>
@@ -274,17 +274,17 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
 
             <details
                 style={{
-                    background: '#0d1117',
-                    border: '1px solid #30363d',
+                    background: 'var(--admin-raised)',
+                    border: '1px solid var(--admin-border)',
                     borderRadius: '10px',
                     padding: '0.85rem 1rem',
                     textAlign: adminAlign(isAr)
                 }}
             >
-                <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#c9d1d9' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--admin-text-secondary)' }}>
                     {isAr ? 'الإيموجي والتنسيق في واتساب' : 'Emojis & WhatsApp text formatting'}
                 </summary>
-                <div style={{ marginTop: '0.75rem', color: '#8b949e', fontSize: '0.88rem', lineHeight: 1.55 }}>
+                <div style={{ marginTop: '0.75rem', color: 'var(--admin-muted)', fontSize: '0.88rem', lineHeight: 1.55 }}>
                     {isAr
                         ? 'الرسائل تُرسل كنص عادي UTF-8: يدعم واتساب الإيموجي. للتنسيق استخدم *غامق* و _مائل_ و ~شطب~ و ```مونospace``` كما في تطبيق واتساب.'
                         : 'Messages are plain UTF-8 text: WhatsApp supports emojis. For styling use *bold*, _italic_, ~strikethrough~, and ```monospace``` blocks like in WhatsApp.'}
@@ -296,10 +296,10 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                     <div
                         key={row.id}
                         style={{
-                            border: '1px solid #30363d',
+                            border: '1px solid var(--admin-border)',
                             borderRadius: '10px',
                             padding: '1.1rem 1.2rem',
-                            background: '#111827',
+                            background: 'var(--admin-hover-alt)',
                             display: 'grid',
                             gap: '0.75rem',
                             textAlign: adminAlign(isAr)
@@ -315,7 +315,7 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                             }}
                         >
                             <label style={{ display: 'grid', gap: '0.4rem', flex: '1 1 240px' }}>
-                                <span style={{ color: '#8b949e', fontSize: '0.88rem' }}>
+                                <span style={{ color: 'var(--admin-muted)', fontSize: '0.88rem' }}>
                                     {isAr ? 'عنوان القالب' : 'Template title'}
                                 </span>
                                 <input
@@ -343,7 +343,7 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                             </button>
                         </div>
                         <div style={{ display: 'grid', gap: '0.5rem' }}>
-                            <span style={{ color: '#8b949e', fontSize: '0.88rem' }}>
+                            <span style={{ color: 'var(--admin-muted)', fontSize: '0.88rem' }}>
                                 {isAr ? 'نص الرسالة (نص غني: إيموجي وتنسيق واتساب)' : 'Message body (emoji + WhatsApp formatting)'}
                             </span>
                             <div
@@ -355,12 +355,12 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                                     gap: '0.45rem',
                                     alignItems: 'center',
                                     padding: '0.55rem 0.65rem',
-                                    background: '#0d1117',
-                                    border: '1px solid #30363d',
+                                    background: 'var(--admin-raised)',
+                                    border: '1px solid var(--admin-border)',
                                     borderRadius: '8px'
                                 }}
                             >
-                                <span style={{ fontSize: '0.72rem', color: '#6e7681', marginInlineEnd: '0.25rem' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--admin-muted-dim)', marginInlineEnd: '0.25rem' }}>
                                     {isAr ? 'إيموجي' : 'Emoji'}
                                 </span>
                                 {QUICK_EMOJIS.map((emoji, ei) => (
@@ -383,12 +383,12 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                                     style={{
                                         width: '1px',
                                         height: '1.25rem',
-                                        background: '#30363d',
+                                        background: 'var(--admin-border)',
                                         margin: '0 0.25rem'
                                     }}
                                     aria-hidden
                                 />
-                                <span style={{ fontSize: '0.72rem', color: '#6e7681', marginInlineEnd: '0.25rem' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--admin-muted-dim)', marginInlineEnd: '0.25rem' }}>
                                     {isAr ? 'تنسيق' : 'Format'}
                                 </span>
                                 <button
@@ -458,9 +458,9 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                                 }}
                             />
                         </div>
-                        <div style={{ fontSize: '0.78rem', color: '#6e7681' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--admin-muted-dim)' }}>
                             {isAr ? 'المعرّف الداخلي:' : 'Internal ID:'}{' '}
-                            <code style={{ color: '#8b949e' }}>{row.id}</code>
+                            <code style={{ color: 'var(--admin-muted)' }}>{row.id}</code>
                         </div>
                     </div>
                 ))}
@@ -492,7 +492,7 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                         borderRadius: '8px',
                         border: 'none',
                         background: '#238636',
-                        color: '#fff',
+                        color: 'var(--admin-on-primary)',
                         fontWeight: 700,
                         cursor: saving ? 'not-allowed' : 'pointer',
                         opacity: saving ? 0.75 : 1
@@ -507,9 +507,9 @@ const AdminWhatsAppTemplatesSettings = ({ lang = 'ar' }) => {
                     style={{
                         padding: '0.65rem 1rem',
                         borderRadius: '8px',
-                        border: '1px solid #3b4452',
-                        background: '#21262d',
-                        color: '#e6edf3',
+                        border: '1px solid var(--admin-border-strong)',
+                        background: 'var(--admin-hover)',
+                        color: 'var(--admin-text)',
                         fontWeight: 600,
                         cursor: saving ? 'not-allowed' : 'pointer'
                     }}

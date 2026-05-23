@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { i18n } from '../i18n';
 import { useNavigate } from 'react-router-dom';
 import { adminLogout } from '../services/backendApi.js';
+import './admin/admin-theme.css';
+import { AdminThemeProvider, useAdminTheme } from './admin/AdminThemeContext.jsx';
 import AdminOrders from './admin/AdminOrders';
 import AdminInvoices from './admin/AdminInvoices';
 import AdminPayments from './admin/AdminPayments';
@@ -17,8 +19,9 @@ import { AdminNavIcon, IconLogout } from './admin/AdminSidebarIcons';
 
 const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
 
-const Admin = () => {
+const AdminDashboard = () => {
     const navigate = useNavigate();
+    const { theme, toggleTheme, isLight } = useAdminTheme();
     const storedLang = window.localStorage.getItem('ez_lang') || 'ar';
     const [lang, setLang] = useState(storedLang);
     const isAr = lang === 'ar';
@@ -113,15 +116,11 @@ const Admin = () => {
     };
 
     useEffect(() => {
-        document.body.style.background = '#0e1117';
-        document.body.style.color = '#fff';
         document.documentElement.style.overflowY = 'auto';
         document.body.style.overflowY = 'auto';
         document.documentElement.dir = isAr ? 'rtl' : 'ltr';
         document.documentElement.lang = isAr ? 'ar' : 'en';
         return () => {
-            document.body.style.background = '';
-            document.body.style.color = '';
             document.documentElement.style.overflowY = '';
             document.body.style.overflowY = '';
         };
@@ -130,6 +129,7 @@ const Admin = () => {
     return (
         <div
             className="admin-dashboard"
+            data-theme={theme}
             style={{
                 display: 'grid',
                 /* LTR grid so column 1 is always the left edge and 2 the right edge (rtl on parent mirrors tracks). */
@@ -137,16 +137,16 @@ const Admin = () => {
                 gridTemplateColumns: isAr ? '1fr 300px' : '300px 1fr',
                 height: 'calc(100vh - 73px)',
                 minHeight: 'calc(100vh - 73px)',
-                background: '#0e1117',
-                color: '#fff',
+                background: 'var(--admin-app-bg)',
+                color: 'var(--admin-text-strong)',
                 fontFamily: 'Cairo, sans-serif'
             }}
         >
             <aside
                 style={{
-                    background: '#161b22',
-                    borderRight: isAr ? 'none' : '1px solid #30363d',
-                    borderLeft: isAr ? '1px solid #30363d' : 'none',
+                    background: 'var(--admin-surface)',
+                    borderRight: isAr ? 'none' : '1px solid var(--admin-border)',
+                    borderLeft: isAr ? '1px solid var(--admin-border)' : 'none',
                     padding: '2rem 1.25rem',
                     display: 'flex',
                     flexDirection: 'column',
@@ -177,7 +177,7 @@ const Admin = () => {
                         style={{
                             fontSize: '18px',
                             fontWeight: 700,
-                            color: '#8b949e',
+                            color: 'var(--admin-muted)',
                             margin: 0,
                             textTransform: 'uppercase',
                             letterSpacing: '1px',
@@ -186,23 +186,43 @@ const Admin = () => {
                     >
                         {t('admin.panelTitle')}
                     </h2>
-                    <button
-                        type="button"
-                        onClick={toggleLanguage}
-                        style={{
-                            flexShrink: 0,
-                            background: '#21262d',
-                            border: '1px solid #30363d',
-                            color: '#c9d1d9',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            fontWeight: 600
-                        }}
-                    >
-                        {lang === 'ar' ? 'English' : 'العربية'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        <button
+                            type="button"
+                            onClick={toggleTheme}
+                            title={isLight ? (isAr ? 'الوضع الداكن' : 'Dark mode') : (isAr ? 'الوضع الفاتح' : 'Light mode')}
+                            aria-label={isLight ? (isAr ? 'الوضع الداكن' : 'Dark mode') : (isAr ? 'الوضع الفاتح' : 'Light mode')}
+                            style={{
+                                background: 'var(--admin-hover)',
+                                border: '1px solid var(--admin-border)',
+                                color: 'var(--admin-text-secondary)',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                lineHeight: 1
+                            }}
+                        >
+                            {isLight ? '🌙' : '☀️'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={toggleLanguage}
+                            style={{
+                                background: 'var(--admin-hover)',
+                                border: '1px solid var(--admin-border)',
+                                color: 'var(--admin-text-secondary)',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                            }}
+                        >
+                            {lang === 'ar' ? 'English' : 'العربية'}
+                        </button>
+                    </div>
                 </div>
 
                 {navigationGroups.map((group) => (
@@ -211,7 +231,7 @@ const Admin = () => {
                             <div
                                 style={{
                                     padding: '0.45rem 0.25rem 0.15rem',
-                                    color: '#8b949e',
+                                    color: 'var(--admin-muted)',
                                     fontSize: '0.78rem',
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
@@ -239,7 +259,7 @@ const Admin = () => {
                                     padding: '12px 14px',
                                     paddingInlineStart: group.label ? '12px' : undefined,
                                     background: activeTab === tab.id ? navButtonActiveBackground : 'transparent',
-                                    color: activeTab === tab.id ? '#fff' : '#c9d1d9',
+                                    color: activeTab === tab.id ? 'var(--admin-on-primary)' : 'var(--admin-text-secondary)',
                                     border: 'none',
                                     borderRadius: '8px',
                                     cursor: 'pointer',
@@ -253,15 +273,15 @@ const Admin = () => {
                                 }}
                                 onMouseOver={(event) => {
                                     if (activeTab !== tab.id) {
-                                        event.currentTarget.style.background = '#21262d';
-                                        event.currentTarget.style.color = '#c9d1d9';
+                                        event.currentTarget.style.background = 'var(--admin-hover)';
+                                        event.currentTarget.style.color = 'var(--admin-text-secondary)';
                                         event.currentTarget.style.boxShadow = 'none';
                                     }
                                 }}
                                 onMouseOut={(event) => {
                                     if (activeTab !== tab.id) {
                                         event.currentTarget.style.background = 'transparent';
-                                        event.currentTarget.style.color = '#c9d1d9';
+                                        event.currentTarget.style.color = 'var(--admin-text-secondary)';
                                         event.currentTarget.style.boxShadow = 'none';
                                     }
                                 }}
@@ -322,12 +342,12 @@ const Admin = () => {
                 <div
                     dir={isAr ? 'rtl' : 'ltr'}
                     style={{
-                        background: '#161b22',
-                        border: '1px solid #30363d',
+                        background: 'var(--admin-surface)',
+                        border: '1px solid var(--admin-border)',
                         borderRadius: '10px',
                         padding: '2rem',
                         minHeight: '100%',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        boxShadow: 'var(--admin-shadow)',
                         textAlign: isAr ? 'right' : 'left'
                     }}
                 >
@@ -337,7 +357,7 @@ const Admin = () => {
                             fontWeight: 700,
                             marginBottom: '2rem',
                             paddingBottom: '1rem',
-                            borderBottom: '1px solid #30363d',
+                            borderBottom: '1px solid var(--admin-border)',
                             textAlign: isAr ? 'right' : 'left'
                         }}
                     >
@@ -360,5 +380,11 @@ const Admin = () => {
         </div>
     );
 };
+
+const Admin = () => (
+    <AdminThemeProvider>
+        <AdminDashboard />
+    </AdminThemeProvider>
+);
 
 export default Admin;
