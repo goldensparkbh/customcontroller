@@ -258,6 +258,16 @@
         return (i18n[currentLang] && i18n[currentLang][key]) || key;
     }
 
+    function formatEzMoney(bhdAmount) {
+        const n = Number(bhdAmount);
+        const safe = Number.isFinite(n) ? n : 0;
+        if (window.__EZ_CURRENCY__ && typeof window.__EZ_CURRENCY__.format === "function") {
+            return window.__EZ_CURRENCY__.format(safe);
+        }
+        const lc = i18n[currentLang] || i18n.ar || i18n.en || {};
+        return (lc.currencyPrefix || "BHD ") + safe.toFixed(2);
+    }
+
     const BASE_WIDTH = 1166;
     const BASE_HEIGHT = 768;
 
@@ -1722,9 +1732,12 @@
             if (shouldShowPriceInside || shouldShowStockInside) {
                 const priceLabel = document.createElement("span");
                 priceLabel.className = isOutOfStock ? "swatch-price is-out-of-stock" : "swatch-price";
+                if (!isOutOfStock && entry.price != null) {
+                    priceLabel.setAttribute("data-bhd-price", String(entry.price));
+                }
                 priceLabel.textContent = isOutOfStock ?
                     (t("outOfStock") || "Out of Stock") :
-                    ((i18n[currentLang] || i18n.ar || i18n.en || {}).currencyPrefix || "BHD ") + entry.price;
+                    formatEzMoney(entry.price);
                 swatch.appendChild(priceLabel);
             }
 
@@ -1751,9 +1764,12 @@
                     if (entry.price != null || isOutOfStock) {
                         const price = document.createElement("div");
                         price.className = isOutOfStock ? "cd-gamemode-price is-out-of-stock" : "cd-gamemode-price";
+                        if (!isOutOfStock && entry.price != null) {
+                            price.setAttribute("data-bhd-price", String(entry.price));
+                        }
                         price.textContent = isOutOfStock ?
                             (t("outOfStock") || "Out of Stock") :
-                            (Number(entry.price).toFixed(2) + " " + String((i18n[currentLang] || i18n.ar || i18n.en || {}).currencyPrefix || "").trim());
+                            formatEzMoney(entry.price);
                         label.appendChild(price);
                     }
                 } else {
@@ -2057,12 +2073,22 @@
             total += (selectedOptionPriceByPart[p.id] || 0);
         });
 
-        const lc = i18n[currentLang] || i18n.ar || i18n.en || {};
-        const formatted = (lc.currencyPrefix || "BHD ") + total.toFixed(2);
+        const formatted = formatEzMoney(total);
         if (summaryAmountEl) summaryAmountEl.textContent = formatted;
         const alt = document.getElementById("summaryAmountAlt");
         if (alt) alt.textContent = formatted;
     }
+
+    function refreshEzCurrencyLabels() {
+        document.querySelectorAll("[data-bhd-price]").forEach((el) => {
+            const raw = el.getAttribute("data-bhd-price");
+            if (raw == null || raw === "") return;
+            el.textContent = formatEzMoney(Number(raw));
+        });
+        updateSummary();
+    }
+
+    window.addEventListener("ez-currency-change", refreshEzCurrencyLabels);
 
     function getActiveFaceElement() {
         return currentSide === "back" ? faceBackEl : faceFrontEl;

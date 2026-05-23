@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n';
 import { adminMe } from '../services/backendApi.js';
+import CurrencySelect from './CurrencySelect.jsx';
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -50,6 +51,7 @@ const Navbar = () => {
         const newLang = lang === 'ar' ? 'en' : 'ar';
         setLang(newLang);
         localStorage.setItem('ez_lang', newLang);
+        window.dispatchEvent(new CustomEvent('ez-lang-change', { detail: { lang: newLang } }));
 
         // Hard refresh to reload configurator scripts if on configurator page
         if (window.location.pathname === '/configurator') {
@@ -80,6 +82,7 @@ const Navbar = () => {
 
             {/* Right: Language Toggle only */}
             <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <CurrencySelect />
                 {isAdminAuthenticated && (
                     <button
                         onClick={() => navigate('/pos')}

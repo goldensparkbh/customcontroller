@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { INLINE_FORMAT_MONEY_FN } from '../lib/formatMoney.js';
 
 const summaryMarkup = `
 <canvas id="bgCanvas"></canvas>
@@ -21,6 +22,8 @@ const summaryMarkup = `
 `;
 
 const summaryScript = `
+${INLINE_FORMAT_MONEY_FN}
+
   function getLineItemTotal(item) {
     const qty = item.quantity || 1;
     const unit = item.unitPrice != null ? item.unitPrice : (item.total != null ? item.total : 0);
@@ -147,17 +150,19 @@ const summaryScript = `
     const list = document.createElement("ul");
     cart.forEach((item) => {
       const li = document.createElement("li");
+      const lineBhd = getLineItemTotal(item);
+      li.setAttribute("data-bhd-price", String(lineBhd));
       li.textContent =
         (item.name || t("orderItemFallback")) +
         " x " +
         (item.quantity || 1) +
         " - " +
-        (draft.currencyPrefix || "BHD ") +
-        getLineItemTotal(item).toFixed(2);
+        formatEzMoney(lineBhd);
       list.appendChild(li);
     });
     itemsEl.appendChild(list);
-    totalsEl.textContent = t("orderTotalLabel") + " " + (draft.currencyPrefix || "BHD ") + total.toFixed(2);
+    totalsEl.setAttribute("data-bhd-price", String(total));
+    totalsEl.textContent = t("orderTotalLabel") + " " + formatEzMoney(total);
   }
 `;
 

@@ -1,14 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 function HomePage() {
   const navigate = useNavigate();
+  const { formatFromBhd } = useCurrency();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
 
   const goToConfigurator = () => {
     navigate('/configurator');
   };
+
+  useEffect(() => {
+    const onLang = () => setLang(localStorage.getItem('ez_lang') || 'ar');
+    window.addEventListener('ez-lang-change', onLang);
+    return () => window.removeEventListener('ez-lang-change', onLang);
+  }, []);
+
+  useEffect(() => {
+    const heroNote = document.querySelector('[data-hero-price-bhd]');
+    if (!heroNote) return;
+    const fromPrice = formatFromBhd(4);
+    heroNote.innerHTML =
+      lang === 'ar'
+        ? `الأسعار تبدأ من <strong>${fromPrice}</strong>. بدون اشتراك — منتجات مخصصة بالكامل.`
+        : `Prices start from <strong>${fromPrice}</strong>. No subscription — just fully custom gear.`;
+  }, [formatFromBhd, lang]);
 
   useEffect(() => {
     document.body.classList.add('home-page-active');
@@ -109,6 +128,7 @@ function HomePage() {
           <div>
             <h1 className="hero-title" data-i18n-html="heroTitle"></h1>
             <p className="hero-sub" data-i18n="heroSub"></p>
+            <p className="hero-note" data-hero-price-bhd style={{ marginTop: '0.75rem', opacity: 0.9 }} />
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
             </div>

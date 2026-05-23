@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { i18n } from '../i18n.js';
 import { LoadingInline } from '../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const arabCountries = ["BH", "SA", "AE", "KW", "OM", "QA", "EG", "JO"];
 
@@ -84,7 +85,8 @@ function getOrCreateAbandonSessionId() {
 
 const CheckoutPage = () => {
   const formRef = useRef(null);
-  const [lang, setLang] = useState('ar');
+  const { formatFromBhd, chargeNote } = useCurrency();
+  const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [cartItems, setCartItems] = useState([]);
   const [abandonSessionId] = useState(() => getOrCreateAbandonSessionId());
   const [discountInput, setDiscountInput] = useState('');
@@ -113,6 +115,12 @@ const CheckoutPage = () => {
   });
 
   const [loadingAction, setLoadingAction] = useState('');
+
+  useEffect(() => {
+    const onLang = () => setLang(localStorage.getItem('ez_lang') || 'ar');
+    window.addEventListener('ez-lang-change', onLang);
+    return () => window.removeEventListener('ez-lang-change', onLang);
+  }, []);
 
   useEffect(() => {
     document.body.classList.add('checkout-page-active');
@@ -163,10 +171,34 @@ const CheckoutPage = () => {
     setAppliedDiscount(null);
     setDiscountMessage('');
   }, [cartFingerprint, formData.shippingType, formData.country]);
-  const shippingOptions = [
-    { value: 'delivery', label: t('shippingBahrainDelivery') || 'توصيل - خلال 6-7 أيام عمل (2 د.ب)' },
-    { value: 'pickup', label: t('shippingBahrainPickup') || 'استلام من المتجر (مجاني)' }
-  ];
+  const shippingOptions = useMemo(() => {
+    const deliveryFee = formatFromBhd(2);
+    const intlPerPair = formatFromBhd(5);
+    if (isBahrain) {
+      return [
+        {
+          value: 'delivery',
+          label:
+            lang === 'ar'
+              ? `توصيل - خلال 6-7 أيام عمل (${deliveryFee})`
+              : `Delivery - 6-7 business days (${deliveryFee})`
+        },
+        {
+          value: 'pickup',
+          label: t('shippingBahrainPickup') || (lang === 'ar' ? 'استلام من المتجر (مجاني)' : 'Store pickup (Free)')
+        }
+      ];
+    }
+    return [
+      {
+        value: 'delivery',
+        label:
+          lang === 'ar'
+            ? `شحن دولي (${intlPerPair} لكل زوج)`
+            : `International shipping (${intlPerPair} per pair)`
+      }
+    ];
+  }, [formatFromBhd, isBahrain, lang, t]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -515,7 +547,7 @@ const CheckoutPage = () => {
                     <PreviewStack layers={item.previewFrontLayers} fallbackSrc={item.previewFront || "/assets/controller.png"} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                       <span>{item.name} x {item.quantity || 1}</span>
-                      <span>{((item.unitPrice || item.total || 0) * (item.quantity || 1)).toFixed(2)} BHD</span>
+                      <span>{formatFromBhd((item.unitPrice || item.total || 0) * (item.quantity || 1))}</span>
                     </div>
                     <ItemCustomizationSummary item={item} lang={lang} compact />
                   </div>
@@ -529,17 +561,17 @@ const CheckoutPage = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#ccc' }}>
               <span>{t('subtotalLabel')}:</span>
-              <span>{subtotal.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+              <span>{formatFromBhd(subtotal)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#ccc' }}>
               <span>{t('shippingLabel')}:</span>
-              <span>{shippingCost.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+              <span>{formatFromBhd(shippingCost)}</span>
             </div>
 
             {discountAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#4ade80' }}>
                 <span>{t('discountLabel') || 'Discount'}:</span>
-                <span>-{discountAmount.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+                <span>-{formatFromBhd(discountAmount)}</span>
               </div>
             )}
 
@@ -584,8 +616,11 @@ const CheckoutPage = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', color: '#4ade80' }}>
               <span>{t('totalDueLabel')}:</span>
-              <span>{totalDue.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+              <span>{formatFromBhd(totalDue)}</span>
             </div>
+            {chargeNote ? (
+              <p style={{ marginTop: '0.75rem', fontSize: '0.82rem', color: '#8b949e', lineHeight: 1.5 }}>{chargeNote}</p>
+            ) : null}
           </div>
         </div>
 

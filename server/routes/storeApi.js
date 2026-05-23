@@ -5,6 +5,8 @@ const express = require("express");
 const dao = require("../lib/documentsDao");
 const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
 const { getMaintenanceStatus } = require("../lib/maintenanceMode.cjs");
+const { getExchangeRates } = require("../lib/exchangeRates.cjs");
+const { suggestCurrencyForRequest } = require("../lib/geoCurrency.cjs");
 
 module.exports = function createStoreApi(pool) {
   const r = express.Router();
@@ -15,6 +17,26 @@ module.exports = function createStoreApi(pool) {
       res.json(status);
     } catch (err) {
       console.error("[site status]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
+
+  r.get("/exchange-rates", async (_req, res) => {
+    try {
+      const payload = await getExchangeRates();
+      res.json(payload);
+    } catch (err) {
+      console.error("[exchange-rates]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
+
+  r.get("/geo/currency", async (req, res) => {
+    try {
+      const hint = await suggestCurrencyForRequest(req);
+      res.json(hint);
+    } catch (err) {
+      console.error("[geo currency]", err);
       res.status(500).json({ error: String(err.message || err) });
     }
   });

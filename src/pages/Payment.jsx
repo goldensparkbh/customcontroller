@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { i18n } from '../i18n';
 import LoadingState, { LoadingInline } from '../components/LoadingState.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 async function parseJsonSafe(response) {
   const text = await response.text();
@@ -43,6 +44,7 @@ function normalizeOrderDraft(draft) {
 const getTapPublicKey = () => String(import.meta.env.VITE_TAP_PUBLIC_KEY || '').trim();
 
 function PaymentPage() {
+  const { formatFromBhd, chargeNote } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [orderDraft, setOrderDraft] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState("");
@@ -167,12 +169,13 @@ function PaymentPage() {
         <div id="paymentDetails" style={{ margin: "20px 0", fontSize: "1.1rem", fontWeight: "bold" }}>
           {orderDraft && (
             <>
-              {t("totalLabel") || "Total"}: {orderDraft.currencyPrefix || "BHD"} {
-                getOrderTotals(orderDraft).total.toFixed(2)
-              }
+              {t("totalLabel") || "Total"}: {formatFromBhd(getOrderTotals(orderDraft).total)}
             </>
           )}
         </div>
+        {chargeNote ? (
+          <p style={{ margin: "0 0 12px", fontSize: "0.85rem", color: "#8b949e", lineHeight: 1.5 }}>{chargeNote}</p>
+        ) : null}
 
         <button
           className="place-order-btn"

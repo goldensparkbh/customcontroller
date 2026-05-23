@@ -27,6 +27,8 @@ function isExemptPath(urlPath) {
   if (urlPath === "/health") return true;
   if (urlPath.startsWith("/admin-api")) return true;
   if (urlPath === "/store-api/site/status") return true;
+  if (urlPath === "/store-api/exchange-rates") return true;
+  if (urlPath === "/store-api/geo/currency") return true;
   return false;
 }
 

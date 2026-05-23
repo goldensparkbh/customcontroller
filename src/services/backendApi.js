@@ -92,6 +92,18 @@ export async function fetchSiteStatus() {
   return res.json();
 }
 
+export async function fetchExchangeRates() {
+  const res = await fetch("/store-api/exchange-rates");
+  if (!res.ok) throw new Error(await readError(res));
+  return res.json();
+}
+
+export async function fetchGeoCurrency() {
+  const res = await fetch("/store-api/geo/currency");
+  if (!res.ok) throw new Error(await readError(res));
+  return res.json();
+}
+
 export async function fetchPosCatalog() {
   const res = await fetch("/store-api/pos/catalog");
   if (!res.ok) throw new Error(await readError(res));

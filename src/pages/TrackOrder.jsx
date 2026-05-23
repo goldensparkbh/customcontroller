@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { INLINE_FORMAT_MONEY_FN } from '../lib/formatMoney.js';
 
 const trackMarkup = `
   <canvas id="bgCanvas"></canvas>
@@ -181,6 +182,8 @@ const trackMarkup = `
 `;
 
 const trackScript = `
+${INLINE_FORMAT_MONEY_FN}
+
 let navLang = localStorage.getItem("ez_lang") || "ar";
 const i18n = window.__EZ_I18N__ || {};
 const navLangToggle = document.getElementById("langToggle");
@@ -370,8 +373,8 @@ async function load() {
     const order = payload.order || {};
     const orderNumber = order.orderNumber ? "#" + String(order.orderNumber).padStart(6, "0") : String(order.id || orderId);
     const status = normalizeOrderStatus(order.status, order.paymentStatus);
-    const currency = order.currency || "BHD";
-    const totalText = Number.isFinite(Number(order.total)) ? (currency + " " + Number(order.total).toFixed(2)) : "";
+    const totalBhd = Number(order.total);
+    const totalText = Number.isFinite(totalBhd) ? formatEzMoney(totalBhd) : "";
 
     const details = [
       { label: t("trackOrderIdLabel"), value: orderNumber },
@@ -421,7 +424,12 @@ async function load() {
         const price = document.createElement("div");
         price.className = "item-price";
         const lineTotal = getLineTotal(li);
-        price.textContent = Number.isFinite(lineTotal) ? (currency + " " + lineTotal.toFixed(2)) : "";
+        if (Number.isFinite(lineTotal)) {
+          price.setAttribute("data-bhd-price", String(lineTotal));
+          price.textContent = formatEzMoney(lineTotal);
+        } else {
+          price.textContent = "";
+        }
         row.appendChild(name);
         row.appendChild(qty);
         row.appendChild(price);

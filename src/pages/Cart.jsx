@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
 import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const PreviewStack = ({ layers, fallbackSrc, alt }) => (
   <div className="cart-preview-stack" style={{ position: 'relative', aspectRatio: '1.5', background: '#11141b', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -54,11 +55,18 @@ const collectPreviewUrls = (item) => {
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const [lang, setLang] = useState('ar');
+  const { formatFromBhd, chargeNote } = useCurrency();
+  const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [cartItems, setCartItems] = useState([]);
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
   const [paymentBanner, setPaymentBanner] = useState('');
   const previewSignatureRef = useRef('');
+
+  useEffect(() => {
+    const onLang = () => setLang(localStorage.getItem('ez_lang') || 'ar');
+    window.addEventListener('ez-lang-change', onLang);
+    return () => window.removeEventListener('ez-lang-change', onLang);
+  }, []);
 
   useEffect(() => {
     try {
@@ -316,7 +324,7 @@ const CartPage = () => {
               <div className="cart-item-details" style={{ flex: 1 }}>
                 <h3 style={{ margin: '0 0 0.5rem 0' }}>{item.name}</h3>
                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4ade80', marginBottom: '1rem' }}>
-                  {(item.unitPrice || item.total || 0).toFixed(2)} BHD
+                  {formatFromBhd(item.unitPrice || item.total || 0)}
                 </div>
 
                 <ItemCustomizationSummary item={item} lang={lang} />
@@ -348,15 +356,19 @@ const CartPage = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span>{t('subtotalLabel')}:</span>
-              <span>{totals.sum.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+              <span>{formatFromBhd(totals.sum)}</span>
             </div>
 
             <hr style={{ borderColor: '#333', margin: '1rem 0' }} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               <span>{t('totalLabelBold')}:</span>
-              <span>{totals.sum.toFixed(2)} {t('currencyPrefix') || 'BHD'}</span>
+              <span>{formatFromBhd(totals.sum)}</span>
             </div>
+
+            {chargeNote ? (
+              <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: '#8b949e', lineHeight: 1.5 }}>{chargeNote}</p>
+            ) : null}
 
             <button
               onClick={() => navigate('/checkout')}
