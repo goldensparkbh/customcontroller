@@ -697,8 +697,8 @@
             restorePersistedSelections();
             buildPartsList();
 
-            // Always select the first part on initial load as per user requirement.
-            const initialPartId = getFirstShownPartId();
+            // Default to front shell on initial load when available.
+            const initialPartId = getDefaultInitialPartId();
             if (initialPartId) {
                 selectPart(initialPartId, { silent: true });
             } else {
@@ -1226,6 +1226,17 @@
         updateVisualizerLayers();
         updateSummary();
         saveConfigToStorage();
+    }
+
+    const DEFAULT_INITIAL_PART_ID = "shell";
+
+    function getDefaultInitialPartId() {
+        const shellPart = ALL_PARTS.find(
+            (part) => part.id === DEFAULT_INITIAL_PART_ID && !part.hiddenUI && availablePartsSet.has(part.id)
+        );
+        if (shellPart) return shellPart.id;
+
+        return getFirstShownPartId();
     }
 
     function getFirstShownPartId() {
