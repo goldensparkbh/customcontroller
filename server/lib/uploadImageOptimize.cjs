@@ -11,10 +11,11 @@ const RASTER_MIME = new Set([
   "image/avif"
 ]);
 
-/** Longest edge caps — icons are tiny in UI; overlays need detail but not 8K sources. */
+/** Longest edge caps — icons are tiny in UI; overlays need alpha PNG as-is. */
 const PROFILES = {
   configurator_icon: { maxEdge: 360, quality: 80 },
-  configurator_overlay: { maxEdge: 1536, quality: 84 },
+  // Overlays are composited in the configurator; keep original PNG (no webp resize).
+  configurator_overlay: { preserveOriginal: true },
   default: { maxEdge: 2048, quality: 85 }
 };
 
@@ -42,6 +43,10 @@ async function maybeOptimizeRasterUpload(buffer, mime, profile) {
   }
 
   const spec = PROFILES[profile] || PROFILES.default;
+
+  if (spec.preserveOriginal) {
+    return null;
+  }
 
   try {
     const pipeline = sharp(buffer, { failOn: "none", animated: false }).rotate();
