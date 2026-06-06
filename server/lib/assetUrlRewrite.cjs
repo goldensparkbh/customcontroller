@@ -1,11 +1,17 @@
 "use strict";
 
+const { buildSpacesPublicUrl, normalizeSpacesPublicUrl } = require("./spacesPublicUrl.cjs");
+
 /**
  * Rewrite legacy Firebase Storage download URLs embedded in migrated JSON documents
  * to DigitalOcean Spaces (or any S3 public base) URLs.
  *
  * Migrate script uploads with Key = `{DO_SPACES_KEY_PREFIX}/{firebaseObjectName}` — use
  * the same prefix here (often `migrated`).
+ *
+ * Also normalizes wrong origin Spaces URLs to CDN form:
+ *   https://bucket.region.digitaloceanspaces.com/key
+ *   -> https://bucket.region.cdn.digitaloceanspaces.com/bucket/key
  *
  * Env:
  *   DO_SPACES_PUBLIC_BASE_URL  — required to enable (e.g. https://bucket.fra1.digitaloceanspaces.com)
@@ -32,9 +38,8 @@ function extractFirebaseStorageObjectPath(urlString) {
 }
 
 function buildSpacesPublicObjectUrl(publicBaseUrl, migratedPrefixSegments, firebaseObjectPath) {
-  const base = String(publicBaseUrl || "").trim().replace(/\/+$/u, "");
   const objectPath = String(firebaseObjectPath || "").replace(/^\/+/u, "");
-  if (!base || !objectPath) return null;
+  if (!objectPath) return null;
 
   const prefixParts = migratedPrefixSegments
     .trim()
@@ -42,22 +47,33 @@ function buildSpacesPublicObjectUrl(publicBaseUrl, migratedPrefixSegments, fireb
     .split("/")
     .filter(Boolean);
   const objectParts = objectPath.split("/").filter(Boolean);
+  const key = [...prefixParts, ...objectParts].join("/");
 
-  const encodedPath = [...prefixParts, ...objectParts].map((seg) => encodeURIComponent(seg)).join("/");
-  return `${base}/${encodedPath}`;
+  return buildSpacesPublicUrl(key, {
+    ...process.env,
+    DO_SPACES_PUBLIC_BASE_URL: String(publicBaseUrl || process.env.DO_SPACES_PUBLIC_BASE_URL || "").trim()
+  });
 }
 
 function rewriteFirebaseUrlsInString(urlString, config) {
   if (!urlString || typeof urlString !== "string") return urlString;
 
+  const trimmed = urlString.trim();
+
   /*
    * Some fields join multiple URLs; split not supported — rewrite whole string only if it parses as firebase URL.
    */
-  const objectPath = extractFirebaseStorageObjectPath(urlString.trim());
-  if (!objectPath) return urlString;
+  const objectPath = extractFirebaseStorageObjectPath(trimmed);
+  if (objectPath) {
+    const next = buildSpacesPublicObjectUrl(config.publicBase, config.migratedPrefix, objectPath);
+    return next || urlString;
+  }
 
-  const next = buildSpacesPublicObjectUrl(config.publicBase, config.migratedPrefix, objectPath);
-  return next || urlString;
+  if (trimmed.includes("digitaloceanspaces.com")) {
+    return normalizeSpacesPublicUrl(trimmed, process.env);
+  }
+
+  return urlString;
 }
 
 function rewriteFirebaseMediaDeep(value, config) {

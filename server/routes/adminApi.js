@@ -12,6 +12,7 @@ const hooks = require("../lib/orderInventoryHooks");
 const { rewriteFirebaseMediaUrlsIfConfigured } = require("../lib/assetUrlRewrite.cjs");
 const { invalidateMaintenanceCache } = require("../lib/maintenanceMode.cjs");
 const { maybeOptimizeRasterUpload } = require("../lib/uploadImageOptimize.cjs");
+const { buildSpacesPublicUrl } = require("../lib/spacesPublicUrl.cjs");
 
 module.exports = function createAdminApi(pool, handlers) {
   const r = express.Router();
@@ -287,7 +288,6 @@ module.exports = function createAdminApi(pool, handlers) {
       const keyId = String(process.env.DO_SPACES_KEY || "").trim();
       const secret = String(process.env.DO_SPACES_SECRET || "").trim();
       const Bucket = String(process.env.DO_SPACES_BUCKET || "").trim();
-      const publicBase = String(process.env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
 
       if (!endpoint || !keyId || !secret || !Bucket) {
         return res.status(503).json({
@@ -354,12 +354,7 @@ module.exports = function createAdminApi(pool, handlers) {
 
       await s3.send(new PutObjectCommand(putParams));
 
-      /*
-       * Canonical public URL variants
-       */
-      const urlPub =
-        String(publicBase).replace(/\/+$/, "") ? `${String(publicBase).replace(/\/+$/, "")}/${Key}` :
-        `${endpoint.replace(/\/+$/, "")}/${Bucket}/${Key}`;
+      const urlPub = buildSpacesPublicUrl(Key, process.env);
 
       res.json({ url: urlPub, Key });
     } catch (err) {
