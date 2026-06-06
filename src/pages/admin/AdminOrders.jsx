@@ -1021,24 +1021,9 @@ const AdminOrders = ({ lang = 'ar' }) => {
                 </div>
             )}
 
-            <section style={sectionCardStyle}>
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'stretch',
-                        borderBottom: '1px solid var(--admin-border)',
-                        background: 'var(--admin-raised)'
-                    }}
-                >
-                    <div
-                        style={{
-                            flex: `0 0 ${CHECKBOX_COL_WIDTH}`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '0.5rem'
-                        }}
-                    >
+            <section className="admin-oracle-list">
+                <div className="admin-oracle-list__header-row">
+                    <div className="admin-oracle-list__checkbox-col">
                         <input
                             ref={selectAllCheckboxRef}
                             type="checkbox"
@@ -1050,16 +1035,10 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         />
                     </div>
                     <div
+                        className="admin-oracle-list__header-grid"
                         style={{
-                            flex: 1,
-                            display: 'grid',
                             gridTemplateColumns: LIST_COLUMNS,
-                            gap: '0.75rem',
-                            padding: '0.85rem 1rem',
-                            fontSize: '0.72rem',
-                            color: 'var(--admin-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em'
+                            textAlign: adminAlign(isAr)
                         }}
                     >
                         <div style={listCellStyle}>{isAr ? "الطلب" : "Order"}</div>
@@ -1071,26 +1050,16 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid' }}>
+                <div className="admin-oracle-list__body" style={{ display: 'grid' }}>
                     {filteredOrders.map((order) => {
                         const isSelected = detailOpen && order.id === selectedOrderId;
                         return (
                             <div
                                 key={order.id}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'stretch',
-                                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                                    background: isSelected ? '#1f2937' : 'transparent'
-                                }}
+                                className={`admin-oracle-list__body-row${isSelected ? ' admin-oracle-list__body-row--selected' : ''}`}
                             >
                                 <div
-                                    style={{
-                                        flex: `0 0 ${CHECKBOX_COL_WIDTH}`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
+                                    className="admin-oracle-list__checkbox-col"
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={(e) => e.stopPropagation()}
                                 >
@@ -1107,18 +1076,12 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                     type="button"
                                     onClick={() => openOrderDetails(order.id)}
                                     disabled={deletingOrders}
+                                    className="admin-oracle-list__row-btn"
                                     style={{
                                         flex: 1,
-                                        display: 'grid',
                                         gridTemplateColumns: LIST_COLUMNS,
-                                        gap: '0.75rem',
-                                        padding: '1rem',
-                                        border: 'none',
-                                        background: 'transparent',
-                                        color: 'var(--admin-text)',
                                         textAlign: adminAlign(isAr),
-                                        cursor: deletingOrders ? 'not-allowed' : 'pointer',
-                                        opacity: deletingOrders ? 0.65 : 1
+                                        borderTop: 'none'
                                     }}
                                 >
                                     <div style={listCellStyle}>

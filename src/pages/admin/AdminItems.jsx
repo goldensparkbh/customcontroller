@@ -321,19 +321,12 @@ const AdminItems = ({ lang = 'ar' }) => {
                 </button>
             </div>
 
-            <section style={panelStyle}>
+            <section className="admin-oracle-list">
                 <div
+                    className="admin-oracle-list__header-grid"
                     style={{
-                        display: 'grid',
                         gridTemplateColumns: LIST_COLUMNS,
-                        gap: '0.75rem',
-                        padding: '0.85rem 1rem',
-                        background: 'var(--admin-raised)',
-                        borderBottom: '1px solid var(--admin-border)',
-                        fontSize: '0.72rem',
-                        color: 'var(--admin-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em'
+                        textAlign: adminAlign(isAr)
                     }}
                 >
                     <div style={listCellStyle}>{isAr ? "المنتج" : "Item"}</div>
@@ -344,7 +337,7 @@ const AdminItems = ({ lang = 'ar' }) => {
                     <div style={listCellStyle}>{isAr ? "الحالة" : "Visibility"}</div>
                 </div>
 
-                <div style={{ display: 'grid' }}>
+                <div className="admin-oracle-list__body" style={{ display: 'grid' }}>
                     {items.map((item) => {
                         const isSelected = detailOpen && item.id === selectedItemId;
                         return (
@@ -352,17 +345,10 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 key={item.id}
                                 type="button"
                                 onClick={() => openDetailModal(item.id)}
+                                className={`admin-oracle-list__row-btn${isSelected ? ' admin-oracle-list__row-btn--selected' : ''}`}
                                 style={{
-                                    display: 'grid',
                                     gridTemplateColumns: LIST_COLUMNS,
-                                    gap: '0.75rem',
-                                    padding: '1rem',
-                                    border: 'none',
-                                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                                    background: isSelected ? '#1f2937' : 'transparent',
-                                    color: 'var(--admin-text)',
-                                    textAlign: adminAlign(isAr),
-                                    cursor: 'pointer'
+                                    textAlign: adminAlign(isAr)
                                 }}
                             >
                                 <div style={{ ...listCellStyle, display: 'flex', gap: '0.75rem' }}>

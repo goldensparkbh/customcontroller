@@ -330,43 +330,29 @@ const AdminDashboard = () => {
 
             <main
                 style={{
-                    padding: '2rem',
+                    padding: '1.5rem 1.75rem',
                     overflowY: 'auto',
                     minHeight: 0,
                     maxHeight: 'calc(100vh - 73px)',
                     WebkitOverflowScrolling: 'touch',
-                    /* Arabic: wide column on the left of the viewport; English: wide column on the right */
                     gridColumn: isAr ? 1 : 2,
                     gridRow: 1
                 }}
             >
                 <div
                     dir={isAr ? 'rtl' : 'ltr'}
-                    style={{
-                        background: 'var(--admin-surface)',
-                        border: '1px solid var(--admin-border)',
-                        borderRadius: '10px',
-                        padding: '2rem',
-                        minHeight: '100%',
-                        boxShadow: 'var(--admin-shadow)',
-                        textAlign: isAr ? 'right' : 'left'
-                    }}
+                    className="admin-main-content"
+                    style={{ textAlign: isAr ? 'right' : 'left' }}
                 >
-                    <h1
-                        style={{
-                            fontSize: '24px',
-                            fontWeight: 700,
-                            marginBottom: '2rem',
-                            paddingBottom: '1rem',
-                            borderBottom: '1px solid var(--admin-border)',
-                            textAlign: isAr ? 'right' : 'left'
-                        }}
-                    >
+                    <h1 className="admin-page-title">
                         {navigationGroups.flatMap(g => g.items).find((tab) => tab.id === activeTab)?.label}
                     </h1>
 
-                    <AdminStockAlerts lang={lang} />
+                    <div className="admin-stock-alert">
+                        <AdminStockAlerts lang={lang} />
+                    </div>
 
+                    <div className="admin-page-shell">
                     {activeTab === 'orders' && <AdminOrders lang={lang} />}
                     {activeTab === 'invoices' && <AdminInvoices lang={lang} />}
                     {activeTab === 'payments' && <AdminPayments lang={lang} />}
@@ -378,6 +364,7 @@ const AdminDashboard = () => {
                     {activeTab === 'discountCodes' && <AdminDiscountCodes lang={lang} />}
                     {activeTab === 'translations' && <AdminTranslations lang={lang} />}
                     {activeTab === 'settings' && <AdminSettings lang={lang} />}
+                    </div>
                 </div>
             </main>
         </div>

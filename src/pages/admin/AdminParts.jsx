@@ -748,19 +748,11 @@ const AdminParts = ({ lang = 'ar' }) => {
                     ))}
                 </div>
             ) : (
-                <div style={{ background: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: '10px', overflow: 'hidden' }}>
+                <div className="admin-oracle-list">
                     <div
+                        className="admin-oracle-list__header-grid"
                         style={{
-                            display: 'grid',
                             gridTemplateColumns: '0.8fr 1.4fr 0.7fr 0.7fr 1.1fr 0.9fr',
-                            gap: '0.75rem',
-                            padding: '0.85rem 1rem',
-                            background: 'var(--admin-raised)',
-                            borderBottom: '1px solid var(--admin-border)',
-                            fontSize: '0.72rem',
-                            color: 'var(--admin-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em',
                             textAlign: adminAlign(isAr)
                         }}
                     >
@@ -772,22 +764,23 @@ const AdminParts = ({ lang = 'ar' }) => {
                         <div>{isAr ? 'إجراءات' : 'Actions'}</div>
                     </div>
 
-                    <div style={{ display: 'grid' }}>
+                    <div className="admin-oracle-list__body" style={{ display: 'grid' }}>
                         {parts.map((p) => (
                             <div
                                 key={p.id}
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => handleOpenPartDetails(p)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        handleOpenPartDetails(p);
+                                    }
+                                }}
+                                className="admin-oracle-list__row"
                                 style={{
-                                    display: 'grid',
                                     gridTemplateColumns: '0.8fr 1.4fr 0.7fr 0.7fr 1.1fr 0.9fr',
-                                    gap: '0.75rem',
-                                    padding: '1rem',
-                                    border: 'none',
-                                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                                    background: 'transparent',
-                                    color: 'var(--admin-text)',
-                                    textAlign: adminAlign(isAr),
-                                    cursor: 'pointer'
+                                    textAlign: adminAlign(isAr)
                                 }}
                             >
                                 <div>

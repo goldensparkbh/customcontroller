@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { adminDeleteDoc, adminListDocs, adminPatchDoc, adminPutDocData } from '../../services/backendApi.js';
 import LoadingState from '../../components/LoadingState.jsx';
 import { i18n } from '../../i18n';
+import AdminPanel from './components/AdminPanel.jsx';
+import AdminTable, { AdminTableRow } from './components/AdminTable.jsx';
 import { adminAlign } from './adminUi.js';
 
 const fieldStyle = {
@@ -485,83 +487,58 @@ const AdminDiscountCodes = ({ lang = 'ar' }) => {
         </div>
       )}
 
-      <div style={sectionStyle}>
-        <div style={{ fontWeight: 700 }}>{t('admin.discounts.list')}</div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-            <thead>
-              <tr style={{ textAlign: adminAlign(isAr), color: 'var(--admin-muted)' }}>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.code')}</th>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.active')}</th>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.type')}</th>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.value')}</th>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.used')}</th>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.left')}</th>
-                <th style={{ padding: '0.5rem' }}>{t('admin.discounts.validity')}</th>
-                <th style={{ padding: '0.5rem' }} />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ padding: '1rem', color: 'var(--admin-muted)' }}>
-                    {t('admin.discounts.empty')}
-                  </td>
-                </tr>
-              )}
-              {rows.map((row) => {
-                const d = getCodeDerived(row);
-                const leftDisplay =
-                  d.remaining == null ? (
-                    <span style={{ color: 'var(--admin-muted)' }}>{t('admin.discounts.unlimited')}</span>
-                  ) : (
-                    <span style={{ color: d.remaining === 0 ? '#f85149' : 'var(--admin-text)', fontWeight: d.remaining === 0 ? 700 : 400 }}>
-                      {d.remaining}
-                      {d.hasCap ? ` / ${d.maxUses}` : ''}
-                    </span>
-                  );
-                const dateExpired = d.timeStatus === 'expired';
-                const notUsable = dateExpired || d.exhausted || row.active === false;
+      <AdminPanel className="admin-panel--padded">
+        <div style={{ fontWeight: 700, marginBottom: '0.85rem' }}>{t('admin.discounts.list')}</div>
+        <AdminTable
+          lang={lang}
+          columns={[
+            { key: 'code', label: t('admin.discounts.code') },
+            { key: 'active', label: t('admin.discounts.active'), align: 'center' },
+            { key: 'type', label: t('admin.discounts.type') },
+            { key: 'value', label: t('admin.discounts.value'), numeric: true },
+            { key: 'used', label: t('admin.discounts.used'), numeric: true },
+            { key: 'left', label: t('admin.discounts.left'), numeric: true },
+            { key: 'validity', label: t('admin.discounts.validity') },
+            { key: 'actions', label: '' }
+          ]}
+          emptyMessage={t('admin.discounts.empty')}
+        >
+          {rows.map((row) => {
+            const d = getCodeDerived(row);
+            const leftDisplay =
+              d.remaining == null ? (
+                <span style={{ color: 'var(--admin-muted)' }}>{t('admin.discounts.unlimited')}</span>
+              ) : (
+                <span style={{ color: d.remaining === 0 ? '#f85149' : 'var(--admin-text)', fontWeight: d.remaining === 0 ? 700 : 400 }}>
+                  {d.remaining}
+                  {d.hasCap ? ` / ${d.maxUses}` : ''}
+                </span>
+              );
+            const dateExpired = d.timeStatus === 'expired';
+            const notUsable = dateExpired || d.exhausted || row.active === false;
 
-                return (
-                  <tr
-                    key={row.id}
-                    style={{
-                      borderTop: '1px solid var(--admin-border)',
-                      opacity: notUsable ? 0.72 : 1,
-                      textAlign: adminAlign(isAr)
-                    }}
-                  >
-                    <td style={{ padding: '0.5rem', fontWeight: 600 }}>{row.id}</td>
-                    <td style={{ padding: '0.5rem' }}>{row.active === false ? '—' : '✓'}</td>
-                    <td style={{ padding: '0.5rem' }}>{row.discountType === 'fixed' ? t('admin.discounts.fixed') : t('admin.discounts.percent')}</td>
-                    <td style={{ padding: '0.5rem' }}>{row.discountValue}</td>
-                    <td style={{ padding: '0.5rem' }}>{d.used}</td>
-                    <td style={{ padding: '0.5rem' }}>{leftDisplay}</td>
-                    <td style={{ padding: '0.5rem', verticalAlign: 'top', textAlign: adminAlign(isAr) }}>{renderValidityCell(row)}</td>
-                    <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(row)}
-                        style={{ marginInlineEnd: '0.5rem', background: 'none', border: 'none', color: '#58a6ff', cursor: 'pointer' }}
-                      >
-                        {t('admin.discounts.edit')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(row.id)}
-                        style={{ background: 'none', border: 'none', color: '#f85149', cursor: 'pointer' }}
-                      >
-                        {t('admin.discounts.delete')}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            return (
+              <AdminTableRow key={row.id} dimmed={notUsable}>
+                <td style={{ fontWeight: 600 }}>{row.id}</td>
+                <td className="admin-table__cell--center">{row.active === false ? '—' : '✓'}</td>
+                <td>{row.discountType === 'fixed' ? t('admin.discounts.fixed') : t('admin.discounts.percent')}</td>
+                <td className="admin-table__cell--numeric">{row.discountValue}</td>
+                <td className="admin-table__cell--numeric">{d.used}</td>
+                <td className="admin-table__cell--numeric">{leftDisplay}</td>
+                <td>{renderValidityCell(row)}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button type="button" onClick={() => startEdit(row)} className="admin-btn admin-btn--ghost" style={{ padding: '0.25rem 0.5rem', color: '#58a6ff' }}>
+                    {t('admin.discounts.edit')}
+                  </button>
+                  <button type="button" onClick={() => handleDelete(row.id)} className="admin-btn admin-btn--ghost" style={{ padding: '0.25rem 0.5rem', color: '#f85149' }}>
+                    {t('admin.discounts.delete')}
+                  </button>
+                </td>
+              </AdminTableRow>
+            );
+          })}
+        </AdminTable>
+      </AdminPanel>
 
       {modalOpen && (
         <div

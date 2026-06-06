@@ -244,24 +244,11 @@ export default function AdminTranslations({ lang }) {
 
             <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', textAlign: adminAlign(isAr) }}>{countLabel}</div>
 
-            <div style={{ overflowX: 'auto' }}>
-                <table
-                    style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        fontSize: '0.9rem'
-                    }}
-                >
+            <div className="admin-table-wrap">
+                <table className="admin-table admin-table--sticky" style={{ fontSize: '0.9rem' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
-                            <th
-                                style={{
-                                    textAlign: adminAlign(isAr),
-                                    padding: '0.5rem 0.75rem',
-                                    color: 'var(--admin-text-secondary)',
-                                    width: '22%'
-                                }}
-                            >
+                        <tr>
+                            <th style={{ width: '22%' }}>
                                 {t('admin.translationsPage.keyCol')}
                             </th>
                             <th

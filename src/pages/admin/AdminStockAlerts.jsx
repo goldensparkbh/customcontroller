@@ -54,16 +54,8 @@ const AdminStockAlerts = ({ lang = 'ar' }) => {
 
     return (
         <div
-            style={{
-                marginBottom: '1.25rem',
-                padding: '0.9rem 1.1rem',
-                borderRadius: '10px',
-                border: `1px solid ${alert.isOut ? 'rgba(248, 113, 113, 0.45)' : 'rgba(245, 158, 11, 0.45)'}`,
-                background: alert.isOut ? 'rgba(248, 113, 113, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                color: alert.isOut ? '#fca5a5' : '#fdba74',
-                textAlign: adminAlign(isAr),
-                lineHeight: 1.55
-            }}
+            className={`admin-alert-banner ${alert.isOut ? 'admin-alert-banner--danger' : 'admin-alert-banner--warning'}`}
+            style={{ textAlign: adminAlign(isAr) }}
         >
             <strong>{isAr ? 'تنبيه مخزون وحدة التحكم الأساسي' : 'Base controller stock alert'}</strong>
             {' — '}
