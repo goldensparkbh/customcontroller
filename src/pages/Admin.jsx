@@ -15,6 +15,7 @@ import AdminSettings from './admin/AdminSettings';
 import AdminTranslations from './admin/AdminTranslations';
 import AdminAbandonedCarts from './admin/AdminAbandonedCarts';
 import AdminDiscountCodes from './admin/AdminDiscountCodes';
+import AdminStockAlerts from './admin/AdminStockAlerts';
 import { AdminNavIcon, IconLogout } from './admin/AdminSidebarIcons';
 
 const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
@@ -363,6 +364,8 @@ const AdminDashboard = () => {
                     >
                         {navigationGroups.flatMap(g => g.items).find((tab) => tab.id === activeTab)?.label}
                     </h1>
+
+                    <AdminStockAlerts lang={lang} />
 
                     {activeTab === 'orders' && <AdminOrders lang={lang} />}
                     {activeTab === 'invoices' && <AdminInvoices lang={lang} />}

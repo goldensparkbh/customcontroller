@@ -174,7 +174,7 @@ const ConfiguratorPage = () => {
        * Legacy `configurator-logic.js` reads `__CONFIG_DATA__.i18n` at load time.
        * Set defaults before any await so a failed catalog fetch does not leave i18n empty.
        */
-      window.__CONFIG_DATA__ = { i18n, baseControllerPrice: 0 };
+      window.__CONFIG_DATA__ = { i18n, baseControllerPrice: 0, baseControllerQty: null, baseControllerLowStockThreshold: 5 };
       window.__CONFIG_FIREBASE_DATA__ = window.__CONFIG_FIREBASE_DATA__ || [];
 
       try {
@@ -197,9 +197,19 @@ const ConfiguratorPage = () => {
         }));
 
         const basePrice = Number(catalog.basePrice) || 0;
+        const baseQuantity = catalog.baseQuantity != null ? Number(catalog.baseQuantity) : null;
+        const baseControllerLowStockThreshold = Number(catalog.baseControllerLowStockThreshold);
+        const lowStockThreshold = Number.isFinite(baseControllerLowStockThreshold) && baseControllerLowStockThreshold >= 0
+          ? baseControllerLowStockThreshold
+          : 5;
 
         window.__CONFIG_FIREBASE_DATA__ = partsList;
-        window.__CONFIG_DATA__ = { i18n, baseControllerPrice: basePrice };
+        window.__CONFIG_DATA__ = {
+          i18n,
+          baseControllerPrice: basePrice,
+          baseControllerQty: baseQuantity,
+          baseControllerLowStockThreshold: lowStockThreshold
+        };
       } catch (err) {
         console.error("Configurator catalog fetch error:", err);
         window.__CONFIG_FIREBASE_DATA__ = [];

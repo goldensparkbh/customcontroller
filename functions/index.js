@@ -939,6 +939,8 @@ function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
     const parts = item && item.parts;
     if (!parts || typeof parts !== "object") return;
 
+    addAdjustment("configurator_settings/general", qty);
+
     Object.entries(parts).forEach(([partId, partState]) => {
       // Process Color selection (ID is the Firestore document ID, fallback to key)
       const colorId = partState.color?.id || partState.color?.key;
@@ -1052,10 +1054,90 @@ async function collectNormalItemInventoryAdjustments(items, multiplier = 1) {
   return adjustments;
 }
 
+async function maybeSendBaseControllerLowStockAlert({ prevData, nextData, settings, req }) {
+  const db = getFirestore();
+  const threshold = toFiniteNumber(settings?.baseControllerLowStockThreshold, 5);
+  const prevQty = toFiniteNumber(prevData?.quantity, NaN);
+  const nextQty = toFiniteNumber(nextData?.quantity, 0);
+  const wasAbove = Number.isFinite(prevQty) ? prevQty > threshold : nextQty > threshold;
+  const isLow = nextQty <= threshold;
+
+  const settingsRef = db.doc("configurator_settings/general");
+  const patchAlertState = async (fields) => {
+    try {
+      await settingsRef.update({ ...fields, updatedAt: FieldValue.serverTimestamp() });
+    } catch (err) {
+      console.error("[baseControllerLowStock] failed to update alert state", err);
+    }
+  };
+
+  if (!isLow) {
+    if (nextData?.baseControllerLowStockAlertSentAt) {
+      await patchAlertState({ baseControllerLowStockAlertSentAt: "" });
+    }
+    return { sent: false, reason: "above_threshold" };
+  }
+
+  if (nextData?.baseControllerLowStockAlertSentAt) {
+    return { sent: false, reason: "already_sent" };
+  }
+
+  const adminRecipient = String(settings?.adminEmail || "").trim();
+  if (!adminRecipient) {
+    return { sent: false, reason: "missing_admin_email" };
+  }
+
+  const { transporter, config, error } = getSmtpTransporter(settings);
+  if (!transporter) {
+    return { sent: false, reason: error || "smtp_missing" };
+  }
+
+  const storeName = settings?.storeName || "Custom Controller";
+  const siteBaseUrl = getSiteBaseUrl(req, settings);
+  const adminPartsUrl = siteBaseUrl ? `${String(siteBaseUrl).replace(/\/$/, "")}/admin` : "";
+  const subject = `${storeName} | Base controller stock is low (${nextQty} left)`;
+  const textBody = [
+    "Base controller unit stock has fallen to a low level.",
+    "",
+    `Current quantity on hand: ${nextQty}`,
+    `Low-stock threshold: ${threshold}`,
+    "",
+    "Please restock the base controller unit (وحدة التحكم الأساسي) in the admin panel.",
+    adminPartsUrl ? `Admin panel: ${adminPartsUrl}` : "",
+    "",
+    `— ${storeName}`
+  ].filter(Boolean).join("\n");
+  const htmlBody = escapeHtml(textBody).replace(/\n/g, "<br />");
+  const context = { storeName, branding: getEmailBranding(settings, siteBaseUrl) };
+  const html = wrapOrderEmail({
+    context,
+    title: subject,
+    subtitle: `Quantity on hand: ${nextQty} · Threshold: ${threshold}`,
+    summaryHtml: "",
+    bodyHtml: htmlBody
+  });
+
+  try {
+    const info = await transporter.sendMail({
+      from: { name: config.fromName, address: config.fromEmail },
+      to: adminRecipient,
+      subject,
+      text: textBody,
+      html
+    });
+    await patchAlertState({ baseControllerLowStockAlertSentAt: new Date().toISOString() });
+    return { sent: true, messageId: info?.messageId || "", remaining: nextQty, threshold, wasAbove };
+  } catch (mailErr) {
+    console.error("[baseControllerLowStock] email failed", mailErr);
+    return { sent: false, reason: mailErr.message || "email_failed" };
+  }
+}
+
 async function applyOrderInventoryAdjustments(items, metadata = {}, multiplier = 1) {
   const db = getFirestore();
   const adjustments = await collectOrderInventoryAdjustments(items, multiplier);
   const applied = [];
+  let baseControllerAlertContext = null;
 
   if (!adjustments.size) return applied;
 
@@ -1090,14 +1172,43 @@ async function applyOrderInventoryAdjustments(items, metadata = {}, multiplier =
 
       return {
         path: docPath,
-        sourceType: docPath.startsWith("configurator_parts/") ? "configurator_option" : "normal_item",
+        sourceType: docPath.startsWith("configurator_parts/") ?
+          "configurator_option" :
+          (docPath === "configurator_settings/general" ? "base_controller" : "normal_item"),
         quantity,
         deducted: nextInventory.deducted,
-        remaining: nextInventory.quantity
+        remaining: nextInventory.quantity,
+        prevData: currentData,
+        nextData: {
+          ...currentData,
+          quantity: nextInventory.quantity
+        }
       };
     });
 
-    if (row) applied.push(row);
+    if (row) {
+      applied.push(row);
+      if (row.path === "configurator_settings/general" && multiplier > 0) {
+        baseControllerAlertContext = {
+          prevData: row.prevData,
+          nextData: row.nextData
+        };
+      }
+    }
+  }
+
+  if (baseControllerAlertContext) {
+    try {
+      const settingsSnap = await db.doc("admin_settings/general").get();
+      const adminSettings = settingsSnap.exists ? (settingsSnap.data() || {}) : {};
+      await maybeSendBaseControllerLowStockAlert({
+        ...baseControllerAlertContext,
+        settings: adminSettings,
+        req: metadata.req || null
+      });
+    } catch (alertErr) {
+      console.error("[orderHandler] base controller low stock alert error", alertErr);
+    }
   }
 
   return applied;

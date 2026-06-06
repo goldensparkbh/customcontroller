@@ -119,6 +119,9 @@ const AdminParts = ({ lang = 'ar' }) => {
     const [subitems, setSubitems] = useState([]);
     const [viewMode, setViewMode] = useState('grid');
     const [basePrice, setBasePrice] = useState('0');
+    const [basePurchasePrice, setBasePurchasePrice] = useState('0');
+    const [baseInventoryDetails, setBaseInventoryDetails] = useState([]);
+    const [baseQuantity, setBaseQuantity] = useState(0);
     const [isSavingBasePrice, setIsSavingBasePrice] = useState(false);
 
     // Modal States
@@ -146,6 +149,7 @@ const AdminParts = ({ lang = 'ar' }) => {
     const [subSellPrice, setSubSellPrice] = useState('0');
     const [subInventoryDetails, setSubInventoryDetails] = useState([]);
     const [subType, setSubType] = useState('color');
+    const [subAffectedParts, setSubAffectedParts] = useState([]);
     const [subColorHex, setSubColorHex] = useState('#ffffff');
     const [subDisablesColors, setSubDisablesColors] = useState(false);
     const [subIncompatibleWith, setSubIncompatibleWith] = useState([]); // Array of IDs
@@ -208,7 +212,14 @@ const AdminParts = ({ lang = 'ar' }) => {
             void gp;
             void gid;
             if (baseSnap && Object.keys(gdata).length) {
-                setBasePrice(String(gdata.basePrice || 0));
+                setBasePrice(String(gdata.basePrice ?? gdata.sellPrice ?? 0));
+                setBasePurchasePrice(String(gdata.purchasePrice ?? 0));
+                const hydrated = hydrateInventoryFormEntries({
+                    inventoryDetails: gdata.inventoryDetails,
+                    quantity: gdata.quantity ?? 0
+                });
+                setBaseInventoryDetails(hydrated);
+                setBaseQuantity(Number(gdata.quantity) || 0);
             }
         } catch (e) {
             console.error("Error fetching parts: ", e);
@@ -223,11 +234,32 @@ const AdminParts = ({ lang = 'ar' }) => {
     const handleSaveBasePrice = async () => {
         setIsSavingBasePrice(true);
         try {
-            await adminPatchDoc('configurator_settings/general', { basePrice: Number(basePrice), updatedAt: new Date().toISOString() });
-            alert("Base price saved successfully!");
+            const inventoryPayload = buildInventoryPayload(
+                baseInventoryDetails,
+                {
+                    purchasePrice: basePurchasePrice,
+                    sellPrice: basePrice
+                },
+                { quantity: baseQuantity ?? 0 }
+            );
+            await adminPatchDoc('configurator_settings/general', {
+                basePrice: Number(basePrice),
+                purchasePrice: inventoryPayload.purchasePrice,
+                sellPrice: inventoryPayload.sellPrice,
+                price: inventoryPayload.price,
+                inventoryDetails: inventoryPayload.inventoryDetails,
+                quantity: inventoryPayload.quantity,
+                updatedAt: new Date().toISOString()
+            });
+            setBaseQuantity(inventoryPayload.quantity);
+            setBaseInventoryDetails(hydrateInventoryFormEntries({
+                inventoryDetails: inventoryPayload.inventoryDetails,
+                quantity: inventoryPayload.quantity
+            }));
+            alert(isAr ? 'تم حفظ وحدة التحكم الأساسي.' : 'Base controller saved successfully!');
         } catch (error) {
-            console.error("Error saving base price:", error);
-            alert("Failed to save base price.");
+            console.error("Error saving base controller:", error);
+            alert(isAr ? 'فشل حفظ وحدة التحكم الأساسي.' : 'Failed to save base controller.');
         }
         setIsSavingBasePrice(false);
     };
@@ -347,6 +379,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         setSubSellPrice('0');
         setSubInventoryDetails([]);
         setSubType('color');
+        setSubAffectedParts(selectedPart ? [selectedPart.id] : []);
         setSubColorHex('#ffffff');
         setSubImagePreview('');
         setSubSecondImagePreview('');
@@ -375,6 +408,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         setSubSellPrice(String(sub.sellPrice ?? sub.price ?? 0));
         setSubInventoryDetails(hydrateInventoryFormEntries(sub));
         setSubType(sub.type || 'color');
+        setSubAffectedParts(Array.isArray(sub.affectedParts) && sub.affectedParts.length ? sub.affectedParts : [selectedPart?.id].filter(Boolean));
         setSubColorHex(sub.hex || '#ffffff');
         setSubImagePreview(sub.image || '');
         setSubSecondImagePreview(sub.secondImage || '');
@@ -463,9 +497,18 @@ const AdminParts = ({ lang = 'ar' }) => {
             if (subType === 'color') {
                 data.hex = subColorHex || '#ffffff';
                 data.icon = null;
+                data.affectedParts = null;
+            } else if (subType === 'premade') {
+                data.hex = null;
+                data.icon = iconUrl || '';
+                data.affectedParts = (Array.isArray(subAffectedParts) && subAffectedParts.length
+                    ? subAffectedParts
+                    : [selectedPart.id]).filter(Boolean);
+                if (!data.priority || data.priority > 0) data.priority = -10;
             } else {
                 data.hex = null;
                 data.icon = iconUrl || '';
+                data.affectedParts = null;
             }
 
             const payload = omitUndefinedDeep(data);
@@ -566,28 +609,58 @@ const AdminParts = ({ lang = 'ar' }) => {
 
     return (
         <div>
-            {/* BASE PRICE SETTINGS */}
-            <div style={{ background: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                <div style={{ flex: 1, minWidth: '250px', textAlign: adminAlign(isAr) }}>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--admin-text-strong)' }}>{isAr ? "سعر وحدة التحكم الأساسي" : "Base Controller Price"}</h3>
-                    <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '0.9rem' }}>{isAr ? "هذا هو السعر الأولي لوحدة التحكم قبل تطبيق أي تخصيصات." : "This is the initial price of the controller before any customizations are applied."}</p>
+            {/* BASE CONTROLLER SETTINGS */}
+            <div style={{ background: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: '10px', padding: '1.5rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row', marginBottom: '1.25rem' }}>
+                    <div style={{ flex: 1, minWidth: '250px', textAlign: adminAlign(isAr) }}>
+                        <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--admin-text-strong)' }}>{isAr ? "وحدة التحكم الأساسي" : "Base Controller Unit"}</h3>
+                        <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '0.9rem' }}>{isAr ? "السعر والمخزون لوحدة التحكم قبل أي تخصيصات." : "Price and inventory for the controller before any customizations."}</p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+                        <span style={stockBadgeStyle(baseQuantity)}>{baseQuantity > 0 ? (isAr ? `${baseQuantity} متوفر` : `${baseQuantity} in stock`) : (isAr ? 'نفد' : 'Out of stock')}</span>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                    <span style={{ color: 'var(--admin-text-strong)', fontSize: '1.2rem', fontWeight: 600 }}>BHD</span>
-                    <input 
-                        type="number" 
-                        min="0" 
-                        step="0.01" 
-                        value={basePrice} 
-                        onChange={e => setBasePrice(e.target.value)} 
-                        style={{ ...fieldStyle, width: '120px', fontSize: '1.1rem', textAlign: adminAlign(isAr) }} 
-                    />
-                    <button 
-                        onClick={handleSaveBasePrice} 
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>{isAr ? 'سعر البيع (BHD)' : 'Sell price (BHD)'}</label>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={basePrice}
+                            onChange={e => setBasePrice(e.target.value)}
+                            style={{ ...fieldStyle, fontSize: '1.05rem', textAlign: adminAlign(isAr) }}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>{isAr ? 'سعر الشراء' : 'Purchase price'}</label>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={basePurchasePrice}
+                            onChange={e => setBasePurchasePrice(e.target.value)}
+                            style={{ ...fieldStyle, textAlign: adminAlign(isAr) }}
+                        />
+                    </div>
+                </div>
+
+                <InventoryPricingEditor
+                    rows={baseInventoryDetails}
+                    onChange={setBaseInventoryDetails}
+                    title={isAr ? 'مخزون وحدة التحكم الأساسي' : 'Base controller inventory'}
+                    description={isAr ? 'حركات المخزون لوحدة التحكم الأساسي. يُخصم وحدة واحدة لكل طلب مخصص.' : 'Stock movements for the base controller unit. One unit is deducted per custom order.'}
+                    lang={lang}
+                />
+
+                <div style={{ display: 'flex', justifyContent: isAr ? 'flex-start' : 'flex-end', marginTop: '1.25rem' }}>
+                    <button
+                        onClick={handleSaveBasePrice}
                         disabled={isSavingBasePrice}
                         style={{ padding: '0.7rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: isSavingBasePrice ? 'wait' : 'pointer', fontWeight: 600 }}
                     >
-                        {isSavingBasePrice ? (isAr ? "جاري الحفظ..." : "Saving...") : (isAr ? "حفظ السعر" : "Save Price")}
+                        {isSavingBasePrice ? (isAr ? "جاري الحفظ..." : "Saving...") : (isAr ? "حفظ وحدة التحكم" : "Save Base Controller")}
                     </button>
                 </div>
             </div>
@@ -915,6 +988,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <option value="all">All Types</option>
                                         <option value="color">Colors Only</option>
                                         <option value="gamemode">Gamemodes Only</option>
+                                        <option value="premade">Pre-made Designs</option>
                                     </select>
 
                                     {/* --- Active Status Filter --- */}
@@ -1051,6 +1125,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     <select value={subType} onChange={e => setSubType(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }}>
                                         <option value="color">Color</option>
                                         <option value="gamemode">Game Mode / Performance</option>
+                                        <option value="premade">Pre-made Design</option>
                                     </select>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
@@ -1080,6 +1155,12 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} placeholder="#RRGGBB" />
                                         </div>
                                     </div>
+                                ) : subType === 'premade' ? (
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Design Icon (palette):</label>
+                                        <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
+                                        {subIconPreview && !subIconFile && <img src={subIconPreview} alt="Preview" style={{ height: '40px', marginTop: '0.5rem', display: 'block', background: 'var(--admin-hover)', padding: '4px', borderRadius: '4px' }} />}
+                                    </div>
                                 ) : (
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Gamemode Icon Image:</label>
@@ -1098,6 +1179,37 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     lang={lang}
                                 />
                             </div>
+
+                            {subType === 'premade' && (
+                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                    <h3 style={{ marginTop: 0, color: 'var(--admin-text-strong)', fontSize: '1.1rem', marginBottom: '1rem' }}>Pre-made Design Coverage</h3>
+                                    <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--admin-muted)' }}>
+                                        Select all controller parts covered by this design overlay. The design renders on a lower layer; part colors render above it.
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                                        {parts.map((p) => (
+                                            <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.6rem', background: 'var(--admin-surface)', borderRadius: '6px', border: '1px solid var(--admin-border)', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={subAffectedParts.includes(p.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSubAffectedParts([...subAffectedParts, p.id]);
+                                                        } else {
+                                                            setSubAffectedParts(subAffectedParts.filter((id) => id !== p.id));
+                                                        }
+                                                    }}
+                                                />
+                                                <span style={{ fontSize: '0.85rem' }}>{p.title || p.id}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Layer priority (lower = behind colors):</label>
+                                        <input type="number" value={subPriority} onChange={e => setSubPriority(e.target.value)} style={{ ...fieldStyle, maxWidth: '120px' }} />
+                                    </div>
+                                </div>
+                            )}
 
                             {subType === 'gamemode' && (
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>

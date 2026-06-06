@@ -145,15 +145,29 @@ module.exports = function createStoreApi(pool) {
       });
 
       let basePrice = 0;
+      let baseQuantity = null;
+      let basePurchasePrice = 0;
       const baseRow = await dao.getRow(pool, "configurator_settings/general");
       if (baseRow && baseRow.data) {
-        basePrice = Number(baseRow.data.basePrice) || 0;
+        basePrice = Number(baseRow.data.basePrice) || Number(baseRow.data.sellPrice) || 0;
+        if (baseRow.data.quantity != null) baseQuantity = Number(baseRow.data.quantity) || 0;
+        basePurchasePrice = Number(baseRow.data.purchasePrice) || 0;
+      }
+
+      let baseControllerLowStockThreshold = 5;
+      const adminSettingsRow = await dao.getRow(pool, "admin_settings/general");
+      if (adminSettingsRow && adminSettingsRow.data) {
+        const t = Number(adminSettingsRow.data.baseControllerLowStockThreshold);
+        if (Number.isFinite(t) && t >= 0) baseControllerLowStockThreshold = t;
       }
 
       res.json(
         rewriteFirebaseMediaUrlsIfConfigured({
           parts: partsList,
-          basePrice
+          basePrice,
+          baseQuantity,
+          basePurchasePrice,
+          baseControllerLowStockThreshold
         })
       );
     } catch (err) {

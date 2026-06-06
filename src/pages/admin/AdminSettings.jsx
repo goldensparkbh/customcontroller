@@ -78,7 +78,8 @@ const defaultSettings = {
   abandonedCartRecoveryCode: '',
   maintenanceMode: false,
   maintenanceMessageAr: '',
-  maintenanceMessageEn: ''
+  maintenanceMessageEn: '',
+  baseControllerLowStockThreshold: 5
 };
 
 const fieldStyle = {
@@ -370,6 +371,17 @@ const AdminSettings = ({ lang = 'ar' }) => {
             <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
               <span>{isAr ? 'هاتف الدعم' : 'Support phone'}</span>
               <input name="supportPhone" value={formData.supportPhone} onChange={handleChange} style={fieldStyle} />
+            </label>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr), maxWidth: '280px' }}>
+              <span>{isAr ? 'حد تنبيه مخزون وحدة التحكم الأساسي' : 'Base controller low-stock threshold'}</span>
+              <input
+                type="number"
+                min={0}
+                name="baseControllerLowStockThreshold"
+                value={formData.baseControllerLowStockThreshold}
+                onChange={handleChange}
+                style={fieldStyle}
+              />
             </label>
           </div>
 

@@ -217,6 +217,11 @@
     // Persistent state
     const configData = window.__CONFIG_DATA__ || {};
     let baseControllerPrice = configData.baseControllerPrice || 0;
+    let baseControllerQty = configData.baseControllerQty;
+    let baseControllerLowStockThreshold = Number(configData.baseControllerLowStockThreshold);
+    if (!Number.isFinite(baseControllerLowStockThreshold) || baseControllerLowStockThreshold < 0) {
+        baseControllerLowStockThreshold = 5;
+    }
     const partsRowsById = {};
     let selectedPartId = null;
     let currentPanel = "options";
@@ -657,7 +662,8 @@
                     addPriceFallback(partId, price);
 
                     // Use accurate type field if available, fallback to substring matching
-                    const isGamemode = opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers");
+                    const isPremade = opt.type === 'premade';
+                    const isGamemode = !isPremade && (opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers"));
                     const nName = (opt.name || "").toLowerCase();
                     const isTransparent = (nName.includes("transparent") || nName.includes("trans"));
 
@@ -667,20 +673,23 @@
                         hex: opt.hex || opt.name, // Use actual Hex if provided, else fallback
                         price: price,
                         qty: qty,
+                        type: isPremade ? 'premade' : (isGamemode ? 'gamemode' : 'color'),
                         isGamemode: isGamemode,
+                        isPremade: isPremade,
                         image: opt.image || null, // The overlay stack image!
                         secondImage: opt.secondImage || null,
-                        icon: opt.icon || (isGamemode && opt.image ? opt.image : null), // Display in palette
+                        icon: opt.icon || ((isGamemode || isPremade) && opt.image ? opt.image : null), // Display in palette
                         isTransparent: isTransparent,
+                        affectedParts: Array.isArray(opt.affectedParts) && opt.affectedParts.length ? opt.affectedParts : [partId],
                         // Gamemode Dependency Fields
                         allowsMultiple: opt.allowsMultiple || false,
                         exclusiveGroup: opt.exclusiveGroup || null,
                         disablesColors: opt.disablesColors || false,
                         incompatibleWith: opt.incompatibleWith || [],
-                        priority: opt.priority || 1
+                        priority: isPremade ? (opt.priority ?? -10) : (opt.priority || 1)
                     };
 
-                    if (isGamemode) {
+                    if (isGamemode || isPremade) {
                         addVariantToMap(dynamicOptionsByPart, partId, entry);
                     } else {
                         addVariantToMap(dynamicColorsByPart, partId, entry);
@@ -782,6 +791,72 @@
     const panelSwitchButtons = document.querySelectorAll(".panel-switch-btn");
     const zohoLoadingOverlay = document.getElementById("zohoLoadingOverlay");
 
+    function createStackImages(part, stackIndex) {
+        const zIndex = String((part.priority || 1) * 10 + stackIndex);
+        const main = document.createElement("img");
+        main.className = "part-layer-img";
+        main.dataset.partId = part.id;
+        main.dataset.stack = String(stackIndex);
+        main.style.display = "none";
+        main.style.zIndex = zIndex;
+
+        const opp = document.createElement("img");
+        opp.className = "part-layer-img";
+        opp.dataset.partId = part.id + "_opp";
+        opp.dataset.stack = String(stackIndex);
+        opp.style.display = "none";
+        opp.style.zIndex = zIndex;
+
+        return { main, opp };
+    }
+
+    function setStackImage(stack, mainUrl, oppUrl) {
+        if (!stack) return;
+        if (mainUrl) {
+            stack.main.src = mainUrl;
+            stack.main.style.display = "block";
+        } else {
+            stack.main.removeAttribute("src");
+            stack.main.style.display = "none";
+        }
+        if (oppUrl) {
+            stack.opp.src = oppUrl;
+            stack.opp.style.display = "block";
+        } else {
+            stack.opp.removeAttribute("src");
+            stack.opp.style.display = "none";
+        }
+    }
+
+    function getPremadeEntriesForPart(partId) {
+        const entries = [];
+        ALL_PARTS.forEach(p => {
+            const options = getOptionsForPart(p.id);
+            const currentOptions = Array.isArray(optionState[p.id]) ? optionState[p.id] : [];
+            currentOptions.forEach(k => {
+                const opt = options.find(o => o.key === k);
+                if (!opt || opt.type !== "premade" || isEntryOutOfStock(opt)) return;
+                const affected = Array.isArray(opt.affectedParts) && opt.affectedParts.length ? opt.affectedParts : [p.id];
+                if (affected.includes(partId)) entries.push(opt);
+            });
+        });
+        return entries;
+    }
+
+    function getGamemodeEntriesForPart(partId) {
+        const options = getOptionsForPart(partId);
+        const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
+        return currentOptions
+            .map(k => options.find(o => o.key === k))
+            .filter(o => o && o.type !== "premade" && !isEntryOutOfStock(o));
+    }
+
+    function getLayerStacks(partId) {
+        const stack = layers[partId];
+        if (!stack) return [];
+        return [stack.premade, stack.color, stack.option].filter(Boolean);
+    }
+
     function buildPartLayers() {
         // Clear existing layers if any
         if (faceFrontEl) {
@@ -797,44 +872,36 @@
         Object.keys(glossLayers).forEach(k => delete glossLayers[k]);
 
         ALL_PARTS.forEach(part => {
-            // 1. Color/Tint layer as IMG
-            const layerMain = document.createElement("img");
-            layerMain.className = "part-layer-img";
-            layerMain.dataset.partId = part.id;
-            layerMain.style.display = "none";
-            layerMain.style.zIndex = (part.priority || 1) * 10;
+            const premade = createStackImages(part, 0);
+            const color = createStackImages(part, 1);
+            const option = createStackImages(part, 2);
 
-            const layerOpposite = document.createElement("img");
-            layerOpposite.className = "part-layer-img";
-            layerOpposite.dataset.partId = part.id + "_opp";
-            layerOpposite.style.display = "none";
-            layerOpposite.style.zIndex = (part.priority || 1) * 10;
-
-            // 2. Gloss/Lighting layer (Legacy support)
             const gloss = document.createElement("div");
             gloss.className = "part-gloss";
             gloss.dataset.partId = part.id;
 
+            const appendFront = (el) => { if (faceFrontEl) faceFrontEl.appendChild(el); };
+            const appendBack = (el) => { if (faceBackEl) faceBackEl.appendChild(el); };
+
             if (part.side === "front") {
-                if (faceFrontEl) {
-                    faceFrontEl.appendChild(layerMain);
-                    faceFrontEl.appendChild(gloss);
-                }
-                if (faceBackEl) {
-                    faceBackEl.appendChild(layerOpposite);
-                }
+                appendFront(premade.main);
+                appendFront(color.main);
+                appendFront(option.main);
+                appendFront(gloss);
+                appendBack(premade.opp);
+                appendBack(color.opp);
+                appendBack(option.opp);
             } else {
-                if (faceBackEl) {
-                    faceBackEl.appendChild(layerMain);
-                    faceBackEl.appendChild(gloss);
-                }
-                if (faceFrontEl) {
-                    faceFrontEl.appendChild(layerOpposite);
-                }
+                appendBack(premade.main);
+                appendBack(color.main);
+                appendBack(option.main);
+                appendBack(gloss);
+                appendFront(premade.opp);
+                appendFront(color.opp);
+                appendFront(option.opp);
             }
 
-            if (!layers[part.id]) layers[part.id] = [];
-            layers[part.id].push({ main: layerMain, opp: layerOpposite });
+            layers[part.id] = { premade, color, option };
 
             if (!glossLayers[part.id]) glossLayers[part.id] = [];
             glossLayers[part.id].push(gloss);
@@ -901,9 +968,9 @@
     }
 
     function getRenderedLayerImage(partId) {
-        const partLayers = layers[partId] || [];
-        for (const layerObj of partLayers) {
-            const layer = layerObj.main;
+        const stacks = getLayerStacks(partId);
+        for (let i = stacks.length - 1; i >= 0; i -= 1) {
+            const layer = stacks[i].main;
             if (!layer || typeof layer.getAttribute !== "function") continue;
             if (layer.style && layer.style.display === "none") continue;
             const src = layer.getAttribute("src");
@@ -1171,49 +1238,44 @@
 
         // Sum up prices for all valid selected options
         let totalOptPrice = 0;
-        const activeEntries = [];
-
-        // Add color if exists (base priority)
-        if (colorObj) activeEntries.push({ ...colorObj, priority: 0 });
-
         currentOptions.forEach(k => {
             const opt = options.find(o => o.key === k);
             if (opt && !isEntryOutOfStock(opt)) {
                 totalOptPrice += (opt.price || 0);
-                activeEntries.push(opt);
             }
         });
         selectedOptionPriceByPart[partId] = totalOptPrice;
 
-        // 3. Visual Layer Stacking (Priority-based)
-        const targetLayers = layers[partId] || [];
-        activeEntries.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+        // 3. Visual Layer Stacking (premade -> color -> option)
+        updatePartVisualStacks(partId);
+    }
 
-        const mainImg = [...activeEntries].reverse().find(e => e.image);
-        const oppImg = [...activeEntries].reverse().find(e => e.secondImage);
+    function updatePartVisualStacks(partId) {
+        const stack = layers[partId];
+        if (!stack) return;
 
-        targetLayers.forEach(obj => {
-            if (mainImg) {
-                obj.main.src = mainImg.image;
-                obj.main.style.display = "block";
-            } else {
-                obj.main.removeAttribute("src");
-                obj.main.style.display = "none";
-            }
+        const palette = getPaletteForPart(partId);
+        const premadeEntries = getPremadeEntriesForPart(partId);
+        premadeEntries.sort((a, b) => (a.priority || -10) - (b.priority || -10));
+        const premadeMain = [...premadeEntries].reverse().find(e => e.image);
+        const premadeOpp = [...premadeEntries].reverse().find(e => e.secondImage);
+        setStackImage(stack.premade, premadeMain?.image, premadeOpp?.secondImage);
 
-            if (oppImg) {
-                obj.opp.src = oppImg.secondImage;
-                obj.opp.style.display = "block";
-            } else {
-                obj.opp.removeAttribute("src");
-                obj.opp.style.display = "none";
-            }
-        });
+        const colorKey = configState[partId];
+        const col = colorKey ? palette.find(c => c.key === colorKey) : null;
+        setStackImage(stack.color, col?.image, col?.secondImage);
 
+        const gamemodeEntries = getGamemodeEntriesForPart(partId);
+        gamemodeEntries.sort((a, b) => (a.priority || 1) - (b.priority || 1));
+        const optMain = [...gamemodeEntries].reverse().find(e => e.image);
+        const optOpp = [...gamemodeEntries].reverse().find(e => e.secondImage);
+        setStackImage(stack.option, optMain?.image, optOpp?.secondImage);
+
+        const hasOptionOverlay = gamemodeEntries.some(e => e.image || e.secondImage);
         const targetGloss = glossLayers[partId] || [];
-        targetGloss.forEach((gloss) => {
-            gloss.style.opacity = "0";
-            gloss.style.display = "none";
+        targetGloss.forEach(gloss => {
+            gloss.style.opacity = hasOptionOverlay ? "0" : "1";
+            gloss.style.display = hasOptionOverlay ? "none" : "block";
         });
     }
 
@@ -1324,9 +1386,9 @@
         // --- BACK SIDE LOGIC ---
         let backSrc = "/assets/controller_back5.png";
         if (configState["backShellMain"] || optionState["backShellMain"]) {
-            (layers["backShellMain"] || []).forEach(obj => {
-                if (obj.main.getAttribute("src")) obj.main.style.display = "block";
-                if (obj.opp.getAttribute("src")) obj.opp.style.display = "block";
+            getLayerStacks("backShellMain").forEach(stack => {
+                if (stack?.main?.getAttribute("src")) stack.main.style.display = "block";
+                if (stack?.opp?.getAttribute("src")) stack.opp.style.display = "block";
             });
         }
 
@@ -1558,13 +1620,13 @@
         updateVisualizerLayers();
         resetColorPanel();
         resetOptionsPanel();
-        Object.values(layers).forEach(layerArr => {
-            if (Array.isArray(layerArr)) {
-                layerArr.forEach(obj => {
-                    obj.main.classList.remove("selected");
-                    obj.opp.classList.remove("selected");
-                });
-            }
+        Object.values(layers).forEach(stack => {
+            if (!stack) return;
+            [stack.premade, stack.color, stack.option].forEach(layerObj => {
+                if (!layerObj) return;
+                if (layerObj.main) layerObj.main.classList.remove("selected");
+                if (layerObj.opp) layerObj.opp.classList.remove("selected");
+            });
         });
 
         if (isMobileLayout()) updateMobileOptionsBar();
@@ -1629,8 +1691,13 @@
         if (!partId) return;
 
         if (isOption) {
-            if (entries.length > 0) {
-                renderSection(target, entries, t("availableOptions"), true);
+            const premadeEntries = entries.filter(e => e.isPremade);
+            const otherEntries = entries.filter(e => !e.isPremade);
+            if (premadeEntries.length > 0) {
+                renderSection(target, premadeEntries, currentLang === 'ar' ? 'تصاميم جاهزة' : 'Pre-made Designs', true);
+            }
+            if (otherEntries.length > 0) {
+                renderSection(target, otherEntries, t("availableOptions"), true);
             }
         } else {
             const isAllButtons = (partId === "allButtons");
@@ -1673,7 +1740,7 @@
         entries.forEach(entry => {
             const cell = document.createElement("div");
             cell.className = isOption ? "cd-cell-op" : "cd-cell";
-            if (isOption && entry.isGamemode) {
+            if (isOption && (entry.isGamemode || entry.isPremade)) {
                 cell.classList.add("is-gamemode-option");
             }
             const isOutOfStock = isEntryOutOfStock(entry);
@@ -1827,49 +1894,9 @@
         const palette = getPaletteForPart(partId);
         const colObj = palette.find(c => c.key === configState[partId]);
 
-        // If an option is active and has an image, DO NOT override its layer visually here
-        const currentOptionKey = optionState[partId];
-        const options = getOptionsForPart(partId);
-        const activeOption = options.find(o => o.key === currentOptionKey);
-        const optionHasOverrides = activeOption && activeOption.image;
-
         if (colObj && colObj.image) {
             queueImageWarmup(colObj.image, { priority: "high", retain: true });
         }
-
-        if (!optionHasOverrides) {
-            const targetLayers = layers[partId] || [];
-            targetLayers.forEach(obj => {
-                if (colObj) {
-                    if (colObj.image) {
-                        obj.main.src = colObj.image;
-                        obj.main.style.display = "block";
-                    } else {
-                        obj.main.removeAttribute("src");
-                        obj.main.style.display = "none";
-                    }
-                    if (colObj.secondImage) {
-                        obj.opp.src = colObj.secondImage;
-                        obj.opp.style.display = "block";
-                    } else {
-                        obj.opp.removeAttribute("src");
-                        obj.opp.style.display = "none";
-                    }
-                } else {
-                    obj.main.removeAttribute("src");
-                    obj.main.style.display = "none";
-                    obj.opp.removeAttribute("src");
-                    obj.opp.style.display = "none";
-                }
-            });
-        }
-
-        // 2. Hide gloss layer entirely, as pre-rendered images have their own shading
-        const targetGloss = glossLayers[partId] || [];
-        targetGloss.forEach(gloss => {
-            gloss.style.opacity = "0";
-            gloss.style.display = "none";
-        });
 
         updatePartsUI();
         syncBaseImages();
@@ -1977,67 +2004,7 @@
         if (selectedPartId === partId) openColorPanelForPart(partId);
     }
     function updateVisualizerLayers() {
-        ALL_PARTS.forEach(part => {
-            const partId = part.id;
-            const targetLayers = layers[partId] || [];
-            if (targetLayers.length === 0) return;
-
-            const palette = getPaletteForPart(partId);
-            const options = getOptionsForPart(partId);
-
-            // 1. Collect all active entries for this part
-            const activeEntries = [];
-
-            // Color selection
-            const colorKey = configState[partId];
-            if (colorKey) {
-                const col = palette.find(c => c.key === colorKey);
-                if (col) activeEntries.push({ ...col, priority: 0 }); // Colors are usually base priority
-            }
-
-            // Options selection (Gamemodes)
-            const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
-            currentOptions.forEach(k => {
-                const opt = options.find(o => o.key === k);
-                if (opt) activeEntries.push(opt);
-            });
-
-            // 2. Sort by priority (Approved decision: By priority)
-            activeEntries.sort((a, b) => (a.priority || 0) - (b.priority || 0));
-
-            // 3. Update the layers
-            // For now, we use the highest priority image that exists, 
-            // but we can extend this to multiple sub-layers if buildPartLayers is updated.
-            // Currently, we'll find the first one with a main image and the first with second image.
-            const mainImg = [...activeEntries].reverse().find(e => e.image);
-            const oppImg = [...activeEntries].reverse().find(e => e.secondImage);
-
-            targetLayers.forEach(obj => {
-                if (mainImg) {
-                    obj.main.src = mainImg.image;
-                    obj.main.style.display = "block";
-                } else {
-                    obj.main.removeAttribute("src");
-                    obj.main.style.display = "none";
-                }
-
-                if (oppImg) {
-                    obj.opp.src = oppImg.secondImage;
-                    obj.opp.style.display = "block";
-                } else {
-                    obj.opp.removeAttribute("src");
-                    obj.opp.style.display = "none";
-                }
-            });
-
-            // Handle gloss visibility (if any option is selected, pre-rendered gloss is usually baked in)
-            const hasOption = currentOptions.length > 0;
-            const targetGloss = glossLayers[partId] || [];
-            targetGloss.forEach(gloss => {
-                gloss.style.opacity = hasOption ? "0" : "1";
-                gloss.style.display = hasOption ? "none" : "block";
-            });
-        });
+        ALL_PARTS.forEach(part => updatePartVisualStacks(part.id));
     }
 
     function setPartPrice(partId, key, isOption) {
@@ -2077,6 +2044,24 @@
         });
     }
 
+    function isBaseControllerOutOfStock() {
+        if (baseControllerQty == null) return false;
+        return Number(baseControllerQty) <= 0;
+    }
+
+    function isBaseControllerLowStock() {
+        if (baseControllerQty == null) return false;
+        return Number(baseControllerQty) > 0 && Number(baseControllerQty) <= baseControllerLowStockThreshold;
+    }
+
+    function updateAddToCartAvailability() {
+        if (!addToCartBtn) return;
+        const out = isBaseControllerOutOfStock();
+        addToCartBtn.disabled = out;
+        addToCartBtn.title = out ? (t("outOfStock") || "Out of Stock") : "";
+        addToCartBtn.classList.toggle("is-out-of-stock", out);
+    }
+
     function updateSummary() {
         let total = baseControllerPrice || 0;
         ALL_PARTS.forEach(p => {
@@ -2088,6 +2073,7 @@
         if (summaryAmountEl) summaryAmountEl.textContent = formatted;
         const alt = document.getElementById("summaryAmountAlt");
         if (alt) alt.textContent = formatted;
+        updateAddToCartAvailability();
     }
 
     function refreshEzCurrencyLabels() {
@@ -2167,7 +2153,7 @@
 
         // Hide all layers
         Object.keys(layers).forEach(pid => {
-            (layers[pid] || []).forEach(layerObj => {
+            getLayerStacks(pid).forEach(layerObj => {
                 if (layerObj.main) layerObj.main.style.display = "none";
                 if (layerObj.opp) layerObj.opp.style.display = "none";
             });
@@ -2304,6 +2290,10 @@
 
     if (addToCartBtn) {
         addToCartBtn.addEventListener("click", async () => {
+            if (isBaseControllerOutOfStock()) {
+                alert(t("outOfStock") || "Out of Stock");
+                return;
+            }
             const snapshot = getSnapshot();
             const hasCustom = Object.values(snapshot.parts).some(p => p.color || (p.option && p.option.key !== "standard"));
             if (!hasCustom) {

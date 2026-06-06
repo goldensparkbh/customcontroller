@@ -139,6 +139,19 @@ module.exports = function createAdminApi(pool, handlers) {
       const merged = await dao.mergeShallow(pool, p, req.body && typeof req.body === "object" ? req.body : {});
       await hooks.maybeRunOrderUpdate(handlers, prevRow?.data ?? null, merged, p);
       if (p === "admin_settings/general") invalidateMaintenanceCache();
+      if (p === "configurator_settings/general" && typeof handlers.maybeSendBaseControllerLowStockAlert === "function") {
+        try {
+          const settingsRow = await dao.getRow(pool, "admin_settings/general");
+          await handlers.maybeSendBaseControllerLowStockAlert({
+            prevData: prevRow?.data ?? null,
+            nextData: merged,
+            settings: settingsRow?.data || {},
+            req
+          });
+        } catch (alertErr) {
+          console.error("[doc patch] base controller low stock alert", alertErr);
+        }
+      }
       res.json({ ok: true });
     } catch (err) {
       console.error("[doc patch]", err);
