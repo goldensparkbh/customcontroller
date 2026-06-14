@@ -5,6 +5,7 @@ import Navbar from './components/Navbar.jsx';
 import LoadingState from './components/LoadingState.jsx';
 import MaintenanceGate from './components/MaintenanceGate.jsx';
 import { CurrencyProvider } from './context/CurrencyContext.jsx';
+import { CheckoutCountryProvider } from './context/CheckoutCountryContext.jsx';
 
 // Lazy-load heavy pages to reduce initial JS memory footprint.
 const HomePage = lazy(() => import('./pages/Home.jsx'));
@@ -78,6 +79,7 @@ function App() {
 
   return (
     <CurrencyProvider>
+    <CheckoutCountryProvider>
     <MaintenanceGate>
       {!shouldHideNavbar && <Navbar />}
       <Suspense fallback={<LoadingState message="Loading..." fullScreen />}>
@@ -114,6 +116,7 @@ function App() {
         </Routes>
       </Suspense>
     </MaintenanceGate>
+    </CheckoutCountryProvider>
     </CurrencyProvider>
   );
 }

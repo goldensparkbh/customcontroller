@@ -3,8 +3,7 @@ import { i18n } from '../i18n.js';
 import { LoadingInline } from '../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
 import { useCurrency } from '../context/CurrencyContext.jsx';
-
-const arabCountries = ["BH", "SA", "AE", "KW", "OM", "QA", "EG", "JO"];
+import { useCheckoutCountry } from '../context/CheckoutCountryContext.jsx';
 
 const PreviewStack = ({ layers, fallbackSrc }) => (
   <div className="checkout-preview-stack" style={{ position: 'relative', width: '100px', height: '65px', background: '#111', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -86,6 +85,7 @@ function getOrCreateAbandonSessionId() {
 const CheckoutPage = () => {
   const formRef = useRef(null);
   const { formatFromBhd, chargeNote } = useCurrency();
+  const { country, phonePrefix: countryPhonePrefix } = useCheckoutCountry();
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [cartItems, setCartItems] = useState([]);
   const [abandonSessionId] = useState(() => getOrCreateAbandonSessionId());
@@ -101,7 +101,6 @@ const CheckoutPage = () => {
     phonePrefix: '973',
     phone: '',
     email: '',
-    country: 'BH',
     shippingType: 'delivery',
     city: '',
     state: '',
@@ -137,14 +136,21 @@ const CheckoutPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      phonePrefix: countryPhonePrefix
+    }));
+  }, [country, countryPhonePrefix]);
+
   const t = (key) => (i18n[lang] && i18n[lang][key]) ? i18n[lang][key] : key;
 
   // Calculation Logic
   const itemsCount = cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0);
   const subtotal = cartItems.reduce((acc, item) => acc + ((item.unitPrice || item.total || 0) * (item.quantity || 1)), 0);
 
-  const isBahrain = formData.country === 'BH';
-  const isSaudi = formData.country === 'SA';
+  const isBahrain = country === 'BH';
+  const isSaudi = country === 'SA';
   const requiresAddress = isBahrain ? formData.shippingType === 'delivery' : true;
 
   let shippingCost = 0;
@@ -170,7 +176,7 @@ const CheckoutPage = () => {
   useEffect(() => {
     setAppliedDiscount(null);
     setDiscountMessage('');
-  }, [cartFingerprint, formData.shippingType, formData.country]);
+  }, [cartFingerprint, formData.shippingType, country]);
   const shippingOptions = useMemo(() => {
     const deliveryFee = formatFromBhd(2);
     const intlPerPair = formatFromBhd(5);
@@ -267,6 +273,7 @@ const CheckoutPage = () => {
 
     const orderData = {
       ...formData,
+      country,
       subtotal,
       shippingCost,
       total: totalDue,
@@ -456,17 +463,6 @@ const CheckoutPage = () => {
             <div>
               <label>{t('emailLabel') || 'Email *'}</label>
               <input name="email" value={formData.email} onChange={handleChange} type="email" required autoComplete="email" style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
-            </div>
-
-            <div>
-              <label>{t('countryLabel') || 'Country'} *</label>
-              <select name="country" value={formData.country} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}>
-                {arabCountries.map(code => (
-                  <option key={code} value={code}>
-                    {i18n[lang]?.arabCountries?.[code] || code}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {requiresAddress && (

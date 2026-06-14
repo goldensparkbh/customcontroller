@@ -505,6 +505,14 @@ const AdminParts = ({ lang = 'ar' }) => {
                     ? subAffectedParts
                     : [selectedPart.id]).filter(Boolean);
                 if (!data.priority || data.priority > 0) data.priority = -10;
+            } else if (subType === 'kit') {
+                data.hex = null;
+                data.icon = iconUrl || '';
+                data.affectedParts = (Array.isArray(subAffectedParts) && subAffectedParts.length
+                    ? subAffectedParts
+                    : parts.map((p) => p.id)).filter(Boolean);
+                if (!data.priority || data.priority > 0) data.priority = -100;
+                data.disablesColors = false;
             } else {
                 data.hex = null;
                 data.icon = iconUrl || '';
@@ -982,6 +990,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <option value="color">Colors Only</option>
                                         <option value="gamemode">Gamemodes Only</option>
                                         <option value="premade">Pre-made Designs</option>
+                                        <option value="kit">Special Edition Kit (PLP)</option>
                                     </select>
 
                                     {/* --- Active Status Filter --- */}
@@ -1119,6 +1128,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <option value="color">Color</option>
                                         <option value="gamemode">Game Mode / Performance</option>
                                         <option value="premade">Pre-made Design</option>
+                                        <option value="kit">Special Edition Kit (PLP)</option>
                                     </select>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
@@ -1148,7 +1158,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} placeholder="#RRGGBB" />
                                         </div>
                                     </div>
-                                ) : subType === 'premade' ? (
+                                ) : subType === 'premade' || subType === 'kit' ? (
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Design Icon (palette):</label>
                                         <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
@@ -1173,11 +1183,15 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 />
                             </div>
 
-                            {subType === 'premade' && (
+                            {(subType === 'premade' || subType === 'kit') && (
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ marginTop: 0, color: 'var(--admin-text-strong)', fontSize: '1.1rem', marginBottom: '1rem' }}>Pre-made Design Coverage</h3>
+                                    <h3 style={{ marginTop: 0, color: 'var(--admin-text-strong)', fontSize: '1.1rem', marginBottom: '1rem' }}>
+                                        {subType === 'kit' ? 'Special Edition Kit Coverage' : 'Pre-made Design Coverage'}
+                                    </h3>
                                     <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--admin-muted)' }}>
-                                        Select all controller parts covered by this design overlay. The design renders on a lower layer; part colors render above it.
+                                        {subType === 'kit'
+                                            ? 'Select all controller parts covered by this kit. The kit renders on the bottom layer; part colors render above it. Shown in the Pre-made Controllers list on the configurator.'
+                                            : 'Select all controller parts covered by this design overlay. The design renders on a lower layer; part colors render above it.'}
                                     </p>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
                                         {parts.map((p) => (

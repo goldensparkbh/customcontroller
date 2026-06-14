@@ -20,6 +20,40 @@ const CHECKBOX_COL_WIDTH = '44px';
 const FIRESTORE_BATCH_DELETE_LIMIT = 450;
 const ORDER_STATUS_OPTIONS = ['Paid', 'On Going', 'Completed', 'Shipped', 'Canceled'];
 const ORDER_URGENCY_OPTIONS = ['Normal', 'Urgent', 'Very Urgent'];
+const PAYMENT_STATUS_OPTIONS = ['Pending', 'Paid', 'Failed', 'Refunded'];
+
+const editInputStyle = {
+    width: '100%',
+    padding: '0.55rem 0.65rem',
+    borderRadius: '6px',
+    border: '1px solid var(--admin-border-strong)',
+    background: 'var(--admin-hover-alt)',
+    color: 'var(--admin-text)',
+    font: 'inherit'
+};
+
+const buildEditFormFromOrder = (order) => {
+    const customer = order?.customer || {};
+    const shipping = order?.shipping || {};
+    return {
+        firstName: customer.firstName || customer.first_name || '',
+        lastName: customer.lastName || customer.last_name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        shippingMethod: shipping.method || '',
+        country: shipping.country || '',
+        city: shipping.city || '',
+        state: shipping.state || '',
+        addressLine: shipping.addressLine || shipping.address || '',
+        blockNumber: shipping.blockNumber || '',
+        roadNumber: shipping.roadNumber || '',
+        houseBuildingNumber: shipping.houseBuildingNumber || '',
+        flat: shipping.flat || '',
+        paymentStatus: order?.paymentStatus || 'Pending',
+        total: String(order?.total ?? ''),
+        adminNotes: order?.adminNotes || ''
+    };
+};
 
 const getItemLineTotal = (item) => {
     const qty = item?.quantity || 1;
@@ -320,6 +354,27 @@ const DetailField = ({ label, value, isAr }) => {
     );
 };
 
+const EditField = ({ label, value, onChange, isAr, type = 'text', as = 'input', rows = 3 }) => {
+    const align = adminAlign(isAr);
+    const sharedProps = {
+        value,
+        onChange,
+        style: { ...editInputStyle, textAlign: align }
+    };
+    return (
+        <div style={{ display: 'grid', gap: '0.35rem', textAlign: align }}>
+            <label style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+            </label>
+            {as === 'textarea' ? (
+                <textarea {...sharedProps} rows={rows} />
+            ) : (
+                <input {...sharedProps} type={type} />
+            )}
+        </div>
+    );
+};
+
 const DetailActionField = ({ label, value, helperText, onClick, disabled, isAr }) => {
     const align = adminAlign(isAr);
     return (
@@ -367,6 +422,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
     const [detailStatus, setDetailStatus] = useState('Paid');
     const [detailUrgency, setDetailUrgency] = useState('Normal');
     const [detailTrackingNumber, setDetailTrackingNumber] = useState('');
+    const [orderEditMode, setOrderEditMode] = useState(false);
+    const [editForm, setEditForm] = useState(() => buildEditFormFromOrder(null));
     const [whatsAppOpen, setWhatsAppOpen] = useState(false);
     const [whatsAppSendHint, setWhatsAppSendHint] = useState(null);
     const [selectedTemplateKey, setSelectedTemplateKey] = useState('controller_ready');
@@ -553,16 +610,24 @@ const AdminOrders = ({ lang = 'ar' }) => {
         [selectedOrder]
     );
 
-    const hasOrderChanges = selectedOrder
-        ? detailStatus !== normalizeOrderStatus(selectedOrder.status, selectedOrder) ||
-        detailUrgency !== normalizeOrderUrgency(selectedOrder.urgency) ||
-        detailTrackingNumber.trim() !== getTrackingNumber(selectedOrder).trim()
-        : false;
+    const hasOrderChanges = useMemo(() => {
+        if (!selectedOrder) return false;
+        const baseChanges =
+            detailStatus !== normalizeOrderStatus(selectedOrder.status, selectedOrder) ||
+            detailUrgency !== normalizeOrderUrgency(selectedOrder.urgency) ||
+            detailTrackingNumber.trim() !== getTrackingNumber(selectedOrder).trim();
+        if (!orderEditMode) return baseChanges;
+        const original = buildEditFormFromOrder(selectedOrder);
+        const editChanged = Object.keys(original).some((key) => String(editForm[key] ?? '').trim() !== String(original[key] ?? '').trim());
+        return baseChanges || editChanged;
+    }, [selectedOrder, detailStatus, detailUrgency, detailTrackingNumber, orderEditMode, editForm]);
 
     useEffect(() => {
         setDetailStatus(normalizeOrderStatus(selectedOrder?.status, selectedOrder));
         setDetailUrgency(normalizeOrderUrgency(selectedOrder?.urgency));
         setDetailTrackingNumber(getTrackingNumber(selectedOrder));
+        setEditForm(buildEditFormFromOrder(selectedOrder));
+        setOrderEditMode(false);
         setWhatsAppOpen(false);
         setSelectedTemplateKey('controller_ready');
     }, [selectedOrder]);
@@ -596,7 +661,12 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
     const closeOrderDetails = () => {
         setWhatsAppOpen(false);
+        setOrderEditMode(false);
         setDetailOpen(false);
+    };
+
+    const patchEditField = (key, value) => {
+        setEditForm((current) => ({ ...current, [key]: value }));
     };
 
     const handleStatusSave = async () => {
@@ -606,7 +676,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
         try {
             const trackingNumber = detailTrackingNumber.trim();
             const updatedAt = new Date().toISOString();
-            await adminPatchDoc(`orders/${selectedOrder.id}`, {
+            const patch = {
                 status: detailStatus,
                 urgency: detailUrgency,
                 updatedAt,
@@ -614,22 +684,51 @@ const AdminOrders = ({ lang = 'ar' }) => {
                     ...(selectedOrder.shipping || {}),
                     trackingNumber
                 }
-            });
+            };
+
+            if (orderEditMode) {
+                patch.customer = {
+                    ...(selectedOrder.customer || {}),
+                    firstName: editForm.firstName.trim(),
+                    lastName: editForm.lastName.trim(),
+                    first_name: editForm.firstName.trim(),
+                    last_name: editForm.lastName.trim(),
+                    email: editForm.email.trim(),
+                    phone: editForm.phone.trim()
+                };
+                patch.shipping = {
+                    ...(selectedOrder.shipping || {}),
+                    method: editForm.shippingMethod.trim(),
+                    country: editForm.country.trim(),
+                    city: editForm.city.trim(),
+                    state: editForm.state.trim(),
+                    addressLine: editForm.addressLine.trim(),
+                    address: editForm.addressLine.trim(),
+                    blockNumber: editForm.blockNumber.trim(),
+                    roadNumber: editForm.roadNumber.trim(),
+                    houseBuildingNumber: editForm.houseBuildingNumber.trim(),
+                    flat: editForm.flat.trim(),
+                    trackingNumber
+                };
+                patch.paymentStatus = editForm.paymentStatus.trim() || getPaymentStatus(selectedOrder);
+                const nextTotal = Number(editForm.total);
+                if (Number.isFinite(nextTotal)) patch.total = nextTotal;
+                patch.adminNotes = editForm.adminNotes.trim();
+            }
+
+            await adminPatchDoc(`orders/${selectedOrder.id}`, patch);
 
             setOrders((current) => current.map((order) => (
                 order.id === selectedOrder.id
                     ? {
                         ...order,
-                        status: detailStatus,
-                        urgency: detailUrgency,
-                        updatedAt,
-                        shipping: {
-                            ...(order.shipping || {}),
-                            trackingNumber
-                        }
+                        ...patch,
+                        customer: patch.customer || order.customer,
+                        shipping: patch.shipping || order.shipping
                     }
                     : order
             )));
+            setOrderEditMode(false);
         } catch (error) {
             console.error('Error updating status', error);
             alert('Failed to update status');
@@ -1202,6 +1301,22 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                 </span>
                                 <button
                                     type="button"
+                                    onClick={() => setOrderEditMode((current) => !current)}
+                                    disabled={deletingOrders}
+                                    style={{
+                                        padding: '0.55rem 0.8rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--admin-border-strong)',
+                                        background: orderEditMode ? 'rgba(56,189,248,0.15)' : 'var(--admin-raised)',
+                                        color: 'var(--admin-text)',
+                                        cursor: deletingOrders ? 'not-allowed' : 'pointer',
+                                        fontWeight: 700
+                                    }}
+                                >
+                                    {orderEditMode ? (isAr ? 'إلغاء التعديل' : 'Cancel Edit') : (isAr ? 'تعديل الطلب' : 'Edit Order')}
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={fetchOrders}
                                     disabled={deletingOrders}
                                     style={{
@@ -1254,47 +1369,110 @@ const AdminOrders = ({ lang = 'ar' }) => {
                         <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', textAlign: adminAlign(isAr) }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
-                                    <DetailField isAr={isAr} label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailActionField
-                                        label={isAr ? "الهاتف" : "Phone"}
-                                        value={selectedOrder.customer?.phone}
-                                        helperText={isAr ? "انقر لاختيار قالب واتساب وإرساله." : "Click to choose a WhatsApp template and send it."}
-                                        onClick={openWhatsAppModal}
-                                        disabled={!customerPhoneDigits}
-                                        isAr={isAr}
-                                    />
+                                    {orderEditMode ? (
+                                        <>
+                                            <EditField isAr={isAr} label={isAr ? 'الاسم الأول' : 'First name'} value={editForm.firstName} onChange={(e) => patchEditField('firstName', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'اسم العائلة' : 'Last name'} value={editForm.lastName} onChange={(e) => patchEditField('lastName', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'البريد الإلكتروني' : 'Email'} value={editForm.email} onChange={(e) => patchEditField('email', e.target.value)} type="email" />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'الهاتف' : 'Phone'} value={editForm.phone} onChange={(e) => patchEditField('phone', e.target.value)} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DetailField isAr={isAr} label={isAr ? "العميل" : "Customer"} value={getCustomerName(selectedOrder)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailField isAr={isAr} label={isAr ? "البريد الإلكتروني" : "Email"} value={selectedOrder.customer?.email} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailActionField
+                                                label={isAr ? "الهاتف" : "Phone"}
+                                                value={selectedOrder.customer?.phone}
+                                                helperText={isAr ? "انقر لاختيار قالب واتساب وإرساله." : "Click to choose a WhatsApp template and send it."}
+                                                onClick={openWhatsAppModal}
+                                                disabled={!customerPhoneDigits}
+                                                isAr={isAr}
+                                            />
+                                        </>
+                                    )}
                                 </div>
 
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
-                                    <DetailField isAr={isAr} label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', textAlign: adminAlign(isAr) }}>
-                                        {isAr ? 'عنوان الشحن' : 'Shipping address'}
-                                    </div>
-                                    <ShippingAddressDisplay shipping={selectedOrder.shipping} lang={lang} isAr={isAr} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
+                                    {orderEditMode ? (
+                                        <>
+                                            <EditField isAr={isAr} label={isAr ? 'طريقة الشحن' : 'Shipping method'} value={editForm.shippingMethod} onChange={(e) => patchEditField('shippingMethod', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'الدولة' : 'Country'} value={editForm.country} onChange={(e) => patchEditField('country', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'المدينة' : 'City'} value={editForm.city} onChange={(e) => patchEditField('city', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'المنطقة' : 'State / Province'} value={editForm.state} onChange={(e) => patchEditField('state', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'العنوان' : 'Address'} value={editForm.addressLine} onChange={(e) => patchEditField('addressLine', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'المجمع' : 'Block'} value={editForm.blockNumber} onChange={(e) => patchEditField('blockNumber', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'الطريق' : 'Road'} value={editForm.roadNumber} onChange={(e) => patchEditField('roadNumber', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'المبنى' : 'House / Building'} value={editForm.houseBuildingNumber} onChange={(e) => patchEditField('houseBuildingNumber', e.target.value)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <EditField isAr={isAr} label={isAr ? 'الشقة' : 'Flat'} value={editForm.flat} onChange={(e) => patchEditField('flat', e.target.value)} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DetailField isAr={isAr} label={isAr ? "طريقة الشحن" : "Shipping Method"} value={selectedOrder.shipping?.method} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem', textAlign: adminAlign(isAr) }}>
+                                                {isAr ? 'عنوان الشحن' : 'Shipping address'}
+                                            </div>
+                                            <ShippingAddressDisplay shipping={selectedOrder.shipping} lang={lang} isAr={isAr} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailField isAr={isAr} label={isAr ? "رقم الشحنة" : "Shipping Number"} value={getTrackingNumber(selectedOrder)} />
+                                        </>
+                                    )}
                                 </div>
 
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
-                                    <DetailField isAr={isAr} label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
+                                    {orderEditMode ? (
+                                        <>
+                                            <DetailField isAr={isAr} label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <div style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
+                                                <label style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                                    {isAr ? 'حالة الدفع' : 'Payment Status'}
+                                                </label>
+                                                <select value={editForm.paymentStatus} onChange={(e) => patchEditField('paymentStatus', e.target.value)} style={{ ...editInputStyle, textAlign: adminAlign(isAr) }}>
+                                                    {PAYMENT_STATUS_OPTIONS.map((status) => (
+                                                        <option key={status} value={status}>{status}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailField isAr={isAr} label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DetailField isAr={isAr} label={isAr ? "طريقة الدفع" : "Payment Method"} value={getPaymentMethod(selectedOrder)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailField isAr={isAr} label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailField isAr={isAr} label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
+                                        </>
+                                    )}
                                 </div>
 
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem', textAlign: adminAlign(isAr) }}>
                                     <DetailField isAr={isAr} label={isAr ? "أنشئ في" : "Created"} value={formatDate(selectedOrder.createdAt)} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField
-                                        isAr={isAr}
-                                        label={isAr ? "الإجمالي" : "Total"}
-                                        value={`${Number(selectedOrder.total || 0).toFixed(2)} ${selectedOrder.currency || 'BHD'}`}
-                                    />
+                                    {orderEditMode ? (
+                                        <EditField isAr={isAr} label={isAr ? 'الإجمالي' : 'Total'} value={editForm.total} onChange={(e) => patchEditField('total', e.target.value)} type="number" />
+                                    ) : (
+                                        <DetailField
+                                            isAr={isAr}
+                                            label={isAr ? "الإجمالي" : "Total"}
+                                            value={`${Number(selectedOrder.total || 0).toFixed(2)} ${selectedOrder.currency || 'BHD'}`}
+                                        />
+                                    )}
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
                                         isAr={isAr}
@@ -1302,11 +1480,23 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         value={`${(selectedOrder.items || []).length} ${isAr ? "عنصر" : "item(s)"}`}
                                     />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField
-                                        isAr={isAr}
-                                        label={isAr ? "الأهمية" : "Urgency"}
-                                        value={getUrgencyLabelText(selectedOrder.urgency)}
-                                    />
+                                    {orderEditMode ? (
+                                        <EditField isAr={isAr} label={isAr ? 'ملاحظات الإدارة' : 'Admin notes'} value={editForm.adminNotes} onChange={(e) => patchEditField('adminNotes', e.target.value)} as="textarea" rows={3} />
+                                    ) : (
+                                        <>
+                                            <DetailField
+                                                isAr={isAr}
+                                                label={isAr ? "الأهمية" : "Urgency"}
+                                                value={getUrgencyLabelText(selectedOrder.urgency)}
+                                            />
+                                            {selectedOrder.adminNotes ? (
+                                                <>
+                                                    <div style={{ height: '0.75rem' }} />
+                                                    <DetailField isAr={isAr} label={isAr ? 'ملاحظات الإدارة' : 'Admin notes'} value={selectedOrder.adminNotes} />
+                                                </>
+                                            ) : null}
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -1413,7 +1603,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                             <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontWeight: 700, color: 'var(--admin-text)' }}>{isAr ? "تحديث الحالة" : "Update Status"}</div>
+                                        <div style={{ fontWeight: 700, color: 'var(--admin-text)' }}>{orderEditMode ? (isAr ? 'حفظ التعديلات' : 'Save Order Changes') : (isAr ? "تحديث الحالة" : "Update Status")}</div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>

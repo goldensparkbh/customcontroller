@@ -50,6 +50,8 @@ const configuratorMarkup = `
 <div class="color-panel">
 <!-- Options grid (stick type ...) -->
 <div class="color-panel-grid" id="optionsPanelGrid"></div>
+<!-- Pre-made controller kits (special edition PLP) -->
+<div id="premadeControllersPLP" class="config-premade-plp" style="display:none;"></div>
 <!-- Colors grid -->
 <div class="color-panel-grid2" id="colorPanelGrid"></div>
 <!-- Empty state (shown when no part is selected) -->
