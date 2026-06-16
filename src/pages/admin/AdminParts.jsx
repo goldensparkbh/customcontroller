@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     adminCreateDoc,
     adminDeleteDoc,
@@ -139,8 +139,10 @@ const AdminParts = ({ lang = 'ar' }) => {
     const [partSide, setPartSide] = useState('front');
     const [partIconFile, setPartIconFile] = useState(null);
     const [partIconPreview, setPartIconPreview] = useState('');
+    const [partComponentType, setPartComponentType] = useState('regular');
+    const [showPartTypePickerModal, setShowPartTypePickerModal] = useState(false);
 
-    // Subitem Form State
+    const isPremadeComponent = (part) => String(part?.componentType || '').trim() === 'premade';
     const [editSubId, setEditSubId] = useState(null);
     const [subName, setSubName] = useState('');
     const [subItemNumber, setSubItemNumber] = useState('');
@@ -273,7 +275,14 @@ const AdminParts = ({ lang = 'ar' }) => {
         setPartSide('front');
         setPartIconPreview('');
         setPartIconFile(null);
-        setSelectedPart(null); // Clear selected part so ID logic knows it's a new part
+        setPartComponentType('regular');
+        setSelectedPart(null);
+        setShowPartTypePickerModal(true);
+    };
+
+    const beginAddPartWithType = (componentType) => {
+        setPartComponentType(componentType === 'premade' ? 'premade' : 'regular');
+        setShowPartTypePickerModal(false);
         setShowPartFormModal(true);
     };
 
@@ -284,6 +293,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         setPartTitle(p.title || '');
         setPartPriority(p.priority || 1);
         setPartSide(p.side || 'front');
+        setPartComponentType(p.componentType || 'regular');
         setPartIconPreview(p.icon || '');
         setPartIconFile(null);
         setShowPartFormModal(true);
@@ -304,6 +314,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                 title: partTitle,
                 priority: parseInt(partPriority, 10),
                 side: partSide,
+                componentType: partComponentType === 'premade' ? 'premade' : 'regular',
                 updatedAt: new Date().toISOString()
             };
             if (iconUrl) partData.icon = iconUrl;
@@ -370,7 +381,13 @@ const AdminParts = ({ lang = 'ar' }) => {
         setShowDetailsModal(true);
     };
 
+    const regularPartIds = useMemo(
+        () => parts.filter((p) => !isPremadeComponent(p)).map((p) => p.id),
+        [parts]
+    );
+
     const handleOpenAddOption = () => {
+        const premade = isPremadeComponent(selectedPart);
         setEditSubId(null);
         setSubName('');
         setSubItemNumber('');
@@ -378,8 +395,8 @@ const AdminParts = ({ lang = 'ar' }) => {
         setSubPurchasePrice('0');
         setSubSellPrice('0');
         setSubInventoryDetails([]);
-        setSubType('color');
-        setSubAffectedParts(selectedPart ? [selectedPart.id] : []);
+        setSubType(premade ? 'premade' : 'color');
+        setSubAffectedParts(premade ? [...regularPartIds] : (selectedPart ? [selectedPart.id] : []));
         setSubColorHex('#ffffff');
         setSubImagePreview('');
         setSubSecondImagePreview('');
@@ -391,7 +408,7 @@ const AdminParts = ({ lang = 'ar' }) => {
         setSubFilterQuery('');
         setSubFilterActive('all');
         setSubFilterType('all');
-        setSubPriority(1);
+        setSubPriority(premade ? -10 : 1);
         setSubActive(true);
         setSubAllowsMultiple(false);
         setSubExclusiveGroup('');
@@ -473,6 +490,8 @@ const AdminParts = ({ lang = 'ar' }) => {
             }
             const barcode = normalizeNumericString(subBarcode) || itemNumber;
 
+            const effectiveType = isPremadeComponent(selectedPart) ? 'premade' : subType;
+
             const data = {
                 name: String(subName || '').trim(),
                 itemNumber,
@@ -482,7 +501,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                 sellPrice: inventoryPayload.sellPrice,
                 price: inventoryPayload.price,
                 quantity: inventoryPayload.quantity,
-                type: subType,
+                type: effectiveType,
                 active: Boolean(subActive),
                 image: imageUrl || '',
                 secondImage: secondImageUrl || '',
@@ -494,25 +513,19 @@ const AdminParts = ({ lang = 'ar' }) => {
                 priority: safeFiniteInt(subPriority, 1)
             };
 
-            if (subType === 'color') {
+            if (effectiveType === 'color') {
                 data.hex = subColorHex || '#ffffff';
                 data.icon = null;
                 data.affectedParts = null;
-            } else if (subType === 'premade') {
+            } else if (effectiveType === 'premade') {
                 data.hex = null;
-                data.icon = iconUrl || '';
+                data.icon = iconUrl || imageUrl || '';
                 data.affectedParts = (Array.isArray(subAffectedParts) && subAffectedParts.length
                     ? subAffectedParts
-                    : [selectedPart.id]).filter(Boolean);
+                    : regularPartIds).filter(Boolean);
                 if (!data.priority || data.priority > 0) data.priority = -10;
-            } else if (subType === 'kit') {
-                data.hex = null;
-                data.icon = iconUrl || '';
-                data.affectedParts = (Array.isArray(subAffectedParts) && subAffectedParts.length
-                    ? subAffectedParts
-                    : parts.map((p) => p.id)).filter(Boolean);
-                if (!data.priority || data.priority > 0) data.priority = -100;
                 data.disablesColors = false;
+                data.allowsMultiple = false;
             } else {
                 data.hex = null;
                 data.icon = iconUrl || '';
@@ -742,6 +755,9 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 <div style={{ height: '60px', width: '60px', background: 'var(--admin-border)', borderRadius: '8px', marginBottom: '1rem' }}></div>
                             )}
                             <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--admin-text-strong)', fontSize: '1.2rem' }}>{p.title}</h4>
+                            {isPremadeComponent(p) && (
+                                <span style={{ marginBottom: '0.5rem', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(56,189,248,0.15)', color: '#7dd3fc' }}>Pre-made</span>
+                            )}
                             <div style={{ color: 'var(--admin-muted)', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
                                 ID: {p.id} | {isAr ? "الجهة" : "Side"}: {p.side}
                             </div>
@@ -822,12 +838,56 @@ const AdminParts = ({ lang = 'ar' }) => {
             )}
 
 
+            {/* MODAL 0: Part type picker (new parts only) */}
+            {showPartTypePickerModal && (
+                <div style={{ ...overlayStyle, zIndex: 1040 }}>
+                    <div style={{ ...modalStyle, maxWidth: '520px' }}>
+                        <button onClick={() => setShowPartTypePickerModal(false)} style={closeBtnStyle}>&times;</button>
+                        <h2 style={{ marginTop: 0, marginBottom: '0.75rem', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr) }}>
+                            {isAr ? 'نوع المكوّن' : 'Component type'}
+                        </h2>
+                        <p style={{ margin: '0 0 1.25rem 0', color: 'var(--admin-muted)', fontSize: '0.9rem', textAlign: adminAlign(isAr) }}>
+                            {isAr
+                                ? 'اختر نوع المكوّن الذي تريد إضافته. مكوّنات Pre-made تعرض تصاميم جاهزة كاملة في صفحة التخصيص.'
+                                : 'Choose what you are adding. Pre-made components show full controller designs in the configurator.'}
+                        </p>
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => beginAddPartWithType('regular')}
+                                style={{ padding: '1rem', borderRadius: '8px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr), cursor: 'pointer' }}
+                            >
+                                <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{isAr ? 'جزء عادي' : 'Regular part'}</div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--admin-muted)' }}>
+                                    {isAr ? 'ألوان وخيارات أداء مثل الأجزاء الحالية.' : 'Colors and performance options like existing parts.'}
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => beginAddPartWithType('premade')}
+                                style={{ padding: '1rem', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.35)', background: 'rgba(56,189,248,0.08)', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr), cursor: 'pointer' }}
+                            >
+                                <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{isAr ? 'Pre-made' : 'Pre-made'}</div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--admin-muted)' }}>
+                                    {isAr ? 'تصاميم جاهزة كاملة تُطبّق كطبقة أسفل ألوان الأجزاء العادية.' : 'Full ready-made designs applied below regular part colors.'}
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* MODAL 1: Part Form Modal (Add / Edit) */}
             {showPartFormModal && (
                 <div style={{ ...overlayStyle, zIndex: 1050 }}>
                     <div style={modalStyle}>
                         <button onClick={() => setShowPartFormModal(false)} style={closeBtnStyle}>&times;</button>
-                        <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr) }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
+                        <h2 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--admin-text-strong)', textAlign: adminAlign(isAr) }}>{partId && selectedPart ? (isAr ? 'تعديل الجزء' : 'Edit Part') : (isAr ? 'إضافة جزء جديد' : 'Add New Part')}</h2>
+                        <div style={{ marginBottom: '1.25rem', textAlign: adminAlign(isAr) }}>
+                            <span style={{ display: 'inline-flex', padding: '0.25rem 0.6rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 700, background: partComponentType === 'premade' ? 'rgba(56,189,248,0.15)' : 'var(--admin-raised)', border: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)' }}>
+                                {partComponentType === 'premade' ? (isAr ? 'مكوّن Pre-made' : 'Pre-made component') : (isAr ? 'جزء عادي' : 'Regular part')}
+                            </span>
+                        </div>
                         <form onSubmit={handlePartSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Part ID (e.g. shell, trimpiece): </label>
@@ -877,6 +937,8 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 <div style={{ textAlign: adminAlign(isAr) }}>
                                     <h2 style={{ margin: 0, color: 'var(--admin-text-strong)' }}>{selectedPart.title}</h2>
                                     <span style={{ color: 'var(--admin-muted)', fontSize: '0.9rem' }}>
+                                        {isPremadeComponent(selectedPart) ? (isAr ? 'Pre-made' : 'Pre-made') : (isAr ? 'عادي' : 'Regular')}
+                                        {' · '}
                                         Side: {selectedPart.side} | ID: {selectedPart.id}
                                         {' · '}
                                         {formatStockSummaryLabel(summarizeOptionsStock(subitems), isAr)}
@@ -989,8 +1051,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <option value="all">All Types</option>
                                         <option value="color">Colors Only</option>
                                         <option value="gamemode">Gamemodes Only</option>
-                                        <option value="premade">Pre-made Designs</option>
-                                        <option value="kit">Special Edition Kit (PLP)</option>
+                                        {!isPremadeComponent(selectedPart) && null}
                                     </select>
 
                                     {/* --- Active Status Filter --- */}
@@ -1119,18 +1180,20 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     <input value={padNumericString(subBarcode) || padNumericString(subItemNumber) || 'Matches item number on save'} readOnly style={{ ...fieldStyle, color: 'var(--admin-muted)' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Option Name (e.g. Red, Turbo):</label>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>
+                                        {isPremadeComponent(selectedPart) ? (isAr ? 'اسم التصميم' : 'Design name') : 'Option Name (e.g. Red, Turbo):'}
+                                    </label>
                                     <input value={subName} onChange={e => setSubName(e.target.value)} required style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                                 </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Type:</label>
-                                    <select value={subType} onChange={e => setSubType(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }}>
-                                        <option value="color">Color</option>
-                                        <option value="gamemode">Game Mode / Performance</option>
-                                        <option value="premade">Pre-made Design</option>
-                                        <option value="kit">Special Edition Kit (PLP)</option>
-                                    </select>
-                                </div>
+                                {!isPremadeComponent(selectedPart) && (
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Type:</label>
+                                        <select value={subType} onChange={e => setSubType(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }}>
+                                            <option value="color">Color</option>
+                                            <option value="gamemode">Game Mode / Performance</option>
+                                        </select>
+                                    </div>
+                                )}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
                                     <input 
                                         type="checkbox" 
@@ -1150,7 +1213,15 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     <input type="number" step="0.01" min="0" value={subSellPrice} onChange={e => setSubSellPrice(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} />
                                 </div>
 
-                                {subType === 'color' ? (
+                                {isPremadeComponent(selectedPart) ? (
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>{isAr ? 'صورة البطاقة (كبيرة)' : 'Card image (large preview)'}:</label>
+                                        <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
+                                        {(subIconPreview || subImagePreview) && !subIconFile && (
+                                            <img src={subIconPreview || subImagePreview} alt="Preview" style={{ height: '80px', marginTop: '0.5rem', display: 'block', background: 'var(--admin-hover)', padding: '4px', borderRadius: '4px' }} />
+                                        )}
+                                    </div>
+                                ) : subType === 'color' ? (
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Color Hex (Palette Swatch):</label>
                                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -1158,13 +1229,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} placeholder="#RRGGBB" />
                                         </div>
                                     </div>
-                                ) : subType === 'premade' || subType === 'kit' ? (
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Design Icon (palette):</label>
-                                        <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
-                                        {subIconPreview && !subIconFile && <img src={subIconPreview} alt="Preview" style={{ height: '40px', marginTop: '0.5rem', display: 'block', background: 'var(--admin-hover)', padding: '4px', borderRadius: '4px' }} />}
-                                    </div>
-                                ) : (
+                                ) : subType === 'gamemode' ? (
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Gamemode Icon Image:</label>
                                         <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
@@ -1183,18 +1248,18 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 />
                             </div>
 
-                            {(subType === 'premade' || subType === 'kit') && (
+                            {(isPremadeComponent(selectedPart) || subType === 'premade') && (
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
                                     <h3 style={{ marginTop: 0, color: 'var(--admin-text-strong)', fontSize: '1.1rem', marginBottom: '1rem' }}>
-                                        {subType === 'kit' ? 'Special Edition Kit Coverage' : 'Pre-made Design Coverage'}
+                                        {isAr ? 'تغطية التصميم على الأجزاء' : 'Design coverage on parts'}
                                     </h3>
                                     <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--admin-muted)' }}>
-                                        {subType === 'kit'
-                                            ? 'Select all controller parts covered by this kit. The kit renders on the bottom layer; part colors render above it. Shown in the Pre-made Controllers list on the configurator.'
-                                            : 'Select all controller parts covered by this design overlay. The design renders on a lower layer; part colors render above it.'}
+                                        {isAr
+                                            ? 'حدد الأجزاء العادية التي يغطيها هذا التصميم. الألوان المختارة لاحقاً ستظهر فوق التصميم على نفس الجزء.'
+                                            : 'Select regular parts this design covers. Later color picks on those parts render above this design.'}
                                     </p>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
-                                        {parts.map((p) => (
+                                        {parts.filter((p) => !isPremadeComponent(p)).map((p) => (
                                             <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.6rem', background: 'var(--admin-surface)', borderRadius: '6px', border: '1px solid var(--admin-border)', cursor: 'pointer' }}>
                                                 <input
                                                     type="checkbox"
@@ -1218,7 +1283,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                 </div>
                             )}
 
-                            {subType === 'gamemode' && (
+                            {!isPremadeComponent(selectedPart) && subType === 'gamemode' && (
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
                                     <h3 style={{ marginTop: 0, color: 'var(--admin-text-strong)', fontSize: '1.1rem', marginBottom: '1rem' }}>Gamemode Dependencies & Rules</h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>

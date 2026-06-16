@@ -634,7 +634,8 @@
                     mask: tech.mask || [],
                     priority: fbPart.priority || tech.priority || 1,
                     side: fbPart.side || tech.side || 'front',
-                    hiddenUI: fbPart.hiddenUI || false
+                    hiddenUI: fbPart.hiddenUI || false,
+                    componentType: fbPart.componentType === 'premade' ? 'premade' : 'regular'
                 };
             });
 
@@ -651,6 +652,7 @@
 
             firebaseParts.forEach(fbPart => {
                 const partId = fbPart.id;
+                const componentType = fbPart.componentType === 'premade' ? 'premade' : 'regular';
                 const options = fbPart.options || [];
 
                 options.forEach(opt => {
@@ -661,46 +663,43 @@
 
                     addPriceFallback(partId, price);
 
-                    const isKit = opt.type === 'kit';
-                    const isPremade = !isKit && opt.type === 'premade';
-                    const isGamemode = !isPremade && !isKit && (opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers"));
+                    const isPremade = opt.type === 'premade';
+                    if (componentType === 'regular' && isPremade) return;
+                    if (componentType === 'premade' && !isPremade) return;
+
+                    const isGamemode = !isPremade && (opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers"));
                     const nName = (opt.name || "").toLowerCase();
                     const isTransparent = (nName.includes("transparent") || nName.includes("trans"));
 
                     const entry = {
                         key: opt.id,
-                        valName: opt.name,
-                        hex: opt.hex || opt.name,
+                        valName: opt.name, // Used for rendering labels directly
+                        hex: opt.hex || opt.name, // Use actual Hex if provided, else fallback
                         price: price,
                         qty: qty,
-                        type: isKit ? 'kit' : (isPremade ? 'premade' : (isGamemode ? 'gamemode' : 'color')),
+                        type: isPremade ? 'premade' : (isGamemode ? 'gamemode' : 'color'),
                         isGamemode: isGamemode,
                         isPremade: isPremade,
-                        isKit: isKit,
-                        hostPartId: partId,
-                        image: opt.image || null,
+                        image: opt.image || null, // The overlay stack image!
                         secondImage: opt.secondImage || null,
-                        icon: opt.icon || ((isGamemode || isPremade || isKit) && opt.image ? opt.image : null),
+                        icon: opt.icon || ((isGamemode || isPremade) && opt.image ? opt.image : null), // Display in palette
                         isTransparent: isTransparent,
                         affectedParts: Array.isArray(opt.affectedParts) && opt.affectedParts.length ? opt.affectedParts : [partId],
+                        // Gamemode Dependency Fields
                         allowsMultiple: opt.allowsMultiple || false,
                         exclusiveGroup: opt.exclusiveGroup || null,
                         disablesColors: opt.disablesColors || false,
                         incompatibleWith: opt.incompatibleWith || [],
-                        priority: (isPremade || isKit) ? (opt.priority ?? -10) : (opt.priority || 1)
+                        priority: isPremade ? (opt.priority ?? -10) : (opt.priority || 1)
                     };
 
-                    if (isKit) {
-                        premadeControllersCatalog.push(entry);
-                    }
-
-                    if (isGamemode || isPremade || isKit) {
+                    if (isGamemode || isPremade) {
                         addVariantToMap(dynamicOptionsByPart, partId, entry);
                     } else {
                         addVariantToMap(dynamicColorsByPart, partId, entry);
                     }
 
-                    if (!(partId in configState)) configState[partId] = null;
+                    // Ensure config/option state is initialized to null for this part
                     if (!(partId in optionState)) optionState[partId] = [];
                 });
             });
@@ -727,7 +726,6 @@
             saveConfigToStorage();
 
             scheduleGlobalOverlayWarmup(initialPartId);
-            renderPremadeControllersPLP();
         } catch (err) {
             console.error("[Firebase Config] Bootstrap failed:", err);
         } finally {
@@ -775,8 +773,6 @@
     const colorPanelSub = document.getElementById("colorPanelSub");
     const colorPanelGrid = document.getElementById("colorPanelGrid");
     const optionsPanelGrid = document.getElementById("optionsPanelGrid");
-    const premadeControllersPLP = document.getElementById("premadeControllersPLP");
-    let premadeControllersCatalog = [];
     const colorPanelHeaderBottom = document.getElementById("colorPanelHeaderBottom");
     const colorEmptyState = document.getElementById("colorEmptyState");
 
@@ -797,6 +793,11 @@
     const panelButtons = configuratorControls ? configuratorControls.querySelectorAll("[data-panel]") : [];
     const panelSwitchButtons = document.querySelectorAll(".panel-switch-btn");
     const zohoLoadingOverlay = document.getElementById("zohoLoadingOverlay");
+
+    function isPremadeComponentPart(partId) {
+        const part = ALL_PARTS.find(p => p.id === partId);
+        return !!(part && part.componentType === 'premade');
+    }
 
     function getStackZIndex(part, stackIndex) {
         const partPri = part.priority || 1;
@@ -849,11 +850,12 @@
     function getPremadeEntriesForPart(partId) {
         const entries = [];
         ALL_PARTS.forEach(p => {
+            if (p.componentType !== 'premade') return;
             const options = getOptionsForPart(p.id);
             const currentOptions = Array.isArray(optionState[p.id]) ? optionState[p.id] : [];
             currentOptions.forEach(k => {
                 const opt = options.find(o => o.key === k);
-                if (!opt || (opt.type !== "premade" && opt.type !== "kit") || isEntryOutOfStock(opt)) return;
+                if (!opt || opt.type !== "premade" || isEntryOutOfStock(opt)) return;
                 const affected = Array.isArray(opt.affectedParts) && opt.affectedParts.length ? opt.affectedParts : [p.id];
                 if (affected.includes(partId)) entries.push(opt);
             });
@@ -866,7 +868,7 @@
         const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
         return currentOptions
             .map(k => options.find(o => o.key === k))
-            .filter(o => o && o.type !== "premade" && o.type !== "kit" && !isEntryOutOfStock(o));
+            .filter(o => o && o.type !== "premade" && !isEntryOutOfStock(o));
     }
 
     function getLayerStacks(partId) {
@@ -1538,7 +1540,9 @@
             if (part.hiddenUI) return;
             const row = createPartRow(part, idx);
             partsRowsById[part.id] = row;
-            if (secondaryIds.has(part.id)) {
+            if (part.componentType === 'premade') {
+                if (primaryList) primaryList.appendChild(row);
+            } else if (secondaryIds.has(part.id)) {
                 if (secondaryList) secondaryList.appendChild(row);
             } else {
                 if (primaryList) primaryList.appendChild(row);
@@ -1554,6 +1558,7 @@
     function createPartRow(part, thumbIndex = 0) {
         const row = document.createElement("div");
         row.className = "parts-item";
+        if (part.componentType === 'premade') row.classList.add('is-premade-component');
         row.dataset.id = part.id;
         row.title = part.title || ""; // Desktop tooltip
         if (!isPartActive(part)) row.classList.add("disabled");
@@ -1660,126 +1665,27 @@
         if (optionsPanelGrid) optionsPanelGrid.innerHTML = "";
     }
 
-    function isKitSelected(kit) {
-        if (!kit) return false;
-        const sel = optionState[kit.hostPartId];
-        return Array.isArray(sel) && sel.includes(kit.key);
-    }
-
-    function clearAllKitSelections() {
-        ALL_PARTS.forEach((p) => {
-            optionState[p.id] = (optionState[p.id] || []).filter((k) => {
-                const opt = getOptionsForPart(p.id).find((o) => o.key === k);
-                return !opt || opt.type !== "kit";
-            });
-        });
-    }
-
-    function applySpecialEditionKit(kit) {
-        if (!kit || isEntryOutOfStock(kit)) return;
-        clearAllKitSelections();
-        if (!Array.isArray(optionState[kit.hostPartId])) optionState[kit.hostPartId] = [];
-        const hostOptions = getOptionsForPart(kit.hostPartId);
-        const withoutOtherKits = optionState[kit.hostPartId].filter((k) => {
-            const opt = hostOptions.find((o) => o.key === k);
-            return !opt || opt.type !== "kit";
-        });
-        optionState[kit.hostPartId] = [...withoutOtherKits, kit.key];
-        saveConfigToStorage();
-        updatePartsUI();
-        updateSummary();
-        renderPremadeControllersPLP();
-        if (selectedPartId) openColorPanelForPart(selectedPartId);
-    }
-
-    function renderPremadeControllersPLP() {
-        if (!premadeControllersPLP) return;
-        premadeControllersPLP.innerHTML = "";
-
-        const kits = premadeControllersCatalog.filter((k) => !isEntryOutOfStock(k));
-        if (!kits.length) {
-            premadeControllersPLP.style.display = "none";
-            return;
-        }
-
-        premadeControllersPLP.style.display = "block";
-
-        const header = document.createElement("div");
-        header.className = "config-premade-plp__title";
-        header.textContent = currentLang === "ar" ? "أذرع تحكم جاهزة" : "Pre-made Controllers";
-        premadeControllersPLP.appendChild(header);
-
-        const grid = document.createElement("div");
-        grid.className = "build-grid config-premade-plp__grid";
-
-        kits.forEach((kit) => {
-            const card = document.createElement("article");
-            card.className = "build-card config-premade-plp__card";
-            if (isKitSelected(kit)) card.classList.add("is-selected");
-
-            const thumb = document.createElement("div");
-            thumb.className = "build-thumb";
-            const imgWrap = document.createElement("div");
-            imgWrap.className = "config-premade-plp__thumb";
-            const img = document.createElement("img");
-            img.src = kit.icon || kit.image || kit.secondImage || "/assets/controller.png";
-            img.alt = kit.valName || "";
-            img.loading = "lazy";
-            img.decoding = "async";
-            imgWrap.appendChild(img);
-            thumb.appendChild(imgWrap);
-
-            const body = document.createElement("div");
-            body.className = "build-body";
-
-            const title = document.createElement("div");
-            title.className = "build-title";
-            title.textContent = kit.valName || kit.key;
-
-            const price = document.createElement("div");
-            price.className = "build-price";
-            const totalPrice = (parseFloat(baseControllerPrice) || 0) + (parseFloat(kit.price) || 0);
-            price.innerHTML = `<span>${formatEzMoney(totalPrice)}</span>`;
-
-            const actions = document.createElement("div");
-            actions.className = "config-premade-plp__actions";
-
-            const customizeBtn = document.createElement("button");
-            customizeBtn.type = "button";
-            customizeBtn.className = "build-cta";
-            customizeBtn.textContent = currentLang === "ar" ? "تخصيص" : "Customize";
-            customizeBtn.addEventListener("click", () => applySpecialEditionKit(kit));
-
-            const cartBtn = document.createElement("button");
-            cartBtn.type = "button";
-            cartBtn.className = "build-cta config-premade-plp__cart-btn";
-            cartBtn.textContent = currentLang === "ar" ? "أضف للسلة" : "Add to Cart";
-            cartBtn.addEventListener("click", () => {
-                applySpecialEditionKit(kit);
-                addCurrentConfigToCart();
-            });
-
-            actions.appendChild(customizeBtn);
-            actions.appendChild(cartBtn);
-            body.appendChild(title);
-            body.appendChild(price);
-            body.appendChild(actions);
-
-            card.appendChild(thumb);
-            card.appendChild(body);
-            grid.appendChild(card);
-        });
-
-        premadeControllersPLP.appendChild(grid);
-    }
-
     function openColorPanelForPart(partId) {
-        renderPremadeControllersPLP();
         const part = ALL_PARTS.find(p => p.id === partId);
         if (!part) return;
 
+        if (colorPanelGrid) {
+            colorPanelGrid.classList.toggle('config-premade-component-panel', part.componentType === 'premade');
+        }
+
         const palette = getPaletteForPart(partId);
         const options = getOptionsForPart(partId);
+
+        if (part.componentType === 'premade') {
+            colorEmptyState.style.display = options.length ? 'none' : 'flex';
+            if (optionsPanelGrid) optionsPanelGrid.style.display = 'none';
+            if (colorPanelGrid) {
+                colorPanelGrid.style.display = options.length ? 'grid' : 'none';
+                buildPremadeComponentPalette(colorPanelGrid, options);
+            }
+            if (isMobileLayout()) updateMobileOptionsBar();
+            return;
+        }
 
         // Check if color customization is currently disabled by a selected gamemode
         const currentSelectedOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
@@ -1817,17 +1723,84 @@
 
 
 
+    function buildPremadeComponentPalette(target, entries) {
+        if (!target) return;
+        target.innerHTML = '';
+
+        const partId = selectedPartId;
+        if (!partId) return;
+
+        const header = document.createElement('div');
+        header.className = isMobileLayout() ? 'mobile-group-title' : 'color-group-title';
+        header.textContent = currentLang === 'ar' ? 'تصاميم جاهزة' : 'Pre-made Designs';
+        target.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'config-premade-design-grid';
+
+        const currentSelected = Array.isArray(optionState[partId]) ? optionState[partId] : [];
+
+        entries.forEach(entry => {
+            const isOutOfStock = isEntryOutOfStock(entry);
+            const isSelected = currentSelected.includes(entry.key);
+
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'config-premade-design-card';
+            if (isSelected) card.classList.add('active');
+            if (isOutOfStock) {
+                card.classList.add('is-disabled');
+                card.disabled = true;
+            }
+
+            const img = document.createElement('img');
+            img.src = entry.icon || entry.image || entry.secondImage || '/assets/controller.png';
+            img.alt = entry.valName || '';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            card.appendChild(img);
+
+            const meta = document.createElement('div');
+            meta.className = 'config-premade-design-meta';
+
+            const title = document.createElement('div');
+            title.className = 'config-premade-design-title';
+            title.textContent = entry.valName || entry.key;
+            meta.appendChild(title);
+
+            if (!isOutOfStock && entry.price > 0) {
+                const price = document.createElement('div');
+                price.className = 'config-premade-design-price';
+                price.setAttribute('data-bhd-price', String(entry.price));
+                price.textContent = formatEzMoney(entry.price);
+                meta.appendChild(price);
+            } else if (isOutOfStock) {
+                const stock = document.createElement('div');
+                stock.className = 'config-premade-design-price is-out-of-stock';
+                stock.textContent = t('outOfStock') || 'Out of Stock';
+                meta.appendChild(stock);
+            }
+
+            card.appendChild(meta);
+
+            card.addEventListener('click', () => {
+                if (isOutOfStock) return;
+                applyOption(partId, entry.key);
+            });
+
+            grid.appendChild(card);
+        });
+
+        target.appendChild(grid);
+    }
+
     function buildPaletteCells(target, entries, isOption) {
         if (target) target.innerHTML = "";
         const partId = selectedPartId;
         if (!partId) return;
 
         if (isOption) {
-            const premadeEntries = entries.filter(e => e.isPremade && !e.isKit);
-            const otherEntries = entries.filter(e => !e.isPremade && !e.isKit);
-            if (premadeEntries.length > 0) {
-                renderSection(target, premadeEntries, currentLang === 'ar' ? 'تصاميم جاهزة' : 'Pre-made Designs', true);
-            }
+            const otherEntries = entries.filter(e => !e.isPremade);
             if (otherEntries.length > 0) {
                 renderSection(target, otherEntries, t("availableOptions"), true);
             }
@@ -2420,70 +2393,60 @@
         return canvas.toDataURL("image/jpeg", 0.7);
     }
 
-    async function addCurrentConfigToCart() {
-        if (isBaseControllerOutOfStock()) {
-            alert(t("outOfStock") || "Out of Stock");
-            return false;
-        }
-        const snapshot = getSnapshot();
-        const hasCustom = Object.values(snapshot.parts).some((p) =>
-            p.color ||
-            (Array.isArray(p.options) && p.options.length > 0) ||
-            (p.option && p.option.key !== "standard")
-        );
-        if (!hasCustom) {
-            alert(t("alertNone"));
-            return false;
-        }
-
-        setZohoLoading(true);
-        if (addToCartBtn) addToCartBtn.disabled = true;
-
-        try {
-            const previewFrontLayers = collectVisibleFaceLayers("front");
-            const previewBackLayers = collectVisibleFaceLayers("back");
-            const previewFront = await buildPreviewImage(snapshot, "front");
-            const previewBack = await buildPreviewImage(snapshot, "back");
-
-            const cartItem = {
-                id: Date.now(),
-                name: t("productName"),
-                total: snapshot.total,
-                parts: snapshot.parts,
-                previewFrontLayers,
-                previewBackLayers,
-                previewFront,
-                previewBack
-            };
-
-            const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
-            cart.push(cartItem);
-            localStorage.setItem("ezCart", JSON.stringify(cart));
-            window.location.href = "/cart";
-            return true;
-        } catch (err) {
-            console.error("Cart Preview Generation Error:", err);
-            setZohoLoading(false);
-            if (addToCartBtn) addToCartBtn.disabled = false;
-            const cartItem = {
-                id: Date.now(),
-                name: t("productName"),
-                total: snapshot.total,
-                parts: snapshot.parts,
-                previewFrontLayers: collectVisibleFaceLayers("front"),
-                previewBackLayers: collectVisibleFaceLayers("back")
-            };
-            const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
-            cart.push(cartItem);
-            localStorage.setItem("ezCart", JSON.stringify(cart));
-            window.location.href = "/cart";
-            return true;
-        }
-    }
-
     if (addToCartBtn) {
-        addToCartBtn.addEventListener("click", () => {
-            addCurrentConfigToCart();
+        addToCartBtn.addEventListener("click", async () => {
+            if (isBaseControllerOutOfStock()) {
+                alert(t("outOfStock") || "Out of Stock");
+                return;
+            }
+            const snapshot = getSnapshot();
+            const hasCustom = Object.values(snapshot.parts).some(p => p.color || (p.option && p.option.key !== "standard"));
+            if (!hasCustom) {
+                alert(t("alertNone"));
+                return;
+            }
+
+            setZohoLoading(true);
+            addToCartBtn.disabled = true;
+
+            try {
+                const previewFrontLayers = collectVisibleFaceLayers("front");
+                const previewBackLayers = collectVisibleFaceLayers("back");
+                const previewFront = await buildPreviewImage(snapshot, "front");
+                const previewBack = await buildPreviewImage(snapshot, "back");
+
+                const cartItem = {
+                    id: Date.now(),
+                    name: t("productName"),
+                    total: snapshot.total,
+                    parts: snapshot.parts,
+                    previewFrontLayers: previewFrontLayers,
+                    previewBackLayers: previewBackLayers,
+                    previewFront: previewFront,
+                    previewBack: previewBack
+                };
+
+                const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
+                cart.push(cartItem);
+                localStorage.setItem("ezCart", JSON.stringify(cart));
+                window.location.href = "/cart";
+            } catch (err) {
+                console.error("Cart Preview Generation Error:", err);
+                setZohoLoading(false);
+                addToCartBtn.disabled = false;
+                const cartItem = {
+                    id: Date.now(),
+                    name: t("productName"),
+                    total: snapshot.total,
+                    parts: snapshot.parts,
+                    previewFrontLayers: collectVisibleFaceLayers("front"),
+                    previewBackLayers: collectVisibleFaceLayers("back")
+                };
+                const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
+                cart.push(cartItem);
+                localStorage.setItem("ezCart", JSON.stringify(cart));
+                window.location.href = "/cart";
+            }
         });
     }
 
