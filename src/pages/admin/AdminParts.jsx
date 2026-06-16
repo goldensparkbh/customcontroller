@@ -1235,7 +1235,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <input type="file" accept="image/*" onChange={e => setSubIconFile(e.target.files[0])} style={{ color: 'var(--admin-text-strong)' }} />
                                         {subIconPreview && !subIconFile && <img src={subIconPreview} alt="Preview" style={{ height: '40px', marginTop: '0.5rem', display: 'block', background: 'var(--admin-hover)', padding: '4px', borderRadius: '4px' }} />}
                                     </div>
-                                )}
+                                ) : null}
                             </div>
 
                             <div style={{ marginBottom: '1.5rem' }}>

@@ -634,7 +634,8 @@
                     mask: tech.mask || [],
                     priority: fbPart.priority || tech.priority || 1,
                     side: fbPart.side || tech.side || 'front',
-                    hiddenUI: fbPart.hiddenUI || false
+                    hiddenUI: fbPart.hiddenUI || false,
+                    componentType: fbPart.componentType === 'premade' ? 'premade' : 'regular'
                 };
             });
 
@@ -651,6 +652,7 @@
 
             firebaseParts.forEach(fbPart => {
                 const partId = fbPart.id;
+                const componentType = fbPart.componentType === 'premade' ? 'premade' : 'regular';
                 const options = fbPart.options || [];
 
                 options.forEach(opt => {
@@ -661,8 +663,10 @@
 
                     addPriceFallback(partId, price);
 
-                    // Use accurate type field if available, fallback to substring matching
                     const isPremade = opt.type === 'premade';
+                    if (componentType === 'regular' && isPremade) return;
+                    if (componentType === 'premade' && !isPremade) return;
+
                     const isGamemode = !isPremade && (opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers"));
                     const nName = (opt.name || "").toLowerCase();
                     const isTransparent = (nName.includes("transparent") || nName.includes("trans"));
@@ -696,7 +700,6 @@
                     }
 
                     // Ensure config/option state is initialized to null for this part
-                    if (!(partId in configState)) configState[partId] = null;
                     if (!(partId in optionState)) optionState[partId] = [];
                 });
             });
@@ -791,8 +794,24 @@
     const panelSwitchButtons = document.querySelectorAll(".panel-switch-btn");
     const zohoLoadingOverlay = document.getElementById("zohoLoadingOverlay");
 
+    function isPremadeComponentPart(partId) {
+        const part = ALL_PARTS.find(p => p.id === partId);
+        return !!(part && part.componentType === 'premade');
+    }
+
+    function getStackZIndex(part, stackIndex) {
+        const partPri = part.priority || 1;
+        if (stackIndex === 0) {
+            return String(partPri);
+        }
+        if (stackIndex === 1) {
+            return String(100 + partPri * 10);
+        }
+        return String(100 + partPri * 10 + 5);
+    }
+
     function createStackImages(part, stackIndex) {
-        const zIndex = String((part.priority || 1) * 10 + stackIndex);
+        const zIndex = getStackZIndex(part, stackIndex);
         const main = document.createElement("img");
         main.className = "part-layer-img";
         main.dataset.partId = part.id;
@@ -831,6 +850,7 @@
     function getPremadeEntriesForPart(partId) {
         const entries = [];
         ALL_PARTS.forEach(p => {
+            if (p.componentType !== 'premade') return;
             const options = getOptionsForPart(p.id);
             const currentOptions = Array.isArray(optionState[p.id]) ? optionState[p.id] : [];
             currentOptions.forEach(k => {
@@ -1520,7 +1540,9 @@
             if (part.hiddenUI) return;
             const row = createPartRow(part, idx);
             partsRowsById[part.id] = row;
-            if (secondaryIds.has(part.id)) {
+            if (part.componentType === 'premade') {
+                if (primaryList) primaryList.appendChild(row);
+            } else if (secondaryIds.has(part.id)) {
                 if (secondaryList) secondaryList.appendChild(row);
             } else {
                 if (primaryList) primaryList.appendChild(row);
@@ -1536,6 +1558,7 @@
     function createPartRow(part, thumbIndex = 0) {
         const row = document.createElement("div");
         row.className = "parts-item";
+        if (part.componentType === 'premade') row.classList.add('is-premade-component');
         row.dataset.id = part.id;
         row.title = part.title || ""; // Desktop tooltip
         if (!isPartActive(part)) row.classList.add("disabled");
@@ -1646,8 +1669,23 @@
         const part = ALL_PARTS.find(p => p.id === partId);
         if (!part) return;
 
+        if (colorPanelGrid) {
+            colorPanelGrid.classList.toggle('config-premade-component-panel', part.componentType === 'premade');
+        }
+
         const palette = getPaletteForPart(partId);
         const options = getOptionsForPart(partId);
+
+        if (part.componentType === 'premade') {
+            colorEmptyState.style.display = options.length ? 'none' : 'flex';
+            if (optionsPanelGrid) optionsPanelGrid.style.display = 'none';
+            if (colorPanelGrid) {
+                colorPanelGrid.style.display = options.length ? 'grid' : 'none';
+                buildPremadeComponentPalette(colorPanelGrid, options);
+            }
+            if (isMobileLayout()) updateMobileOptionsBar();
+            return;
+        }
 
         // Check if color customization is currently disabled by a selected gamemode
         const currentSelectedOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
@@ -1685,17 +1723,84 @@
 
 
 
+    function buildPremadeComponentPalette(target, entries) {
+        if (!target) return;
+        target.innerHTML = '';
+
+        const partId = selectedPartId;
+        if (!partId) return;
+
+        const header = document.createElement('div');
+        header.className = isMobileLayout() ? 'mobile-group-title' : 'color-group-title';
+        header.textContent = currentLang === 'ar' ? 'تصاميم جاهزة' : 'Pre-made Designs';
+        target.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'config-premade-design-grid';
+
+        const currentSelected = Array.isArray(optionState[partId]) ? optionState[partId] : [];
+
+        entries.forEach(entry => {
+            const isOutOfStock = isEntryOutOfStock(entry);
+            const isSelected = currentSelected.includes(entry.key);
+
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'config-premade-design-card';
+            if (isSelected) card.classList.add('active');
+            if (isOutOfStock) {
+                card.classList.add('is-disabled');
+                card.disabled = true;
+            }
+
+            const img = document.createElement('img');
+            img.src = entry.icon || entry.image || entry.secondImage || '/assets/controller.png';
+            img.alt = entry.valName || '';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            card.appendChild(img);
+
+            const meta = document.createElement('div');
+            meta.className = 'config-premade-design-meta';
+
+            const title = document.createElement('div');
+            title.className = 'config-premade-design-title';
+            title.textContent = entry.valName || entry.key;
+            meta.appendChild(title);
+
+            if (!isOutOfStock && entry.price > 0) {
+                const price = document.createElement('div');
+                price.className = 'config-premade-design-price';
+                price.setAttribute('data-bhd-price', String(entry.price));
+                price.textContent = formatEzMoney(entry.price);
+                meta.appendChild(price);
+            } else if (isOutOfStock) {
+                const stock = document.createElement('div');
+                stock.className = 'config-premade-design-price is-out-of-stock';
+                stock.textContent = t('outOfStock') || 'Out of Stock';
+                meta.appendChild(stock);
+            }
+
+            card.appendChild(meta);
+
+            card.addEventListener('click', () => {
+                if (isOutOfStock) return;
+                applyOption(partId, entry.key);
+            });
+
+            grid.appendChild(card);
+        });
+
+        target.appendChild(grid);
+    }
+
     function buildPaletteCells(target, entries, isOption) {
         if (target) target.innerHTML = "";
         const partId = selectedPartId;
         if (!partId) return;
 
         if (isOption) {
-            const premadeEntries = entries.filter(e => e.isPremade);
             const otherEntries = entries.filter(e => !e.isPremade);
-            if (premadeEntries.length > 0) {
-                renderSection(target, premadeEntries, currentLang === 'ar' ? 'تصاميم جاهزة' : 'Pre-made Designs', true);
-            }
             if (otherEntries.length > 0) {
                 renderSection(target, otherEntries, t("availableOptions"), true);
             }
@@ -2301,8 +2406,6 @@
                 return;
             }
 
-            // Show loading state
-            // Show loading state
             setZohoLoading(true);
             addToCartBtn.disabled = true;
 
@@ -2331,7 +2434,6 @@
                 console.error("Cart Preview Generation Error:", err);
                 setZohoLoading(false);
                 addToCartBtn.disabled = false;
-                // Fallback if canvas fails
                 const cartItem = {
                     id: Date.now(),
                     name: t("productName"),
