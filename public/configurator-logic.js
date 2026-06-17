@@ -1781,6 +1781,14 @@
 
     function refreshAccordionHeights() {
         if (!accordionItems) return;
+        if (!isMobileLayout()) {
+            accordionItems.forEach((item) => {
+                item.classList.add("open");
+                const content = item.querySelector(".accordion-content");
+                if (content) content.style.removeProperty("max-height");
+            });
+            return;
+        }
         accordionItems.forEach(item => {
             const content = item.querySelector(".accordion-content");
             if (content) {
@@ -2826,6 +2834,7 @@
         function updateAllButtons() {
             updateColorButtons();
             updatePartsButtons();
+            refreshAccordionHeights();
         }
 
         window.addEventListener("resize", updateAllButtons, { passive: true });
