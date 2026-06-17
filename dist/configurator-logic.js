@@ -863,6 +863,111 @@
         return entries;
     }
 
+    /** Clear color/option picks on regular parts covered by a pre-made design (one-way only). */
+    function clearRegularPartsCoveredByPremade(premadeOption) {
+        if (!premadeOption || premadeOption.type !== "premade") return;
+        const affected = Array.isArray(premadeOption.affectedParts) && premadeOption.affectedParts.length
+            ? premadeOption.affectedParts
+            : [];
+        if (!affected.length) return;
+
+        affected.forEach(affectedPartId => {
+            const targetPart = ALL_PARTS.find(p => p.id === affectedPartId);
+            if (!targetPart || targetPart.componentType === "premade") return;
+
+            configState[affectedPartId] = null;
+            optionState[affectedPartId] = [];
+            selectedPriceByPart[affectedPartId] = 0;
+            selectedOptionPriceByPart[affectedPartId] = 0;
+        });
+    }
+
+    /** Re-apply coverage clears for all active pre-made selections (e.g. after restore). */
+    function enforcePremadeCoverageClears() {
+        ALL_PARTS.forEach(p => {
+            if (p.componentType !== "premade") return;
+            const options = getOptionsForPart(p.id);
+            const currentOptions = Array.isArray(optionState[p.id]) ? optionState[p.id] : [];
+            currentOptions.forEach(k => {
+                const opt = options.find(o => o.key === k);
+                if (opt && opt.type === "premade" && !isEntryOutOfStock(opt)) {
+                    clearRegularPartsCoveredByPremade(opt);
+                }
+            });
+        });
+    }
+
+    function partHasActiveCustomization(partId) {
+        if (configState[partId]) return true;
+        const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
+        if (!currentOptions.length) return false;
+        const options = getOptionsForPart(partId);
+        return currentOptions.some(k => {
+            const opt = options.find(o => o.key === k);
+            return opt && !isEntryOutOfStock(opt);
+        });
+    }
+
+    function getPartMaskUrl(part) {
+        if (!part || !part.mask) return null;
+        const raw = Array.isArray(part.mask) ? part.mask[0] : part.mask;
+        return raw ? String(raw) : null;
+    }
+
+    function applyPartMaskToImg(imgEl, part) {
+        if (!imgEl || !part) return;
+        const maskPath = getPartMaskUrl(part);
+        if (!maskPath) return;
+        const maskUrl = `url('${maskPath}')`;
+        imgEl.style.webkitMaskImage = maskUrl;
+        imgEl.style.maskImage = maskUrl;
+        imgEl.style.webkitMaskSize = "contain";
+        imgEl.style.maskSize = "contain";
+        imgEl.style.webkitMaskPosition = "center";
+        imgEl.style.maskPosition = "center";
+        imgEl.style.webkitMaskRepeat = "no-repeat";
+        imgEl.style.maskRepeat = "no-repeat";
+    }
+
+    /** Pre-made main/opp visibility: only show the face that matches the current controller side. */
+    function shouldShowPremadeOnFace(part, isMainLayer) {
+        if (!part) return false;
+        const isFrontPart = part.side === "front";
+        if (isMainLayer) {
+            return currentSide === "front" ? isFrontPart : !isFrontPart;
+        }
+        if (isFrontPart) {
+            return currentSide === "back";
+        }
+        return false;
+    }
+
+    function setPremadeStackImage(stack, part, mainUrl, oppUrl) {
+        if (!stack || !part) return;
+
+        if (stack.main) {
+            if (mainUrl && shouldShowPremadeOnFace(part, true)) {
+                stack.main.src = mainUrl;
+                stack.main.style.display = "block";
+                applyPartMaskToImg(stack.main, part);
+            } else {
+                stack.main.removeAttribute("src");
+                stack.main.style.display = "none";
+            }
+        }
+
+        if (stack.opp) {
+            if (oppUrl && shouldShowPremadeOnFace(part, false)) {
+                stack.opp.src = oppUrl;
+                stack.opp.style.display = "block";
+                applyPartMaskToImg(stack.opp, part);
+            } else {
+                stack.opp.removeAttribute("src");
+                stack.opp.style.display = "none";
+            }
+        }
+    }
+
     function getGamemodeEntriesForPart(partId) {
         const options = getOptionsForPart(partId);
         const currentOptions = Array.isArray(optionState[partId]) ? optionState[partId] : [];
@@ -1274,22 +1379,36 @@
         const stack = layers[partId];
         if (!stack) return;
 
+        const part = ALL_PARTS.find(p => p.id === partId);
         const palette = getPaletteForPart(partId);
-        const premadeEntries = getPremadeEntriesForPart(partId);
-        premadeEntries.sort((a, b) => (a.priority || -10) - (b.priority || -10));
-        const premadeMain = [...premadeEntries].reverse().find(e => e.image);
-        const premadeOpp = [...premadeEntries].reverse().find(e => e.secondImage);
-        setStackImage(stack.premade, premadeMain?.image, premadeOpp?.secondImage);
+
+        let premadeMain = null;
+        let premadeOpp = null;
+        if (!partHasActiveCustomization(partId)) {
+            const premadeEntries = getPremadeEntriesForPart(partId);
+            premadeEntries.sort((a, b) => (a.priority || -10) - (b.priority || -10));
+            premadeMain = [...premadeEntries].reverse().find(e => e.image);
+            premadeOpp = [...premadeEntries].reverse().find(e => e.secondImage);
+        }
+        setPremadeStackImage(stack.premade, part, premadeMain?.image, premadeOpp?.secondImage);
 
         const colorKey = configState[partId];
         const col = colorKey ? palette.find(c => c.key === colorKey) : null;
         setStackImage(stack.color, col?.image, col?.secondImage);
+        if (part) {
+            applyPartMaskToImg(stack.color?.main, part);
+            applyPartMaskToImg(stack.color?.opp, part);
+        }
 
         const gamemodeEntries = getGamemodeEntriesForPart(partId);
         gamemodeEntries.sort((a, b) => (a.priority || 1) - (b.priority || 1));
         const optMain = [...gamemodeEntries].reverse().find(e => e.image);
         const optOpp = [...gamemodeEntries].reverse().find(e => e.secondImage);
         setStackImage(stack.option, optMain?.image, optOpp?.secondImage);
+        if (part) {
+            applyPartMaskToImg(stack.option?.main, part);
+            applyPartMaskToImg(stack.option?.opp, part);
+        }
 
         const hasOptionOverlay = gamemodeEntries.some(e => e.image || e.secondImage);
         const targetGloss = glossLayers[partId] || [];
@@ -1301,6 +1420,7 @@
 
     function restorePersistedSelections() {
         ensurePartStateDefaults();
+        enforcePremadeCoverageClears();
         ALL_PARTS.forEach((part) => syncPartVisualState(part.id));
         setSide(currentSide === "back" ? "back" : "front");
         syncBaseImages();
@@ -2076,6 +2196,11 @@
 
         optionState[partId] = currentSelections;
 
+        // Pre-made design selected: clear colors/options on covered regular parts (not vice versa).
+        if (!isAlreadySelected && requestedOption.type === "premade") {
+            clearRegularPartsCoveredByPremade(requestedOption);
+        }
+
         // --- 4. Handle Color-Disabling Cleanup & Price Reset ---
         const colorDisabled = currentSelections.some(k => {
             const opt = options.find(o => o.key === k);
@@ -2136,6 +2261,7 @@
         if (flipBtns) {
             flipBtns.forEach((btn) => btn.classList.toggle("flipped", side === "back"));
         }
+        updateVisualizerLayers();
         saveConfigToStorage();
     }
 
