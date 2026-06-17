@@ -236,6 +236,7 @@
     const lastApplySeqByPart = {};
     const layers = {};
     const glossLayers = {};
+    const premadeFaceOverlays = {};
     const maskDataById = {};
     let masksReady = false;
     const imageWarmupMeta = new Map();
@@ -649,6 +650,7 @@
             void rebuildMasks();
             // Re-build UI layers
             buildPartLayers();
+            buildPremadeFaceOverlays();
 
             firebaseParts.forEach(fbPart => {
                 const partId = fbPart.id;
@@ -920,35 +922,25 @@
         return urls.length ? urls[0] : null;
     }
 
-    const FULL_BLEED_OVERLAY_PARTS = new Set(["shell", "trimpiece"]);
-
-    function applyOverlayFitToImg(imgEl, partId) {
-        if (!imgEl) return;
-        const baseId = String(partId || "").replace(/_opp$/, "");
-        if (FULL_BLEED_OVERLAY_PARTS.has(baseId)) {
-            imgEl.style.objectFit = "fill";
-        } else {
-            imgEl.style.removeProperty("object-fit");
-        }
-    }
-
     function applyPartMaskToImg(imgEl, part) {
         if (!imgEl || !part) return;
         const maskPaths = getPartMaskUrls(part);
         if (!maskPaths.length) return;
 
-        const isFullBleed = FULL_BLEED_OVERLAY_PARTS.has(part.id);
-        const maskSize = isFullBleed ? "100% 100%" : "contain";
         const maskUrls = maskPaths.map((path) => `url('${path}')`).join(", ");
 
         imgEl.style.webkitMaskImage = maskUrls;
         imgEl.style.maskImage = maskUrls;
-        imgEl.style.webkitMaskSize = maskPaths.map(() => maskSize).join(", ");
-        imgEl.style.maskSize = maskPaths.map(() => maskSize).join(", ");
+        imgEl.style.webkitMaskSize = maskPaths.map(() => "contain").join(", ");
+        imgEl.style.maskSize = maskPaths.map(() => "contain").join(", ");
         imgEl.style.webkitMaskPosition = maskPaths.map(() => "center").join(", ");
         imgEl.style.maskPosition = maskPaths.map(() => "center").join(", ");
         imgEl.style.webkitMaskRepeat = maskPaths.map(() => "no-repeat").join(", ");
         imgEl.style.maskRepeat = maskPaths.map(() => "no-repeat").join(", ");
+        imgEl.style.webkitMaskOrigin = "border-box";
+        imgEl.style.maskOrigin = "border-box";
+        imgEl.style.webkitMaskClip = "border-box";
+        imgEl.style.maskClip = "border-box";
 
         if (maskPaths.length > 1) {
             imgEl.style.webkitMaskComposite = "source-over";
@@ -969,6 +961,10 @@
         imgEl.style.removeProperty("mask-position");
         imgEl.style.removeProperty("-webkit-mask-repeat");
         imgEl.style.removeProperty("mask-repeat");
+        imgEl.style.removeProperty("-webkit-mask-origin");
+        imgEl.style.removeProperty("mask-origin");
+        imgEl.style.removeProperty("-webkit-mask-clip");
+        imgEl.style.removeProperty("mask-clip");
     }
 
     /** Which controller face (front/back) a stack slot is rendered on in the DOM. */
@@ -981,10 +977,19 @@
         return isFrontPart ? "front" : "back";
     }
 
+    function shouldShowPremadeLayer(part, isOppElement) {
+        if (!part) return false;
+        const isFrontPart = part.side === "front";
+        if (currentSide === "front") {
+            return isFrontPart && !isOppElement;
+        }
+        if (isFrontPart) return isOppElement;
+        return !isOppElement;
+    }
+
     function shouldShowLayerOnCurrentSide(part, isOppElement, isPremade) {
-        if (getPhysicalFaceForLayer(part, isOppElement) !== currentSide) return false;
-        if (isPremade && part.side === "back" && isOppElement) return false;
-        return true;
+        if (isPremade) return shouldShowPremadeLayer(part, isOppElement);
+        return getPhysicalFaceForLayer(part, isOppElement) === currentSide;
     }
 
     function syncStackLayerVisibility(stack, part, isPremade) {
@@ -1004,7 +1009,6 @@
             const show = shouldShowLayerOnCurrentSide(part, isOpp, isPremade);
             el.style.visibility = show ? "visible" : "hidden";
             el.style.pointerEvents = show ? "" : "none";
-            applyOverlayFitToImg(el, el.dataset.partId || part.id);
             if (isPremade) {
                 if (show) applyPartMaskToImg(el, part);
                 else clearPartMaskFromImg(el);
@@ -1039,6 +1043,86 @@
         const stack = layers[partId];
         if (!stack) return [];
         return [stack.premade, stack.color, stack.option].filter(Boolean);
+    }
+
+    function getActivePremadeSelectionForComponent(componentPartId) {
+        const options = getOptionsForPart(componentPartId);
+        const currentOptions = Array.isArray(optionState[componentPartId]) ? optionState[componentPartId] : [];
+        const selected = currentOptions
+            .map((k) => options.find((o) => o.key === k))
+            .filter((o) => o && o.type === "premade" && !isEntryOutOfStock(o));
+        if (!selected.length) return null;
+        selected.sort((a, b) => (a.priority || -10) - (b.priority || -10));
+        return selected[selected.length - 1];
+    }
+
+    function isPartCoveredByActivePremadeFace(partId) {
+        return ALL_PARTS.some((p) => {
+            if (p.componentType !== "premade") return false;
+            const active = getActivePremadeSelectionForComponent(p.id);
+            if (!active) return false;
+            const affected = Array.isArray(active.affectedParts) && active.affectedParts.length
+                ? active.affectedParts
+                : [];
+            return affected.includes(partId);
+        });
+    }
+
+    function buildPremadeFaceOverlays() {
+        document.querySelectorAll(".premade-face-overlay").forEach((el) => el.remove());
+        Object.keys(premadeFaceOverlays).forEach((k) => delete premadeFaceOverlays[k]);
+
+        ALL_PARTS.filter((p) => p.componentType === "premade").forEach((part) => {
+            const frontImg = document.createElement("img");
+            frontImg.className = "part-layer-img premade-face-overlay";
+            frontImg.dataset.premadeComponentId = part.id;
+            frontImg.alt = "";
+            frontImg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;pointer-events:none;z-index:12;display:none;";
+
+            const backImg = document.createElement("img");
+            backImg.className = "part-layer-img premade-face-overlay";
+            backImg.dataset.premadeComponentId = part.id;
+            backImg.alt = "";
+            backImg.style.cssText = frontImg.style.cssText;
+
+            if (faceFrontEl) faceFrontEl.appendChild(frontImg);
+            if (faceBackEl) faceBackEl.appendChild(backImg);
+            premadeFaceOverlays[part.id] = { front: frontImg, back: backImg };
+        });
+    }
+
+    function updatePremadeFaceOverlays() {
+        ALL_PARTS.filter((p) => p.componentType === "premade").forEach((part) => {
+            const faceLayers = premadeFaceOverlays[part.id];
+            if (!faceLayers) return;
+
+            const active = getActivePremadeSelectionForComponent(part.id);
+            const { front, back } = faceLayers;
+
+            if (!active) {
+                front.style.display = "none";
+                back.style.display = "none";
+                front.removeAttribute("src");
+                back.removeAttribute("src");
+                return;
+            }
+
+            if (active.image) {
+                if (front.getAttribute("src") !== active.image) front.src = active.image;
+                front.style.display = currentSide === "front" ? "block" : "none";
+            } else {
+                front.style.display = "none";
+                front.removeAttribute("src");
+            }
+
+            if (active.secondImage) {
+                if (back.getAttribute("src") !== active.secondImage) back.src = active.secondImage;
+                back.style.display = currentSide === "back" ? "block" : "none";
+            } else {
+                back.style.display = "none";
+                back.removeAttribute("src");
+            }
+        });
     }
 
     function buildPartLayers() {
@@ -1443,13 +1527,18 @@
 
         let premadeMain = null;
         let premadeOpp = null;
-        if (!partHasActiveCustomization(partId)) {
+        const useFullFacePremade = isPartCoveredByActivePremadeFace(partId);
+        if (!partHasActiveCustomization(partId) && !useFullFacePremade) {
             const premadeEntries = getPremadeEntriesForPart(partId);
             premadeEntries.sort((a, b) => (a.priority || -10) - (b.priority || -10));
             premadeMain = [...premadeEntries].reverse().find(e => e.image);
             premadeOpp = [...premadeEntries].reverse().find(e => e.secondImage);
         }
-        setStackImage(stack.premade, premadeMain?.image, premadeOpp?.secondImage);
+        if (useFullFacePremade) {
+            setStackImage(stack.premade, null, null);
+        } else {
+            setStackImage(stack.premade, premadeMain?.image, premadeOpp?.secondImage);
+        }
         syncStackLayerVisibility(stack.premade, part, true);
 
         const colorKey = configState[partId];
@@ -1765,7 +1854,7 @@
         warmPartOverlayImages(partId, { priority: "high", retain: true });
         // Prefer the non-hidden side for the UI selection
         const part = ALL_PARTS.find(p => p.id === partId && !p.hiddenUI) || ALL_PARTS.find(p => p.id === partId);
-        if (part && part.side !== currentSide) {
+        if (part && part.side !== currentSide && part.componentType !== "premade") {
             setSide(part.side);
         }
         updatePartsUI();
@@ -2288,6 +2377,7 @@
         if (selectedPartId === partId) openColorPanelForPart(partId);
     }
     function updateVisualizerLayers() {
+        updatePremadeFaceOverlays();
         ALL_PARTS.forEach(part => updatePartVisualStacks(part.id));
     }
 
@@ -2320,14 +2410,18 @@
     const flipBtns = document.querySelectorAll(".flip-toggle");
     if (flipBtns) {
         flipBtns.forEach((btn) => {
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 setSide(currentSide === "front" ? "back" : "front");
                 playClick();
             });
         });
     }
     if (flipControlBtn) {
-        flipControlBtn.addEventListener("click", () => {
+        flipControlBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             setSide(currentSide === "front" ? "back" : "front");
             playClick();
         });

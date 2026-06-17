@@ -2100,12 +2100,20 @@ html[dir="rtl"] .part-name {
   isolation: isolate;
 }
 
-.controller-face img {
-  position: relative;
+.controller-face img,
+.controller-face .part-layer-img,
+.controller-face .premade-face-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center center;
   pointer-events: none;
+}
+
+.controller-face > img:first-of-type {
   z-index: 1;
 }
 
@@ -2131,22 +2139,11 @@ html[dir="rtl"] .part-name {
 }
 
 .controller-face .part-layer-img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
   z-index: 20;
 }
 
-/* Front shell + trim overlays must align 1:1 with the base controller canvas */
-.controller-face .part-layer-img[data-part-id="shell"],
-.controller-face .part-layer-img[data-part-id="shell_opp"],
-.controller-face .part-layer-img[data-part-id="trimpiece"],
-.controller-face .part-layer-img[data-part-id="trimpiece_opp"] {
-  object-fit: fill;
+.controller-face .premade-face-overlay {
+  z-index: 12;
 }
 
 .part-layer {
