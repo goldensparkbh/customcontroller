@@ -2141,6 +2141,14 @@ html[dir="rtl"] .part-name {
   z-index: 20;
 }
 
+/* Front shell + trim overlays must align 1:1 with the base controller canvas */
+.controller-face .part-layer-img[data-part-id="shell"],
+.controller-face .part-layer-img[data-part-id="shell_opp"],
+.controller-face .part-layer-img[data-part-id="trimpiece"],
+.controller-face .part-layer-img[data-part-id="trimpiece_opp"] {
+  object-fit: fill;
+}
+
 .part-layer {
   position: absolute;
   inset: 0;

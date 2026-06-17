@@ -766,6 +766,7 @@
 
     const controllerFlip = document.getElementById("controllerFlip");
     const controllerFlipBtn = document.getElementById("controllerFlipBtn");
+    const flipControlBtn = document.getElementById("flipControlBtn");
     const summaryAmountEl = document.getElementById("summaryAmount");
     const addToCartBtn = document.getElementById("addToCartBtn");
     const addToCartHome = addToCartBtn ? { parent: addToCartBtn.parentElement, next: addToCartBtn.nextSibling } : null;
@@ -908,64 +909,122 @@
         });
     }
 
+    function getPartMaskUrls(part) {
+        if (!part || !part.mask) return [];
+        const masks = Array.isArray(part.mask) ? part.mask : [part.mask];
+        return masks.map((m) => String(m || "").trim()).filter(Boolean);
+    }
+
     function getPartMaskUrl(part) {
-        if (!part || !part.mask) return null;
-        const raw = Array.isArray(part.mask) ? part.mask[0] : part.mask;
-        return raw ? String(raw) : null;
+        const urls = getPartMaskUrls(part);
+        return urls.length ? urls[0] : null;
+    }
+
+    const FULL_BLEED_OVERLAY_PARTS = new Set(["shell", "trimpiece"]);
+
+    function applyOverlayFitToImg(imgEl, partId) {
+        if (!imgEl) return;
+        const baseId = String(partId || "").replace(/_opp$/, "");
+        if (FULL_BLEED_OVERLAY_PARTS.has(baseId)) {
+            imgEl.style.objectFit = "fill";
+        } else {
+            imgEl.style.removeProperty("object-fit");
+        }
     }
 
     function applyPartMaskToImg(imgEl, part) {
         if (!imgEl || !part) return;
-        const maskPath = getPartMaskUrl(part);
-        if (!maskPath) return;
-        const maskUrl = `url('${maskPath}')`;
-        imgEl.style.webkitMaskImage = maskUrl;
-        imgEl.style.maskImage = maskUrl;
-        imgEl.style.webkitMaskSize = "contain";
-        imgEl.style.maskSize = "contain";
-        imgEl.style.webkitMaskPosition = "center";
-        imgEl.style.maskPosition = "center";
-        imgEl.style.webkitMaskRepeat = "no-repeat";
-        imgEl.style.maskRepeat = "no-repeat";
+        const maskPaths = getPartMaskUrls(part);
+        if (!maskPaths.length) return;
+
+        const isFullBleed = FULL_BLEED_OVERLAY_PARTS.has(part.id);
+        const maskSize = isFullBleed ? "100% 100%" : "contain";
+        const maskUrls = maskPaths.map((path) => `url('${path}')`).join(", ");
+
+        imgEl.style.webkitMaskImage = maskUrls;
+        imgEl.style.maskImage = maskUrls;
+        imgEl.style.webkitMaskSize = maskPaths.map(() => maskSize).join(", ");
+        imgEl.style.maskSize = maskPaths.map(() => maskSize).join(", ");
+        imgEl.style.webkitMaskPosition = maskPaths.map(() => "center").join(", ");
+        imgEl.style.maskPosition = maskPaths.map(() => "center").join(", ");
+        imgEl.style.webkitMaskRepeat = maskPaths.map(() => "no-repeat").join(", ");
+        imgEl.style.maskRepeat = maskPaths.map(() => "no-repeat").join(", ");
+
+        if (maskPaths.length > 1) {
+            imgEl.style.webkitMaskComposite = "source-over";
+            imgEl.style.maskComposite = "add";
+        } else {
+            imgEl.style.removeProperty("-webkit-mask-composite");
+            imgEl.style.removeProperty("mask-composite");
+        }
     }
 
-    /** Pre-made main/opp visibility: only show the face that matches the current controller side. */
-    function shouldShowPremadeOnFace(part, isMainLayer) {
-        if (!part) return false;
+    function clearPartMaskFromImg(imgEl) {
+        if (!imgEl) return;
+        imgEl.style.removeProperty("-webkit-mask-image");
+        imgEl.style.removeProperty("mask-image");
+        imgEl.style.removeProperty("-webkit-mask-size");
+        imgEl.style.removeProperty("mask-size");
+        imgEl.style.removeProperty("-webkit-mask-position");
+        imgEl.style.removeProperty("mask-position");
+        imgEl.style.removeProperty("-webkit-mask-repeat");
+        imgEl.style.removeProperty("mask-repeat");
+    }
+
+    /** Which controller face (front/back) a stack slot is rendered on in the DOM. */
+    function getPhysicalFaceForLayer(part, isOppElement) {
+        if (!part) return currentSide;
         const isFrontPart = part.side === "front";
-        if (isMainLayer) {
-            return currentSide === "front" ? isFrontPart : !isFrontPart;
+        if (isOppElement) {
+            return isFrontPart ? "back" : "front";
         }
-        if (isFrontPart) {
-            return currentSide === "back";
-        }
-        return false;
+        return isFrontPart ? "front" : "back";
     }
 
-    function setPremadeStackImage(stack, part, mainUrl, oppUrl) {
+    function shouldShowLayerOnCurrentSide(part, isOppElement, isPremade) {
+        if (getPhysicalFaceForLayer(part, isOppElement) !== currentSide) return false;
+        if (isPremade && part.side === "back" && isOppElement) return false;
+        return true;
+    }
+
+    function syncStackLayerVisibility(stack, part, isPremade) {
         if (!stack || !part) return;
-
-        if (stack.main) {
-            if (mainUrl && shouldShowPremadeOnFace(part, true)) {
-                stack.main.src = mainUrl;
-                stack.main.style.display = "block";
-                applyPartMaskToImg(stack.main, part);
-            } else {
-                stack.main.removeAttribute("src");
-                stack.main.style.display = "none";
+        [
+            { el: stack.main, isOpp: false },
+            { el: stack.opp, isOpp: true }
+        ].forEach(({ el, isOpp }) => {
+            if (!el) return;
+            const active = el.getAttribute("src") && el.style.display !== "none";
+            if (!active) {
+                el.style.visibility = "";
+                el.style.pointerEvents = "";
+                if (isPremade) clearPartMaskFromImg(el);
+                return;
             }
-        }
-
-        if (stack.opp) {
-            if (oppUrl && shouldShowPremadeOnFace(part, false)) {
-                stack.opp.src = oppUrl;
-                stack.opp.style.display = "block";
-                applyPartMaskToImg(stack.opp, part);
-            } else {
-                stack.opp.removeAttribute("src");
-                stack.opp.style.display = "none";
+            const show = shouldShowLayerOnCurrentSide(part, isOpp, isPremade);
+            el.style.visibility = show ? "visible" : "hidden";
+            el.style.pointerEvents = show ? "" : "none";
+            applyOverlayFitToImg(el, el.dataset.partId || part.id);
+            if (isPremade) {
+                if (show) applyPartMaskToImg(el, part);
+                else clearPartMaskFromImg(el);
             }
+        });
+    }
+
+    function updateFlipControl() {
+        const label = currentSide === "front" ? (t("front") || "Front") : (t("back") || "Back");
+        if (flipControlBtn) {
+            flipControlBtn.setAttribute("aria-label", label);
+            flipControlBtn.classList.toggle("is-back", currentSide === "back");
         }
+        if (controllerFlipBtn) {
+            controllerFlipBtn.setAttribute("aria-label", label);
+            controllerFlipBtn.classList.toggle("flipped", currentSide === "back");
+        }
+        document.querySelectorAll(".flip-toggle").forEach((btn) => {
+            btn.classList.toggle("flipped", currentSide === "back");
+        });
     }
 
     function getGamemodeEntriesForPart(partId) {
@@ -1390,25 +1449,20 @@
             premadeMain = [...premadeEntries].reverse().find(e => e.image);
             premadeOpp = [...premadeEntries].reverse().find(e => e.secondImage);
         }
-        setPremadeStackImage(stack.premade, part, premadeMain?.image, premadeOpp?.secondImage);
+        setStackImage(stack.premade, premadeMain?.image, premadeOpp?.secondImage);
+        syncStackLayerVisibility(stack.premade, part, true);
 
         const colorKey = configState[partId];
         const col = colorKey ? palette.find(c => c.key === colorKey) : null;
         setStackImage(stack.color, col?.image, col?.secondImage);
-        if (part) {
-            applyPartMaskToImg(stack.color?.main, part);
-            applyPartMaskToImg(stack.color?.opp, part);
-        }
+        syncStackLayerVisibility(stack.color, part, false);
 
         const gamemodeEntries = getGamemodeEntriesForPart(partId);
         gamemodeEntries.sort((a, b) => (a.priority || 1) - (b.priority || 1));
         const optMain = [...gamemodeEntries].reverse().find(e => e.image);
         const optOpp = [...gamemodeEntries].reverse().find(e => e.secondImage);
         setStackImage(stack.option, optMain?.image, optOpp?.secondImage);
-        if (part) {
-            applyPartMaskToImg(stack.option?.main, part);
-            applyPartMaskToImg(stack.option?.opp, part);
-        }
+        syncStackLayerVisibility(stack.option, part, false);
 
         const hasOptionOverlay = gamemodeEntries.some(e => e.image || e.secondImage);
         const targetGloss = glossLayers[partId] || [];
@@ -2248,7 +2302,7 @@
     }
 
     function setSide(side) {
-        if (side === currentSide) return;
+        const changed = side !== currentSide;
         currentSide = side;
 
         if (currentSide === "back") {
@@ -2257,12 +2311,10 @@
             if (controllerWrapper) controllerWrapper.classList.remove("is-back");
         }
 
-        const flipBtns = document.querySelectorAll(".flip-toggle");
-        if (flipBtns) {
-            flipBtns.forEach((btn) => btn.classList.toggle("flipped", side === "back"));
-        }
+        updateFlipControl();
+        syncBaseImages();
         updateVisualizerLayers();
-        saveConfigToStorage();
+        if (changed) saveConfigToStorage();
     }
 
     const flipBtns = document.querySelectorAll(".flip-toggle");
@@ -2272,6 +2324,12 @@
                 setSide(currentSide === "front" ? "back" : "front");
                 playClick();
             });
+        });
+    }
+    if (flipControlBtn) {
+        flipControlBtn.addEventListener("click", () => {
+            setSide(currentSide === "front" ? "back" : "front");
+            playClick();
         });
     }
 
