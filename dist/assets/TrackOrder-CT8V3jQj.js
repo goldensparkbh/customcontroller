@@ -1,4 +1,4 @@
-import{r as t,j as a}from"./index-DwxSlMbR.js";import{I as n}from"./formatMoney-BZvJfqwj.js";const r=`
+import{r as t,j as a}from"./index-B7UM_tjM.js";import{I as n}from"./formatMoney-Dq7VILDH.js";const r=`
   <canvas id="bgCanvas"></canvas>
 <div class="page-content" style="padding-top:80px; display:flex; justify-content:center;">
   <div class="track-shell">
