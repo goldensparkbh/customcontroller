@@ -1,23 +1,103 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
 import { useCurrency } from '../context/CurrencyContext.jsx';
+import { fetchHomeBanners } from '../services/backendApi.js';
+import { getDefaultHomeBanners } from '../lib/homeBanners.js';
+
+const JOURNEY_STEPS = [
+  { num: '01', titleKey: 'homeStep1Title', descKey: 'homeStep1Desc', image: '/assets/home-step-customize.png' },
+  { num: '02', titleKey: 'homeStep2Title', descKey: 'homeStep2Desc', image: '/assets/home-step-pay.png' },
+  { num: '03', titleKey: 'homeStep3Title', descKey: 'homeStep3Desc', image: '/assets/home-step-deliver.png' },
+];
+
+const FEATURES = [
+  { titleKey: 'homeFeature1Title', descKey: 'homeFeature1Desc', icon: 'preview' },
+  { titleKey: 'homeFeature2Title', descKey: 'homeFeature2Desc', icon: 'designs' },
+  { titleKey: 'homeFeature3Title', descKey: 'homeFeature3Desc', icon: 'parts' },
+  { titleKey: 'homeFeature4Title', descKey: 'homeFeature4Desc', icon: 'delivery' },
+];
+
+function FeatureIcon({ type }) {
+  const props = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  if (type === 'preview') {
+    return (
+      <svg {...props}>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    );
+  }
+  if (type === 'designs') {
+    return (
+      <svg {...props}>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    );
+  }
+  if (type === 'parts') {
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...props}>
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  );
+}
 
 function HomePage() {
   const navigate = useNavigate();
   const { formatFromBhd } = useCurrency();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [isBannerPaused, setIsBannerPaused] = useState(false);
+  const [isRtl, setIsRtl] = useState(() => (localStorage.getItem('ez_lang') || 'ar') === 'ar');
+  const [bannerSlides, setBannerSlides] = useState(() => getDefaultHomeBanners(localStorage.getItem('ez_lang') || 'ar'));
+  const parallaxRef = useRef(null);
 
   const goToConfigurator = () => {
     navigate('/configurator');
   };
 
   useEffect(() => {
-    const onLang = () => setLang(localStorage.getItem('ez_lang') || 'ar');
+    const onLang = () => {
+      const next = localStorage.getItem('ez_lang') || 'ar';
+      setLang(next);
+      setIsRtl(next === 'ar');
+      setBannerIndex(0);
+    };
     window.addEventListener('ez-lang-change', onLang);
     return () => window.removeEventListener('ez-lang-change', onLang);
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await fetchHomeBanners();
+        if (!alive) return;
+        const locale = lang === 'ar' ? 'ar' : 'en';
+        const remote = Array.isArray(data[locale]) ? data[locale] : [];
+        setBannerSlides(remote.length ? remote : getDefaultHomeBanners(locale));
+        setBannerIndex(0);
+      } catch {
+        if (!alive) return;
+        setBannerSlides(getDefaultHomeBanners(lang === 'ar' ? 'ar' : 'en'));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [lang]);
 
   useEffect(() => {
     const heroNote = document.querySelector('[data-hero-price-bhd]');
@@ -28,6 +108,63 @@ function HomePage() {
         ? `الأسعار تبدأ من <strong>${fromPrice}</strong>. بدون اشتراك — منتجات مخصصة بالكامل.`
         : `Prices start from <strong>${fromPrice}</strong>. No subscription — just fully custom gear.`;
   }, [formatFromBhd, lang]);
+
+  useEffect(() => {
+    if (isBannerPaused || bannerSlides.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [isBannerPaused, bannerSlides.length]);
+
+  useEffect(() => {
+    const root = parallaxRef.current;
+    if (!root) return undefined;
+
+    const layers = root.querySelectorAll('[data-parallax-speed]');
+    let frame = 0;
+
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const rect = root.getBoundingClientRect();
+        const viewH = window.innerHeight;
+        if (rect.bottom < 0 || rect.top > viewH) return;
+
+        const progress = (viewH - rect.top) / (viewH + rect.height);
+        layers.forEach((el) => {
+          const speed = parseFloat(el.getAttribute('data-parallax-speed') || '0.2');
+          const offset = (progress - 0.5) * speed * 120;
+          el.style.transform = `translate3d(0, ${offset}px, 0)`;
+        });
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  useEffect(() => {
+    const reveals = document.querySelectorAll('.home-reveal');
+    if (!reveals.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add('is-visible');
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    reveals.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     document.body.classList.add('home-page-active');
@@ -110,6 +247,57 @@ function HomePage() {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  const goToBanner = useCallback((index) => {
+    setBannerIndex(index);
+  }, []);
+
+  const renderBannerSlide = (slide) => {
+    const hasImage = Boolean(slide.imageUrl);
+    const content = (
+      <>
+        <div className="home-banner-glow" aria-hidden="true" />
+        {hasImage ? <div className="home-banner-image-overlay" aria-hidden="true" /> : null}
+        {slide.eyebrow ? <p className="home-banner-eyebrow">{slide.eyebrow}</p> : null}
+        {slide.title ? <h2 className="home-banner-title">{slide.title}</h2> : null}
+        {slide.subtitle ? <p className="home-banner-sub">{slide.subtitle}</p> : null}
+        {slide.linkUrl ? (
+          <span className="home-banner-link-preview">{slide.linkLabel || slide.linkUrl}</span>
+        ) : null}
+      </>
+    );
+
+    const className = `home-banner-slide home-banner-slide--${slide.accent || 'cyan'}${hasImage ? ' home-banner-slide--has-image' : ''}`;
+    const style = hasImage ? { backgroundImage: `url("${slide.imageUrl}")` } : undefined;
+
+    if (slide.linkUrl) {
+      const isExternal = /^https?:\/\//i.test(slide.linkUrl);
+      if (isExternal) {
+        return (
+          <a
+            href={slide.linkUrl}
+            className={className}
+            style={style}
+            target={slide.linkNewTab ? '_blank' : undefined}
+            rel={slide.linkNewTab ? 'noopener noreferrer' : undefined}
+          >
+            {content}
+          </a>
+        );
+      }
+      return (
+        <button type="button" className={`${className} home-banner-slide--link`} style={style} onClick={() => navigate(slide.linkUrl)}>
+          {content}
+        </button>
+      );
+    }
+
+    return (
+      <article className={className} style={style}>
+        {content}
+      </article>
+    );
+  };
+
   return (
     <div className="home-page">
       <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
@@ -124,6 +312,50 @@ function HomePage() {
         </video>
         <div className="hero-overlay"></div>
 
+        <div
+          className="home-banner"
+          onMouseEnter={() => setIsBannerPaused(true)}
+          onMouseLeave={() => setIsBannerPaused(false)}
+          onFocus={() => setIsBannerPaused(true)}
+          onBlur={() => setIsBannerPaused(false)}
+        >
+          {bannerSlides.length > 0 ? (
+            <>
+              <div className="home-banner-viewport">
+                <div
+                  className="home-banner-track"
+                  style={{
+                    transform: isRtl
+                      ? `translateX(calc(${bannerIndex} * 100%))`
+                      : `translateX(calc(-${bannerIndex} * 100%))`,
+                  }}
+                >
+                  {bannerSlides.map((slide) => (
+                    <React.Fragment key={slide.id}>
+                      {renderBannerSlide(slide)}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+              {bannerSlides.length > 1 ? (
+                <div className="home-banner-dots" role="tablist" aria-label="Promotional banners">
+                  {bannerSlides.map((slide, i) => (
+                    <button
+                      key={slide.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={bannerIndex === i}
+                      aria-label={`Banner ${i + 1}`}
+                      className={`home-banner-dot${bannerIndex === i ? ' is-active' : ''}`}
+                      onClick={() => goToBanner(i)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
         <div className="hero-inner">
           <div>
             <h1 className="hero-title" data-i18n-html="heroTitle"></h1>
@@ -134,6 +366,68 @@ function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="home-showcase" ref={parallaxRef}>
+        <div className="home-showcase-inner home-reveal">
+          <div className="home-showcase-copy">
+            <p className="home-eyebrow" data-i18n="homeShowcaseEyebrow" />
+            <h2 className="home-section-title" data-i18n="homeShowcaseTitle" />
+            <p className="home-section-sub" data-i18n="homeShowcaseSub" />
+            <button className="hero-btn primary home-showcase-cta" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator} />
+          </div>
+          <div className="home-showcase-visual">
+            <div className="home-showcase-orb home-showcase-orb--1" data-parallax-speed="0.35" aria-hidden="true" />
+            <div className="home-showcase-orb home-showcase-orb--2" data-parallax-speed="0.55" aria-hidden="true" />
+            <div className="home-showcase-controller" data-parallax-speed="0.15">
+              <img src="/assets/controller.png" alt="" loading="lazy" draggable="false" />
+            </div>
+            <div className="home-showcase-ring" data-parallax-speed="0.4" aria-hidden="true" />
+          </div>
+        </div>
+      </section>
+
+      <section className="home-journey">
+        <div className="home-journey-header home-reveal">
+          <p className="home-eyebrow" data-i18n="homeJourneyEyebrow" />
+          <h2 className="home-section-title" data-i18n="homeJourneyTitle" />
+          <p className="home-section-sub" data-i18n="homeJourneySub" />
+        </div>
+        <div className="home-journey-steps">
+          {JOURNEY_STEPS.map((step, i) => (
+            <article key={step.num} className={`home-journey-step home-reveal home-reveal--delay-${i + 1}`}>
+              <div className="home-journey-step-visual">
+                <img src={step.image} alt="" loading="lazy" draggable="false" />
+                <span className="home-journey-step-num">{step.num}</span>
+              </div>
+              <div className="home-journey-step-copy">
+                <h3 data-i18n={step.titleKey} />
+                <p data-i18n={step.descKey} />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-features">
+        <div className="home-features-grid">
+          {FEATURES.map((feat, i) => (
+            <article key={feat.titleKey} className={`home-feature-card home-reveal home-reveal--delay-${i + 1}`}>
+              <div className="home-feature-icon">
+                <FeatureIcon type={feat.icon} />
+              </div>
+              <h3 data-i18n={feat.titleKey} />
+              <p data-i18n={feat.descKey} />
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-cta home-reveal">
+        <div className="home-cta-glow" aria-hidden="true" />
+        <h2 className="home-cta-title" data-i18n="homeCtaTitle" />
+        <p className="home-cta-sub" data-i18n="homeCtaSub" />
+        <button className="hero-btn primary" type="button" data-i18n="homeCtaBtn" onClick={goToConfigurator} />
       </section>
 
       <section className="section" id="instagramSection" style={{ display: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '60px' }}>

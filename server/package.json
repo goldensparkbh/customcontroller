@@ -10,7 +10,8 @@
     "dev": "node index.js",
     "run:schema": "node run-schema.js",
     "migrate:firebase": "node scripts/migrate-from-firebase.cjs",
-    "seed:admin": "node scripts/seed-admin-user.cjs"
+    "seed:admin": "node scripts/seed-admin-user.cjs",
+    "seed:home-banners": "node scripts/seed-home-banners.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",

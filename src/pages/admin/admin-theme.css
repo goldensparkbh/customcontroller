@@ -689,3 +689,13 @@
   color: #fca5a5;
 }
 
+.admin-home-banner-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+@media (max-width: 900px) {
+  .admin-home-banner-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

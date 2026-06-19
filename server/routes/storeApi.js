@@ -190,5 +190,26 @@ module.exports = function createStoreApi(pool) {
     }
   });
 
+  r.get("/homepage/banners", async (_req, res) => {
+    try {
+      const row = await dao.getRow(pool, "admin_settings/home_banners");
+      const data = row && row.data && typeof row.data === "object" ? row.data : {};
+      const sortList = (list) => {
+        const arr = Array.isArray(list) ? list : [];
+        return arr
+          .filter((item) => item && item.enabled !== false)
+          .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+      };
+      res.json({
+        ar: sortList(data.ar),
+        en: sortList(data.en),
+        updatedAt: data.updatedAt || null,
+      });
+    } catch (err) {
+      console.error("[homepage banners]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
+
   return r;
 };

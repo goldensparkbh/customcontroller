@@ -67,6 +67,13 @@ export const IconDiscountCodes = (props) => (
     </svg>
 );
 
+export const IconHomeBanners = (props) => (
+    <svg {...base} aria-hidden {...props}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M3 10h18M8 15h4" />
+    </svg>
+);
+
 export const IconTranslations = (props) => (
     <svg {...base} aria-hidden {...props}>
         <path d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
@@ -97,6 +104,7 @@ const NAV_ICON_MAP = {
     parts: IconParts,
     abandonedCarts: IconAbandonedCarts,
     discountCodes: IconDiscountCodes,
+    homeBanners: IconHomeBanners,
     translations: IconTranslations,
     settings: IconSettings
 };

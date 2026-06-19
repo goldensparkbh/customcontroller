@@ -15,6 +15,7 @@ import AdminSettings from './admin/AdminSettings';
 import AdminTranslations from './admin/AdminTranslations';
 import AdminAbandonedCarts from './admin/AdminAbandonedCarts';
 import AdminDiscountCodes from './admin/AdminDiscountCodes';
+import AdminHomeBanners from './admin/AdminHomeBanners';
 import AdminStockAlerts from './admin/AdminStockAlerts';
 import { AdminNavIcon, IconLogout } from './admin/AdminSidebarIcons';
 
@@ -34,7 +35,7 @@ const AdminDashboard = () => {
         const tabs = [
             'orders', 'invoices', 'payments', 'customers',
             'inventory', 'items', 'parts',
-            'abandonedCarts', 'discountCodes', 'translations', 'settings'
+            'abandonedCarts', 'discountCodes', 'homeBanners', 'translations', 'settings'
         ];
         return tabs.includes(storedTab) ? storedTab : 'orders';
     });
@@ -74,7 +75,8 @@ const AdminDashboard = () => {
             label: t('admin.sidebar.marketing'),
             items: [
                 { id: 'abandonedCarts', label: t('admin.sidebar.tabs.abandonedCarts') },
-                { id: 'discountCodes', label: t('admin.sidebar.tabs.discountCodes') }
+                { id: 'discountCodes', label: t('admin.sidebar.tabs.discountCodes') },
+                { id: 'homeBanners', label: t('admin.sidebar.tabs.homeBanners') }
             ]
         },
         {
@@ -362,6 +364,7 @@ const AdminDashboard = () => {
                     {activeTab === 'parts' && <AdminParts lang={lang} />}
                     {activeTab === 'abandonedCarts' && <AdminAbandonedCarts lang={lang} />}
                     {activeTab === 'discountCodes' && <AdminDiscountCodes lang={lang} />}
+                    {activeTab === 'homeBanners' && <AdminHomeBanners lang={lang} />}
                     {activeTab === 'translations' && <AdminTranslations lang={lang} />}
                     {activeTab === 'settings' && <AdminSettings lang={lang} />}
                     </div>
