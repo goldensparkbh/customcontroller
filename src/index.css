@@ -6229,6 +6229,10 @@ body.theme-light.configurator-page-active .mobile-scroll-btn:active {
   will-change: transform;
 }
 
+.home-banner-track--instant {
+  transition: none;
+}
+
 .home-banner-slide {
   position: relative;
   flex: 0 0 100%;

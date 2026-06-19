@@ -1,6 +1,9 @@
 import { getI18nDefaultSource } from '../i18n.js';
 
 export const HOME_BANNERS_PATH = 'admin_settings/home_banners';
+export const DEFAULT_BANNER_DURATION_MS = 4500;
+export const MIN_BANNER_DURATION_MS = 2000;
+export const MAX_BANNER_DURATION_MS = 60000;
 
 /** @typedef {'cyan' | 'pink'} HomeBannerAccent */
 
@@ -17,6 +20,7 @@ export const HOME_BANNERS_PATH = 'admin_settings/home_banners';
  * @property {string} linkUrl
  * @property {string} linkLabel
  * @property {boolean} linkNewTab
+ * @property {number} durationMs
  */
 
 /**
@@ -25,6 +29,24 @@ export const HOME_BANNERS_PATH = 'admin_settings/home_banners';
  */
 function makeId(prefix, index) {
   return `${prefix}_${index}_${Date.now().toString(36)}`;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function normalizeDurationMs(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DEFAULT_BANNER_DURATION_MS;
+  return Math.min(MAX_BANNER_DURATION_MS, Math.max(MIN_BANNER_DURATION_MS, Math.round(n)));
+}
+
+/**
+ * @param {HomeBanner | undefined | null} slide
+ * @returns {number}
+ */
+export function getBannerDurationMs(slide) {
+  return normalizeDurationMs(slide && slide.durationMs);
 }
 
 /**
@@ -72,6 +94,7 @@ export function getDefaultHomeBanners(lang) {
     linkUrl: linkMeta[index]?.linkUrl || '',
     linkLabel: linkMeta[index]?.linkLabel || '',
     linkNewTab: false,
+    durationMs: DEFAULT_BANNER_DURATION_MS,
   }));
 }
 
@@ -104,6 +127,7 @@ function normalizeBanner(row, index, lang) {
     linkUrl: typeof src.linkUrl === 'string' ? src.linkUrl : '',
     linkLabel: typeof src.linkLabel === 'string' ? src.linkLabel : '',
     linkNewTab: src.linkNewTab === true,
+    durationMs: normalizeDurationMs(src.durationMs ?? fallback.durationMs),
   };
 }
 
@@ -153,5 +177,6 @@ export function createEmptyBanner(list, lang) {
     linkUrl: '',
     linkLabel: '',
     linkNewTab: false,
+    durationMs: DEFAULT_BANNER_DURATION_MS,
   };
 }

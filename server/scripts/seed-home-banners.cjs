@@ -25,6 +25,11 @@ const IMAGE_PATHS = [
 ];
 
 const ACCENTS = ["cyan", "pink", "cyan", "pink"];
+const DURATIONS_MS = [5000, 4500, 5500, 4000];
+
+function withDuration(banner, index) {
+  return { ...banner, durationMs: DURATIONS_MS[index] || 4500 };
+}
 
 const AR_BANNERS = [
   {
@@ -155,8 +160,8 @@ if (!process.env.DATABASE_URL) {
     }
 
     const payload = {
-      ar: AR_BANNERS,
-      en: EN_BANNERS,
+      ar: AR_BANNERS.map(withDuration),
+      en: EN_BANNERS.map(withDuration),
       updatedAt: new Date().toISOString(),
       seededAt: new Date().toISOString(),
     };

@@ -10,6 +10,12 @@ import {
   moveBanner,
   saveHomeBanners,
 } from './homeBanners.js';
+import {
+  DEFAULT_BANNER_DURATION_MS,
+  MAX_BANNER_DURATION_MS,
+  MIN_BANNER_DURATION_MS,
+  normalizeDurationMs,
+} from '../../lib/homeBanners.js';
 
 const fieldStyle = {
   width: '100%',
@@ -308,15 +314,37 @@ const AdminHomeBanners = ({ lang = 'ar' }) => {
                     </select>
                   </label>
                   <label style={{ display: 'grid', gap: '0.35rem' }}>
-                    <span>{t('admin.homeBanners.linkUrl')}</span>
+                    <span>{t('admin.homeBanners.duration')}</span>
                     <input
                       style={fieldStyle}
-                      value={row.linkUrl || ''}
-                      onChange={(e) => patchRow(activeLocale, row.id, 'linkUrl', e.target.value)}
-                      placeholder="https://"
+                      type="number"
+                      min={MIN_BANNER_DURATION_MS / 1000}
+                      max={MAX_BANNER_DURATION_MS / 1000}
+                      step={0.5}
+                      value={(normalizeDurationMs(row.durationMs) / 1000).toFixed(1).replace(/\.0$/, '')}
+                      onChange={(e) => {
+                        const seconds = Number(e.target.value);
+                        patchRow(
+                          activeLocale,
+                          row.id,
+                          'durationMs',
+                          normalizeDurationMs(Number.isFinite(seconds) ? seconds * 1000 : DEFAULT_BANNER_DURATION_MS)
+                        );
+                      }}
                     />
+                    <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>{t('admin.homeBanners.durationHint')}</span>
                   </label>
                 </div>
+
+                <label style={{ display: 'grid', gap: '0.35rem' }}>
+                  <span>{t('admin.homeBanners.linkUrl')}</span>
+                  <input
+                    style={fieldStyle}
+                    value={row.linkUrl || ''}
+                    onChange={(e) => patchRow(activeLocale, row.id, 'linkUrl', e.target.value)}
+                    placeholder="https://"
+                  />
+                </label>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'end' }}>
                   <label style={{ display: 'grid', gap: '0.35rem' }}>

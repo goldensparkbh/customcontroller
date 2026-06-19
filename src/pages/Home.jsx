@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
 import { useCurrency } from '../context/CurrencyContext.jsx';
 import { fetchHomeBanners } from '../services/backendApi.js';
-import { getDefaultHomeBanners } from '../lib/homeBanners.js';
+import { getBannerDurationMs, getDefaultHomeBanners } from '../lib/homeBanners.js';
 
 const JOURNEY_STEPS = [
   { num: '01', titleKey: 'homeStep1Title', descKey: 'homeStep1Desc', image: '/assets/home-step-customize.png' },
@@ -58,11 +58,22 @@ function HomePage() {
   const { formatFromBhd } = useCurrency();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
-  const [bannerIndex, setBannerIndex] = useState(0);
+  const [trackIndex, setTrackIndex] = useState(0);
+  const [bannerTransition, setBannerTransition] = useState(true);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
   const [isRtl, setIsRtl] = useState(() => (localStorage.getItem('ez_lang') || 'ar') === 'ar');
   const [bannerSlides, setBannerSlides] = useState(() => getDefaultHomeBanners(localStorage.getItem('ez_lang') || 'ar'));
   const parallaxRef = useRef(null);
+  const trackRef = useRef(null);
+
+  const loopSlides = useMemo(() => {
+    if (bannerSlides.length <= 1) return bannerSlides;
+    return [...bannerSlides, bannerSlides[0]];
+  }, [bannerSlides]);
+
+  const activeBannerIndex = bannerSlides.length
+    ? trackIndex % bannerSlides.length
+    : 0;
 
   const goToConfigurator = () => {
     navigate('/configurator');
@@ -73,7 +84,8 @@ function HomePage() {
       const next = localStorage.getItem('ez_lang') || 'ar';
       setLang(next);
       setIsRtl(next === 'ar');
-      setBannerIndex(0);
+      setTrackIndex(0);
+      setBannerTransition(true);
     };
     window.addEventListener('ez-lang-change', onLang);
     return () => window.removeEventListener('ez-lang-change', onLang);
@@ -88,10 +100,13 @@ function HomePage() {
         const locale = lang === 'ar' ? 'ar' : 'en';
         const remote = Array.isArray(data[locale]) ? data[locale] : [];
         setBannerSlides(remote.length ? remote : getDefaultHomeBanners(locale));
-        setBannerIndex(0);
+        setTrackIndex(0);
+        setBannerTransition(true);
       } catch {
         if (!alive) return;
         setBannerSlides(getDefaultHomeBanners(lang === 'ar' ? 'ar' : 'en'));
+        setTrackIndex(0);
+        setBannerTransition(true);
       }
     })();
     return () => {
@@ -111,11 +126,31 @@ function HomePage() {
 
   useEffect(() => {
     if (isBannerPaused || bannerSlides.length <= 1) return undefined;
-    const timer = window.setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-    }, 4500);
-    return () => window.clearInterval(timer);
-  }, [isBannerPaused, bannerSlides.length]);
+    if (trackIndex >= bannerSlides.length) return undefined;
+
+    const currentSlide = bannerSlides[trackIndex];
+    const duration = getBannerDurationMs(currentSlide);
+    const timer = window.setTimeout(() => {
+      setTrackIndex((prev) => prev + 1);
+    }, duration);
+
+    return () => window.clearTimeout(timer);
+  }, [isBannerPaused, bannerSlides, trackIndex]);
+
+  const handleTrackTransitionEnd = useCallback((e) => {
+    if (e.target !== trackRef.current) return;
+    if (e.propertyName !== 'transform') return;
+    if (bannerSlides.length <= 1) return;
+    if (trackIndex !== bannerSlides.length) return;
+
+    setBannerTransition(false);
+    setTrackIndex(0);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        setBannerTransition(true);
+      });
+    });
+  }, [bannerSlides.length, trackIndex]);
 
   useEffect(() => {
     const root = parallaxRef.current;
@@ -247,9 +282,24 @@ function HomePage() {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  const goToBanner = useCallback((index) => {
-    setBannerIndex(index);
-  }, []);
+  const goToBanner = useCallback((targetIndex) => {
+    if (bannerSlides.length <= 1) return;
+
+    const atClone = trackIndex === bannerSlides.length;
+    if (atClone) {
+      setBannerTransition(false);
+      setTrackIndex(0);
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          setBannerTransition(true);
+          if (targetIndex !== 0) setTrackIndex(targetIndex);
+        });
+      });
+      return;
+    }
+
+    setTrackIndex(targetIndex);
+  }, [bannerSlides.length, trackIndex]);
 
   const renderBannerSlide = (slide) => {
     const hasImage = Boolean(slide.imageUrl);
@@ -323,15 +373,17 @@ function HomePage() {
             <>
               <div className="home-banner-viewport">
                 <div
-                  className="home-banner-track"
+                  ref={trackRef}
+                  className={`home-banner-track${bannerTransition ? '' : ' home-banner-track--instant'}`}
+                  onTransitionEnd={handleTrackTransitionEnd}
                   style={{
                     transform: isRtl
-                      ? `translateX(calc(${bannerIndex} * 100%))`
-                      : `translateX(calc(-${bannerIndex} * 100%))`,
+                      ? `translateX(calc(${trackIndex} * 100%))`
+                      : `translateX(calc(-${trackIndex} * 100%))`,
                   }}
                 >
-                  {bannerSlides.map((slide) => (
-                    <React.Fragment key={slide.id}>
+                  {loopSlides.map((slide, i) => (
+                    <React.Fragment key={i === bannerSlides.length ? `${slide.id}-clone` : slide.id}>
                       {renderBannerSlide(slide)}
                     </React.Fragment>
                   ))}
@@ -344,9 +396,9 @@ function HomePage() {
                       key={slide.id}
                       type="button"
                       role="tab"
-                      aria-selected={bannerIndex === i}
+                      aria-selected={activeBannerIndex === i}
                       aria-label={`Banner ${i + 1}`}
-                      className={`home-banner-dot${bannerIndex === i ? ' is-active' : ''}`}
+                      className={`home-banner-dot${activeBannerIndex === i ? ' is-active' : ''}`}
                       onClick={() => goToBanner(i)}
                     />
                   ))}

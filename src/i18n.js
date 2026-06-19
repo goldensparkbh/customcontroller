@@ -384,7 +384,9 @@ const I18N_DEFAULT_SOURCE = {
             linkLabel: "نص الرابط",
             linkNewTab: "فتح في تبويب جديد",
             image: "صورة الخلفية",
-            preview: "معاينة"
+            preview: "معاينة",
+            duration: "مدة العرض (ثوانٍ)",
+            durationHint: "من 2 إلى 60 ثانية لكل شريحة."
         },
         abandoned: {
             heading: "سلات مهجورة",
@@ -906,7 +908,9 @@ const I18N_DEFAULT_SOURCE = {
             linkLabel: "Link label",
             linkNewTab: "Open in new tab",
             image: "Background image",
-            preview: "Preview"
+            preview: "Preview",
+            duration: "Display duration (seconds)",
+            durationHint: "Between 2 and 60 seconds per slide."
         },
         abandoned: {
             heading: "Abandoned carts",
