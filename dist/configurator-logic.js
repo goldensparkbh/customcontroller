@@ -779,10 +779,7 @@
     const colorPanelHeaderBottom = document.getElementById("colorPanelHeaderBottom");
     const colorEmptyState = document.getElementById("colorEmptyState");
 
-    const partsLists = Array.from(document.querySelectorAll(".parts-list"));
-    const primaryList = document.querySelector('.parts-list[data-list="primary"]');
-    const secondaryList = document.querySelector('.parts-list[data-list="secondary"]');
-    const accordionItems = Array.from(document.querySelectorAll(".accordion-item"));
+    const partsList = document.getElementById("partsList") || document.querySelector(".parts-list");
     const partTooltip = document.getElementById("partTooltip");
 
     const navLangToggle = document.getElementById("langToggle");
@@ -1585,11 +1582,8 @@
     }
 
     function getFirstShownPartId() {
-        const firstPrimary = primaryList ? primaryList.querySelector(".parts-item:not(.disabled)") : null;
-        if (firstPrimary && firstPrimary.dataset.id) return firstPrimary.dataset.id;
-
-        const firstSecondary = secondaryList ? secondaryList.querySelector(".parts-item:not(.disabled)") : null;
-        if (firstSecondary && firstSecondary.dataset.id) return firstSecondary.dataset.id;
+        const firstItem = partsList ? partsList.querySelector(".parts-item:not(.disabled)") : null;
+        if (firstItem && firstItem.dataset.id) return firstItem.dataset.id;
 
         const fallback = ALL_PARTS.find((part) => !part.hiddenUI && availablePartsSet.has(part.id));
         return fallback ? fallback.id : null;
@@ -1622,11 +1616,6 @@
             btn.classList.toggle("active", isActive);
             btn.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
-
-        if (accordionItems.length >= 2) {
-            accordionItems.forEach((item) => item.classList.add("open"));
-            refreshAccordionHeights();
-        }
 
         if (selectedPartId) {
             openColorPanelForPart(selectedPartId);
@@ -1779,47 +1768,28 @@
     }
 
 
-    function refreshAccordionHeights() {
-        if (!accordionItems) return;
-        if (!isMobileLayout()) {
-            accordionItems.forEach((item) => {
-                item.classList.add("open");
-                const content = item.querySelector(".accordion-content");
-                if (content) content.style.removeProperty("max-height");
-            });
-            return;
-        }
-        accordionItems.forEach(item => {
-            const content = item.querySelector(".accordion-content");
-            if (content) {
-                if (item.classList.contains("open")) {
-                    content.style.maxHeight = content.scrollHeight + "px";
-                } else {
-                    content.style.maxHeight = "0";
-                }
-            }
-        });
-    }
-
     function buildPartsList() {
-        if (primaryList) primaryList.innerHTML = "";
-        if (secondaryList) secondaryList.innerHTML = "";
+        if (!partsList) return;
+        partsList.innerHTML = "";
 
         const secondaryIds = new Set(["shell", "trimpiece", "touchpad", "psButton", "allButtons"]);
+        const primaryBucket = [];
+        const secondaryBucket = [];
 
         ALL_PARTS.forEach((part, idx) => {
             if (part.hiddenUI) return;
-            const row = createPartRow(part, idx);
-            partsRowsById[part.id] = row;
-            if (part.componentType === 'premade') {
-                if (primaryList) primaryList.appendChild(row);
-            } else if (secondaryIds.has(part.id)) {
-                if (secondaryList) secondaryList.appendChild(row);
+            if (part.componentType === "premade" || !secondaryIds.has(part.id)) {
+                primaryBucket.push({ part, idx });
             } else {
-                if (primaryList) primaryList.appendChild(row);
+                secondaryBucket.push({ part, idx });
             }
         });
-        refreshAccordionHeights();
+
+        [...primaryBucket, ...secondaryBucket].forEach(({ part, idx }) => {
+            const row = createPartRow(part, idx);
+            partsRowsById[part.id] = row;
+            partsList.appendChild(row);
+        });
     }
 
     function isPartActive(part) {
@@ -2834,7 +2804,6 @@
         function updateAllButtons() {
             updateColorButtons();
             updatePartsButtons();
-            refreshAccordionHeights();
         }
 
         window.addEventListener("resize", updateAllButtons, { passive: true });

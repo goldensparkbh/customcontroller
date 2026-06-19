@@ -80,30 +80,7 @@ const configuratorMarkup = `
   </svg>
 </button>
 <div class="parts-panel">
-<div class="parts-accordion">
-<div class="accordion-item open">
-<button class="accordion-header" type="button">
-<div class="parts-title" data-i18n="partsOptionsHeading">الخيارات</div>
-<span aria-hidden="true" class="accordion-icon"></span>
-</button>
-<div class="accordion-content">
-<div class="accordion-body">
-<div class="parts-list" data-list="primary"></div>
-</div>
-</div>
-</div>
-<div class="accordion-item">
-<button class="accordion-header" type="button">
-<div class="parts-title" data-i18n="partsColorsHeading">الألوان</div>
-<span aria-hidden="true" class="accordion-icon"></span>
-</button>
-<div class="accordion-content">
-<div class="accordion-body">
-<div class="parts-list" data-list="secondary"></div>
-</div>
-</div>
-</div>
-</div>
+<div class="parts-list" id="partsList" data-list="all"></div>
 </div>
 </div>
 </div>

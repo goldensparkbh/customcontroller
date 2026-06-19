@@ -1,4 +1,4 @@
-import{r as c,j as d,L as b,i as l,f}from"./index-DElQdsL6.js";import{b as h}from"./inventoryPricing-ScrDhAis.js";const m=`
+import{r as c,j as d,L as b,i as e,f}from"./index-DwV4usWY.js";import{b as h}from"./inventoryPricing-ScrDhAis.js";const m=`
 <canvas id="bgCanvas"></canvas>
 <div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
 <div class="zoho-loading-card">
@@ -75,30 +75,7 @@ import{r as c,j as d,L as b,i as l,f}from"./index-DElQdsL6.js";import{b as h}fro
   </svg>
 </button>
 <div class="parts-panel">
-<div class="parts-accordion">
-<div class="accordion-item open">
-<button class="accordion-header" type="button">
-<div class="parts-title" data-i18n="partsOptionsHeading">الخيارات</div>
-<span aria-hidden="true" class="accordion-icon"></span>
-</button>
-<div class="accordion-content">
-<div class="accordion-body">
-<div class="parts-list" data-list="primary"></div>
-</div>
-</div>
-</div>
-<div class="accordion-item">
-<button class="accordion-header" type="button">
-<div class="parts-title" data-i18n="partsColorsHeading">الألوان</div>
-<span aria-hidden="true" class="accordion-icon"></span>
-</button>
-<div class="accordion-content">
-<div class="accordion-body">
-<div class="parts-list" data-list="secondary"></div>
-</div>
-</div>
-</div>
-</div>
+<div class="parts-list" id="partsList" data-list="all"></div>
 </div>
 </div>
 </div>
@@ -158,4 +135,4 @@ import{r as c,j as d,L as b,i as l,f}from"./index-DElQdsL6.js";import{b as h}fro
 </div>
 </div>
 <div class="part-tooltip" id="partTooltip"></div>
-`,y=()=>{const[e,v]=c.useState(!0);if(c.useEffect(()=>{(async()=>{window.__CONFIG_DATA__={i18n:l,baseControllerPrice:0,baseControllerQty:null,baseControllerLowStockThreshold:5},window.__CONFIG_FIREBASE_DATA__=window.__CONFIG_FIREBASE_DATA__||[];try{const t=await f(),u=(t.parts||[]).map(p=>({...p,options:(p.options||[]).map(s=>{const a=s;return{id:a.id,...a,...h(a.inventoryDetails,{purchasePrice:a.purchasePrice??0,sellPrice:a.sellPrice??a.price??0},{quantity:a.quantity??0})}}).filter(s=>s.active!==!1)})),o=Number(t.basePrice)||0,r=t.baseQuantity!=null?Number(t.baseQuantity):null,n=Number(t.baseControllerLowStockThreshold),g=Number.isFinite(n)&&n>=0?n:5;window.__CONFIG_FIREBASE_DATA__=u,window.__CONFIG_DATA__={i18n:l,baseControllerPrice:o,baseControllerQty:r,baseControllerLowStockThreshold:g}}catch(t){console.error("Configurator catalog fetch error:",t),window.__CONFIG_FIREBASE_DATA__=[]}finally{v(!1)}})()},[]),c.useEffect(()=>{if(e)return;document.body.classList.add("configurator-page-active");const i=window.requestAnimationFrame(()=>{document.body.classList.add("configurator-intro-active")}),t=window.setTimeout(()=>{document.body.classList.remove("configurator-intro-active")},1350);if(!document.getElementById("ez-configurator-logic-script")){const o=document.createElement("script");o.id="ez-configurator-logic-script",o.src="/configurator-logic.js?v="+Date.now(),o.async=!0,document.body.appendChild(o)}return()=>{if(typeof window.__EZ_CONFIGURATOR_CLEANUP__=="function")try{window.__EZ_CONFIGURATOR_CLEANUP__()}catch(r){console.warn("Configurator cleanup failed",r)}document.body.classList.remove("configurator-page-active"),document.body.classList.remove("configurator-intro-active"),window.cancelAnimationFrame(i),window.clearTimeout(t);const o=document.getElementById("ez-configurator-logic-script");o&&document.body.contains(o)&&document.body.removeChild(o)}},[e]),e){const i=localStorage.getItem("ez_lang")||"ar";return d.jsx(b,{message:l[i]&&l[i].loadingConfigurator||"Loading configurator...",fullScreen:!0})}return d.jsx("div",{className:"configurator-page",children:d.jsx("div",{dangerouslySetInnerHTML:{__html:m}})})};export{y as default};
+`,C=()=>{const[r,g]=c.useState(!0);if(c.useEffect(()=>{(async()=>{window.__CONFIG_DATA__={i18n:e,baseControllerPrice:0,baseControllerQty:null,baseControllerLowStockThreshold:5},window.__CONFIG_FIREBASE_DATA__=window.__CONFIG_FIREBASE_DATA__||[];try{const t=await f(),u=(t.parts||[]).map(p=>({...p,options:(p.options||[]).map(s=>{const a=s;return{id:a.id,...a,...h(a.inventoryDetails,{purchasePrice:a.purchasePrice??0,sellPrice:a.sellPrice??a.price??0},{quantity:a.quantity??0})}}).filter(s=>s.active!==!1)})),o=Number(t.basePrice)||0,i=t.baseQuantity!=null?Number(t.baseQuantity):null,n=Number(t.baseControllerLowStockThreshold),v=Number.isFinite(n)&&n>=0?n:5;window.__CONFIG_FIREBASE_DATA__=u,window.__CONFIG_DATA__={i18n:e,baseControllerPrice:o,baseControllerQty:i,baseControllerLowStockThreshold:v}}catch(t){console.error("Configurator catalog fetch error:",t),window.__CONFIG_FIREBASE_DATA__=[]}finally{g(!1)}})()},[]),c.useEffect(()=>{if(r)return;document.body.classList.add("configurator-page-active");const l=window.requestAnimationFrame(()=>{document.body.classList.add("configurator-intro-active")}),t=window.setTimeout(()=>{document.body.classList.remove("configurator-intro-active")},1350);if(!document.getElementById("ez-configurator-logic-script")){const o=document.createElement("script");o.id="ez-configurator-logic-script",o.src="/configurator-logic.js?v="+Date.now(),o.async=!0,document.body.appendChild(o)}return()=>{if(typeof window.__EZ_CONFIGURATOR_CLEANUP__=="function")try{window.__EZ_CONFIGURATOR_CLEANUP__()}catch(i){console.warn("Configurator cleanup failed",i)}document.body.classList.remove("configurator-page-active"),document.body.classList.remove("configurator-intro-active"),window.cancelAnimationFrame(l),window.clearTimeout(t);const o=document.getElementById("ez-configurator-logic-script");o&&document.body.contains(o)&&document.body.removeChild(o)}},[r]),r){const l=localStorage.getItem("ez_lang")||"ar";return d.jsx(b,{message:e[l]&&e[l].loadingConfigurator||"Loading configurator...",fullScreen:!0})}return d.jsx("div",{className:"configurator-page",children:d.jsx("div",{dangerouslySetInnerHTML:{__html:m}})})};export{C as default};
