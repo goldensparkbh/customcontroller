@@ -1,4 +1,4 @@
-import"./index-CKjokztx.js";const t=`
+import"./index-BON0QoRf.js";const t=`
 function formatEzMoney(bhdAmount) {
   var n = Number(bhdAmount);
   if (!isFinite(n)) n = 0;

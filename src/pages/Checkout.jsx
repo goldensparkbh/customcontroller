@@ -540,7 +540,12 @@ const CheckoutPage = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                 {cartItems.map((item, idx) => (
                   <div key={idx} className="checkout-summary-item" style={{ paddingBottom: '1rem', borderBottom: '1px solid #333' }}>
-                    <PreviewStack layers={item.previewFrontLayers} fallbackSrc={item.previewFront || "/assets/controller.png"} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <PreviewStack layers={item.previewFrontLayers} fallbackSrc={item.previewFront || "/assets/controller.png"} />
+                      {(item.previewBackLayers?.length > 0 || item.previewBack) && (
+                        <PreviewStack layers={item.previewBackLayers} fallbackSrc={item.previewBack || "/assets/controller_back5.png"} />
+                      )}
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                       <span>{item.name} x {item.quantity || 1}</span>
                       <span>{formatFromBhd((item.unitPrice || item.total || 0) * (item.quantity || 1))}</span>

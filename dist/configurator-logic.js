@@ -1106,7 +1106,7 @@
 
             if (active.image) {
                 if (front.getAttribute("src") !== active.image) front.src = active.image;
-                front.style.display = currentSide === "front" ? "block" : "none";
+                front.style.display = "block";
             } else {
                 front.style.display = "none";
                 front.removeAttribute("src");
@@ -1114,7 +1114,7 @@
 
             if (active.secondImage) {
                 if (back.getAttribute("src") !== active.secondImage) back.src = active.secondImage;
-                back.style.display = currentSide === "back" ? "block" : "none";
+                back.style.display = "block";
             } else {
                 back.style.display = "none";
                 back.removeAttribute("src");
@@ -1247,26 +1247,39 @@
     function collectVisibleFaceLayers(side) {
         const faceEl = side === "front" ? faceFrontEl : faceBackEl;
         if (!faceEl) return [];
-        return Array.from(faceEl.querySelectorAll("img"))
+
+        const domLayers = Array.from(faceEl.querySelectorAll("img"))
             .map((imgEl, idx) => {
                 const computed = window.getComputedStyle(imgEl);
                 const src = imgEl.currentSrc || imgEl.getAttribute("src") || "";
+                if (!src || computed.display === "none") return null;
                 const zIndex = Number.parseFloat(computed.zIndex);
                 const opacity = Number.parseFloat(computed.opacity || "1");
+                if (!Number.isFinite(opacity) || opacity <= 0) return null;
                 return {
                     idx,
                     src,
-                    opacity: Number.isFinite(opacity) ? opacity : 1,
-                    zIndex: Number.isFinite(zIndex) ? zIndex : 0,
-                    visible: computed.display !== "none" && computed.visibility !== "hidden"
+                    opacity,
+                    zIndex: Number.isFinite(zIndex) ? zIndex : 0
                 };
             })
-            .filter(item => item.visible && item.opacity > 0 && item.src)
+            .filter(Boolean)
             .sort((a, b) => {
                 if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
                 return a.idx - b.idx;
             })
             .map(({ src, opacity, zIndex }) => ({ src, opacity, zIndex }));
+
+        const overlayLayers = [];
+        ALL_PARTS.filter((p) => p.componentType === "premade").forEach((part) => {
+            const active = getActivePremadeSelectionForComponent(part.id);
+            if (!active) return;
+            const src = side === "back" ? active.secondImage : active.image;
+            if (!src || domLayers.some((layer) => layer.src === src)) return;
+            overlayLayers.push({ src, opacity: 1, zIndex: 12 });
+        });
+
+        return [...domLayers, ...overlayLayers].sort((a, b) => a.zIndex - b.zIndex);
     }
 
     function loadConfigFromStorage() {
