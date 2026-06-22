@@ -6,29 +6,21 @@ import {
 } from './currencies.js';
 import { CHECKOUT_COUNTRY_CODES } from './checkoutCountries.js';
 
-export const CHECKOUT_COUNTRY_STORAGE_KEY = 'ez_checkout_country';
-export const CURRENCY_STORAGE_KEY = 'ez_currency';
-
 /** Fallback when IP/country cannot be resolved. */
 export const DEFAULT_CHECKOUT_COUNTRY = 'SA';
 export const DEFAULT_DISPLAY_CURRENCY = 'SAR';
 
-function readStoredCountry() {
-  try {
-    const saved = localStorage.getItem(CHECKOUT_COUNTRY_STORAGE_KEY);
-    return CHECKOUT_COUNTRY_CODES.includes(saved) ? saved : null;
-  } catch {
-    return null;
-  }
+/** In-memory session prefs (not persisted to localStorage). */
+let sessionCountry = DEFAULT_CHECKOUT_COUNTRY;
+let sessionCurrency = DEFAULT_DISPLAY_CURRENCY;
+let geoDetectedThisSession = false;
+
+export function getSessionCountry() {
+  return sessionCountry;
 }
 
-function readStoredCurrency() {
-  try {
-    const saved = localStorage.getItem(CURRENCY_STORAGE_KEY);
-    return SUPPORTED_CODES.includes(saved) ? saved : null;
-  } catch {
-    return null;
-  }
+export function getSessionCurrency() {
+  return sessionCurrency;
 }
 
 /**
@@ -71,53 +63,39 @@ export function resolveGeoPreferences(geo = {}) {
   };
 }
 
-/**
- * Align a partially saved country/currency pair.
- * @param {string | null} savedCountry
- * @param {string | null} savedCurrency
- */
-export function alignGeoPreferencePair(savedCountry, savedCurrency) {
-  if (savedCountry && savedCurrency) {
-    return { country: savedCountry, currency: savedCurrency };
-  }
-  if (savedCountry) {
-    return { country: savedCountry, currency: currencyForCheckoutCountry(savedCountry) };
-  }
-  if (savedCurrency) {
-    const fromCurrency = countryFromCurrency(savedCurrency);
-    if (fromCurrency && CHECKOUT_COUNTRY_CODES.includes(fromCurrency)) {
-      return { country: fromCurrency, currency: savedCurrency };
-    }
-  }
-  return null;
+function publishSessionPreferences() {
+  window.dispatchEvent(
+    new CustomEvent('ez-checkout-country-change', { detail: { country: sessionCountry } })
+  );
+  window.dispatchEvent(
+    new CustomEvent('ez-currency-change', { detail: { currency: sessionCurrency } })
+  );
+}
+
+export function setSessionCountry(countryCode) {
+  const next = CHECKOUT_COUNTRY_CODES.includes(countryCode) ? countryCode : DEFAULT_CHECKOUT_COUNTRY;
+  sessionCountry = next;
+  window.dispatchEvent(
+    new CustomEvent('ez-checkout-country-change', { detail: { country: next } })
+  );
+}
+
+export function setSessionCurrency(currencyCode) {
+  const next = SUPPORTED_CODES.includes(currencyCode) ? currencyCode : DEFAULT_DISPLAY_CURRENCY;
+  sessionCurrency = next;
+  window.dispatchEvent(
+    new CustomEvent('ez-currency-change', { detail: { currency: next } })
+  );
 }
 
 /**
- * Detect visitor country/currency from IP (once) unless already saved manually.
+ * Detect visitor country/currency from IP for this browser session only.
+ * @param {{ force?: boolean }} [opts] — force re-detect (e.g. when opening configurator)
  * @returns {Promise<{ country: string, currency: string, applied: boolean }>}
  */
-export async function bootstrapGeoPreferences() {
-  const savedCountry = readStoredCountry();
-  const savedCurrency = readStoredCurrency();
-
-  if (savedCountry && savedCurrency) {
-    const countryForCurrency = countryFromCurrency(savedCurrency);
-    if (
-      countryForCurrency &&
-      CHECKOUT_COUNTRY_CODES.includes(countryForCurrency) &&
-      countryForCurrency !== savedCountry
-    ) {
-      try {
-        localStorage.setItem(CHECKOUT_COUNTRY_STORAGE_KEY, countryForCurrency);
-      } catch {
-        /* ignore */
-      }
-      window.dispatchEvent(
-        new CustomEvent('ez-checkout-country-change', { detail: { country: countryForCurrency } })
-      );
-      return { country: countryForCurrency, currency: savedCurrency, applied: true };
-    }
-    return { country: savedCountry, currency: savedCurrency, applied: false };
+export async function bootstrapGeoPreferences({ force = false } = {}) {
+  if (geoDetectedThisSession && !force) {
+    return { country: sessionCountry, currency: sessionCurrency, applied: false };
   }
 
   let geo = {};
@@ -128,38 +106,14 @@ export async function bootstrapGeoPreferences() {
   }
 
   const resolved = resolveGeoPreferences(geo);
-  const aligned = alignGeoPreferencePair(savedCountry, savedCurrency);
-  const country = aligned?.country || resolved.country;
-  const currency = aligned?.currency || resolved.currency;
-
-  const shouldWriteCountry = !savedCountry || savedCountry !== country;
-  const shouldWriteCurrency = !savedCurrency || savedCurrency !== currency;
-
-  if (shouldWriteCountry) {
-    try {
-      localStorage.setItem(CHECKOUT_COUNTRY_STORAGE_KEY, country);
-    } catch {
-      /* ignore */
-    }
-    window.dispatchEvent(
-      new CustomEvent('ez-checkout-country-change', { detail: { country } })
-    );
-  }
-
-  if (shouldWriteCurrency) {
-    try {
-      localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
-    } catch {
-      /* ignore */
-    }
-    window.dispatchEvent(
-      new CustomEvent('ez-currency-change', { detail: { currency } })
-    );
-  }
+  sessionCountry = resolved.country;
+  sessionCurrency = resolved.currency;
+  geoDetectedThisSession = true;
+  publishSessionPreferences();
 
   return {
-    country,
-    currency,
-    applied: shouldWriteCountry || shouldWriteCurrency,
+    country: sessionCountry,
+    currency: sessionCurrency,
+    applied: true,
   };
 }

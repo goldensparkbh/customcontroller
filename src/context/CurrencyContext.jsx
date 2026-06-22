@@ -8,8 +8,9 @@ import {
 } from '../lib/currencies.js';
 import {
   bootstrapGeoPreferences,
-  CURRENCY_STORAGE_KEY,
-  DEFAULT_DISPLAY_CURRENCY
+  DEFAULT_DISPLAY_CURRENCY,
+  getSessionCurrency,
+  setSessionCurrency,
 } from '../lib/geoPreferences.js';
 
 const CurrencyContext = createContext(null);
@@ -19,14 +20,7 @@ function readLang() {
 }
 
 export function CurrencyProvider({ children }) {
-  const [currency, setCurrencyState] = useState(() => {
-    try {
-      const saved = localStorage.getItem(CURRENCY_STORAGE_KEY);
-      return SUPPORTED_CODES.includes(saved) ? saved : DEFAULT_DISPLAY_CURRENCY;
-    } catch {
-      return DEFAULT_DISPLAY_CURRENCY;
-    }
-  });
+  const [currency, setCurrencyState] = useState(getSessionCurrency);
   const [rates, setRates] = useState({ BHD: 1 });
   const [ratesMeta, setRatesMeta] = useState({ loading: true, source: '', stale: false });
   const [lang, setLang] = useState(readLang);
@@ -56,7 +50,7 @@ export function CurrencyProvider({ children }) {
     let alive = true;
     (async () => {
       try {
-        const [ratesPayload] = await Promise.all([
+        const [ratesPayload, geoResult] = await Promise.all([
           fetchExchangeRates(),
           bootstrapGeoPreferences()
         ]);
@@ -70,13 +64,8 @@ export function CurrencyProvider({ children }) {
           fetchedAt: ratesPayload.fetchedAt || ''
         });
 
-        try {
-          const saved = localStorage.getItem(CURRENCY_STORAGE_KEY);
-          if (SUPPORTED_CODES.includes(saved)) {
-            setCurrencyState(saved);
-          }
-        } catch {
-          /* ignore */
+        if (geoResult?.currency && SUPPORTED_CODES.includes(geoResult.currency)) {
+          setCurrencyState(geoResult.currency);
         }
       } catch (err) {
         console.warn('[currency] bootstrap failed', err);
@@ -101,10 +90,9 @@ export function CurrencyProvider({ children }) {
   );
 
   const setCurrency = useCallback((code) => {
-    const next = SUPPORTED_CODES.includes(code) ? code : BASE_CURRENCY;
+    const next = SUPPORTED_CODES.includes(code) ? code : DEFAULT_DISPLAY_CURRENCY;
     setCurrencyState(next);
-    localStorage.setItem(CURRENCY_STORAGE_KEY, next);
-    window.dispatchEvent(new CustomEvent('ez-currency-change', { detail: { currency: next } }));
+    setSessionCurrency(next);
   }, []);
 
   useEffect(() => {

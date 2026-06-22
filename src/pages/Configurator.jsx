@@ -147,7 +147,7 @@ const ConfiguratorPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    bootstrapGeoPreferences().catch(() => {});
+    bootstrapGeoPreferences({ force: true }).catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -2,23 +2,15 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { CHECKOUT_COUNTRY_CODES, getCheckoutPhonePrefix } from '../lib/checkoutCountries.js';
 import {
   bootstrapGeoPreferences,
-  CHECKOUT_COUNTRY_STORAGE_KEY,
-  DEFAULT_CHECKOUT_COUNTRY
+  DEFAULT_CHECKOUT_COUNTRY,
+  getSessionCountry,
+  setSessionCountry,
 } from '../lib/geoPreferences.js';
 
 const CheckoutCountryContext = createContext(null);
 
-function readInitialCountry() {
-  try {
-    const saved = localStorage.getItem(CHECKOUT_COUNTRY_STORAGE_KEY);
-    return CHECKOUT_COUNTRY_CODES.includes(saved) ? saved : DEFAULT_CHECKOUT_COUNTRY;
-  } catch {
-    return DEFAULT_CHECKOUT_COUNTRY;
-  }
-}
-
 export function CheckoutCountryProvider({ children }) {
-  const [country, setCountryState] = useState(readInitialCountry);
+  const [country, setCountryState] = useState(getSessionCountry);
 
   useEffect(() => {
     bootstrapGeoPreferences().then((result) => {
@@ -42,12 +34,7 @@ export function CheckoutCountryProvider({ children }) {
   const setCountry = (code) => {
     const next = CHECKOUT_COUNTRY_CODES.includes(code) ? code : DEFAULT_CHECKOUT_COUNTRY;
     setCountryState(next);
-    try {
-      localStorage.setItem(CHECKOUT_COUNTRY_STORAGE_KEY, next);
-    } catch {
-      /* ignore */
-    }
-    window.dispatchEvent(new CustomEvent('ez-checkout-country-change', { detail: { country: next } }));
+    setSessionCountry(next);
   };
 
   const value = useMemo(
