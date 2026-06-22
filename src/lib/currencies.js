@@ -36,6 +36,21 @@ export function currencyFromCountry(countryCode) {
   return BASE_CURRENCY;
 }
 
+/** @type {Record<string, string>} */
+const CURRENCY_TO_COUNTRY = {
+  BHD: "BH",
+  SAR: "SA",
+  AED: "AE",
+  KWD: "KW",
+  OMR: "OM",
+  QAR: "QA"
+};
+
+export function countryFromCurrency(currencyCode) {
+  const code = String(currencyCode || "").trim().toUpperCase();
+  return CURRENCY_TO_COUNTRY[code] || null;
+}
+
 export function formatConvertedAmount(amount, code, { lang = "en" } = {}) {
   const meta = getCurrencyMeta(code);
   const n = Number(amount);

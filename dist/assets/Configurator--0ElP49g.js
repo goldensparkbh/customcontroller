@@ -1,4 +1,4 @@
-import{r as l,b,j as d,L as f,i as r,c as h}from"./index-uJkpmpzU.js";import{b as m}from"./inventoryPricing-ScrDhAis.js";const A=`
+import{r as l,b,j as d,L as f,i as r,c as h}from"./index-v4pB-oSx.js";import{b as m}from"./inventoryPricing-ScrDhAis.js";const A=`
 <canvas id="bgCanvas"></canvas>
 <div class="zoho-loading-overlay" id="zohoLoadingOverlay" aria-live="polite" aria-hidden="false">
 <div class="zoho-loading-card">

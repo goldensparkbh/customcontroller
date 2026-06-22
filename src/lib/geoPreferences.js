@@ -1,6 +1,6 @@
 import { fetchGeoCurrency } from '../services/backendApi.js';
 import {
-  BASE_CURRENCY,
+  countryFromCurrency,
   currencyFromCountry,
   SUPPORTED_CODES
 } from './currencies.js';
@@ -37,32 +37,59 @@ function readStoredCurrency() {
  */
 export function currencyForCheckoutCountry(countryCode) {
   const cc = String(countryCode || '').trim().toUpperCase();
-  if (!cc) return DEFAULT_DISPLAY_CURRENCY;
+  if (!cc || !CHECKOUT_COUNTRY_CODES.includes(cc)) return DEFAULT_DISPLAY_CURRENCY;
   const mapped = currencyFromCountry(cc);
-  if (mapped !== BASE_CURRENCY || cc === 'BH') return mapped;
-  return DEFAULT_DISPLAY_CURRENCY;
+  return SUPPORTED_CODES.includes(mapped) ? mapped : DEFAULT_DISPLAY_CURRENCY;
 }
 
 /**
- * Resolve country + currency from geo IP hint, with SA/SAR defaults.
+ * Resolve country + currency as a matched pair from geo IP hint.
  * @param {{ countryCode?: string | null, currency?: string | null }} geo
  */
 export function resolveGeoPreferences(geo = {}) {
   const detectedCountry = String(geo.countryCode || '').trim().toUpperCase();
   const detectedCurrency = String(geo.currency || '').trim().toUpperCase();
 
-  const country = CHECKOUT_COUNTRY_CODES.includes(detectedCountry)
-    ? detectedCountry
-    : DEFAULT_CHECKOUT_COUNTRY;
-
-  let currency = DEFAULT_DISPLAY_CURRENCY;
-  if (detectedCurrency && SUPPORTED_CODES.includes(detectedCurrency)) {
-    currency = detectedCurrency;
-  } else if (CHECKOUT_COUNTRY_CODES.includes(detectedCountry)) {
-    currency = currencyForCheckoutCountry(detectedCountry);
+  if (CHECKOUT_COUNTRY_CODES.includes(detectedCountry)) {
+    return {
+      country: detectedCountry,
+      currency: currencyForCheckoutCountry(detectedCountry),
+    };
   }
 
-  return { country, currency };
+  const inferredCountry = countryFromCurrency(detectedCurrency);
+  if (inferredCountry && CHECKOUT_COUNTRY_CODES.includes(inferredCountry)) {
+    return {
+      country: inferredCountry,
+      currency: detectedCurrency,
+    };
+  }
+
+  return {
+    country: DEFAULT_CHECKOUT_COUNTRY,
+    currency: DEFAULT_DISPLAY_CURRENCY,
+  };
+}
+
+/**
+ * Align a partially saved country/currency pair.
+ * @param {string | null} savedCountry
+ * @param {string | null} savedCurrency
+ */
+export function alignGeoPreferencePair(savedCountry, savedCurrency) {
+  if (savedCountry && savedCurrency) {
+    return { country: savedCountry, currency: savedCurrency };
+  }
+  if (savedCountry) {
+    return { country: savedCountry, currency: currencyForCheckoutCountry(savedCountry) };
+  }
+  if (savedCurrency) {
+    const fromCurrency = countryFromCurrency(savedCurrency);
+    if (fromCurrency && CHECKOUT_COUNTRY_CODES.includes(fromCurrency)) {
+      return { country: fromCurrency, currency: savedCurrency };
+    }
+  }
+  return null;
 }
 
 /**
@@ -72,7 +99,24 @@ export function resolveGeoPreferences(geo = {}) {
 export async function bootstrapGeoPreferences() {
   const savedCountry = readStoredCountry();
   const savedCurrency = readStoredCurrency();
+
   if (savedCountry && savedCurrency) {
+    const countryForCurrency = countryFromCurrency(savedCurrency);
+    if (
+      countryForCurrency &&
+      CHECKOUT_COUNTRY_CODES.includes(countryForCurrency) &&
+      countryForCurrency !== savedCountry
+    ) {
+      try {
+        localStorage.setItem(CHECKOUT_COUNTRY_STORAGE_KEY, countryForCurrency);
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(
+        new CustomEvent('ez-checkout-country-change', { detail: { country: countryForCurrency } })
+      );
+      return { country: countryForCurrency, currency: savedCurrency, applied: true };
+    }
     return { country: savedCountry, currency: savedCurrency, applied: false };
   }
 
@@ -84,10 +128,14 @@ export async function bootstrapGeoPreferences() {
   }
 
   const resolved = resolveGeoPreferences(geo);
-  const country = savedCountry || resolved.country;
-  const currency = savedCurrency || resolved.currency;
+  const aligned = alignGeoPreferencePair(savedCountry, savedCurrency);
+  const country = aligned?.country || resolved.country;
+  const currency = aligned?.currency || resolved.currency;
 
-  if (!savedCountry) {
+  const shouldWriteCountry = !savedCountry || savedCountry !== country;
+  const shouldWriteCurrency = !savedCurrency || savedCurrency !== currency;
+
+  if (shouldWriteCountry) {
     try {
       localStorage.setItem(CHECKOUT_COUNTRY_STORAGE_KEY, country);
     } catch {
@@ -98,7 +146,7 @@ export async function bootstrapGeoPreferences() {
     );
   }
 
-  if (!savedCurrency) {
+  if (shouldWriteCurrency) {
     try {
       localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
     } catch {
@@ -112,6 +160,6 @@ export async function bootstrapGeoPreferences() {
   return {
     country,
     currency,
-    applied: !savedCountry || !savedCurrency
+    applied: shouldWriteCountry || shouldWriteCurrency,
   };
 }

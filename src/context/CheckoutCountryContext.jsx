@@ -22,12 +22,10 @@ export function CheckoutCountryProvider({ children }) {
 
   useEffect(() => {
     bootstrapGeoPreferences().then((result) => {
-      if (result.country && result.country !== country) {
+      if (result?.country) {
         setCountryState(result.country);
       }
     });
-    // Run once on mount; geo only applies when prefs are not saved yet.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
