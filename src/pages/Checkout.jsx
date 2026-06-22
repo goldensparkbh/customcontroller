@@ -404,6 +404,11 @@ const CheckoutPage = () => {
         {/* Left: Form */}
         <div className="checkout-form-panel" style={{ flex: '2 1 600px', background: '#1c1f28', padding: '2rem', borderRadius: '8px' }}>
           <form className="checkout-form-stack" ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label>{t('countryLabel') || 'Country *'}</label>
+              <CheckoutCountrySelect variant="form" />
+            </div>
+
             {isBahrain && (
               <div className="checkout-shipping-box" style={{ background: '#222', padding: '1rem', borderRadius: '4px' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('shippingMethodLabel') || 'Shipping Method'}</label>
@@ -514,11 +519,6 @@ const CheckoutPage = () => {
                 </div>
               </div>
             )}
-
-            <div>
-              <label>{t('countryLabel') || 'Country *'}</label>
-              <CheckoutCountrySelect variant="form" />
-            </div>
 
             <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
               <input type="checkbox" name="agree" checked={formData.agree} onChange={handleChange} required id="agreeCb" style={{ marginTop: '0.2rem' }} />
