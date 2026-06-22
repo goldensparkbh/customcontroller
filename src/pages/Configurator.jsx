@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchConfiguratorCatalog } from '../services/backendApi.js';
+import { bootstrapGeoPreferences } from '../lib/geoPreferences.js';
 import { i18n } from '../i18n';
 import { buildInventoryPayload } from './admin/inventoryPricing';
 import LoadingState from '../components/LoadingState.jsx';
@@ -144,6 +145,10 @@ const configuratorMarkup = `
 
 const ConfiguratorPage = () => {
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    bootstrapGeoPreferences().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const loadFirebaseData = async () => {

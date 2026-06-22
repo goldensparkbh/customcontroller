@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n';
 import { adminMe } from '../services/backendApi.js';
 import CurrencySelect from './CurrencySelect.jsx';
-import CheckoutCountrySelect from './CheckoutCountrySelect.jsx';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const isCheckoutPage = location.pathname === '/checkout';
     const [lang, setLang] = useState(localStorage.getItem('ez_lang') || 'ar');
     const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
@@ -85,7 +82,6 @@ const Navbar = () => {
 
             {/* Right: Language Toggle only */}
             <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {isCheckoutPage && <CheckoutCountrySelect />}
                 <CurrencySelect />
                 {isAdminAuthenticated && (
                     <button

@@ -4,6 +4,7 @@ import { LoadingInline } from '../components/LoadingState.jsx';
 import ItemCustomizationSummary from '../components/ItemCustomizationSummary.jsx';
 import { useCurrency } from '../context/CurrencyContext.jsx';
 import { useCheckoutCountry } from '../context/CheckoutCountryContext.jsx';
+import CheckoutCountrySelect from '../components/CheckoutCountrySelect.jsx';
 
 const PreviewStack = ({ layers, fallbackSrc }) => (
   <div className="checkout-preview-stack" style={{ position: 'relative', width: '100px', height: '65px', background: '#111', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -513,6 +514,11 @@ const CheckoutPage = () => {
                 </div>
               </div>
             )}
+
+            <div>
+              <label>{t('countryLabel') || 'Country *'}</label>
+              <CheckoutCountrySelect variant="form" />
+            </div>
 
             <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
               <input type="checkbox" name="agree" checked={formData.agree} onChange={handleChange} required id="agreeCb" style={{ marginTop: '0.2rem' }} />

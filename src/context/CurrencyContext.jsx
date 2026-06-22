@@ -1,13 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchExchangeRates, fetchGeoCurrency } from '../services/backendApi.js';
+import { fetchExchangeRates } from '../services/backendApi.js';
 import {
   BASE_CURRENCY,
   formatConvertedAmount,
   getCurrencyMeta,
   SUPPORTED_CODES
 } from '../lib/currencies.js';
-
-const STORAGE_KEY = 'ez_currency';
+import {
+  bootstrapGeoPreferences,
+  CURRENCY_STORAGE_KEY,
+  DEFAULT_DISPLAY_CURRENCY
+} from '../lib/geoPreferences.js';
 
 const CurrencyContext = createContext(null);
 
@@ -17,8 +20,12 @@ function readLang() {
 
 export function CurrencyProvider({ children }) {
   const [currency, setCurrencyState] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return SUPPORTED_CODES.includes(saved) ? saved : BASE_CURRENCY;
+    try {
+      const saved = localStorage.getItem(CURRENCY_STORAGE_KEY);
+      return SUPPORTED_CODES.includes(saved) ? saved : DEFAULT_DISPLAY_CURRENCY;
+    } catch {
+      return DEFAULT_DISPLAY_CURRENCY;
+    }
   });
   const [rates, setRates] = useState({ BHD: 1 });
   const [ratesMeta, setRatesMeta] = useState({ loading: true, source: '', stale: false });
@@ -35,12 +42,24 @@ export function CurrencyProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    const onExternalChange = (event) => {
+      const next = event?.detail?.currency;
+      if (next && SUPPORTED_CODES.includes(next)) {
+        setCurrencyState(next);
+      }
+    };
+    window.addEventListener('ez-currency-change', onExternalChange);
+    return () => window.removeEventListener('ez-currency-change', onExternalChange);
+  }, []);
+
+  useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const hasSaved = Boolean(localStorage.getItem(STORAGE_KEY));
-        const ratesPayload = await fetchExchangeRates();
-        const geo = hasSaved ? null : await fetchGeoCurrency();
+        const [ratesPayload] = await Promise.all([
+          fetchExchangeRates(),
+          bootstrapGeoPreferences()
+        ]);
         if (!alive) return;
 
         setRates(ratesPayload.rates || { BHD: 1 });
@@ -51,14 +70,14 @@ export function CurrencyProvider({ children }) {
           fetchedAt: ratesPayload.fetchedAt || ''
         });
 
-        if (geo?.currency && SUPPORTED_CODES.includes(geo.currency) && !hasSaved) {
-          setCurrencyState(geo.currency);
-          localStorage.setItem(STORAGE_KEY, geo.currency);
+        try {
+          const saved = localStorage.getItem(CURRENCY_STORAGE_KEY);
+          if (SUPPORTED_CODES.includes(saved)) {
+            setCurrencyState(saved);
+          }
+        } catch {
+          /* ignore */
         }
-
-        window.dispatchEvent(
-          new CustomEvent('ez-currency-change', { detail: { currency: localStorage.getItem(STORAGE_KEY) || BASE_CURRENCY } })
-        );
       } catch (err) {
         console.warn('[currency] bootstrap failed', err);
         if (alive) setRatesMeta((m) => ({ ...m, loading: false }));
@@ -84,7 +103,7 @@ export function CurrencyProvider({ children }) {
   const setCurrency = useCallback((code) => {
     const next = SUPPORTED_CODES.includes(code) ? code : BASE_CURRENCY;
     setCurrencyState(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    localStorage.setItem(CURRENCY_STORAGE_KEY, next);
     window.dispatchEvent(new CustomEvent('ez-currency-change', { detail: { currency: next } }));
   }, []);
 
