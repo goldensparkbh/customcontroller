@@ -2905,6 +2905,53 @@ body.theme-light.configurator-page-active .parts-item.active .parts-thumb img {
   gap: 6px;
 }
 
+.config-premade-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.config-premade-header .color-group-title,
+.config-premade-header .mobile-group-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.config-premade-clear-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.config-premade-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  transform: scale(1.06);
+}
+
+.config-premade-clear-btn:focus-visible {
+  outline: 2px solid rgba(239, 68, 68, 0.55);
+  outline-offset: 2px;
+}
+
+.config-premade-clear-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 .config-premade-design-grid {
   grid-column: 1 / -1;
   display: grid;
