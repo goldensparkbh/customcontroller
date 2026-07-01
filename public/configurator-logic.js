@@ -2017,37 +2017,36 @@
         if (!partId) return;
 
         const currentSelected = Array.isArray(optionState[partId]) ? optionState[partId] : [];
-        const hasPremadeSelected = currentSelected.some(k => {
-            const entry = entries.find(e => e.key === k);
-            return entry && entry.type === 'premade';
-        });
-
-        const headerRow = document.createElement('div');
-        headerRow.className = 'config-premade-header';
 
         const header = document.createElement('div');
         header.className = isMobileLayout() ? 'mobile-group-title' : 'color-group-title';
         header.textContent = currentLang === 'ar' ? 'تصاميم جاهزة' : 'Pre-made Designs';
-        headerRow.appendChild(header);
-
-        if (hasPremadeSelected) {
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.className = 'config-premade-clear-btn';
-            clearBtn.setAttribute('aria-label', t('clearPremadeSelection'));
-            clearBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-            clearBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                clearPremadeSelection(partId);
-            });
-            headerRow.appendChild(clearBtn);
-        }
-
-        target.appendChild(headerRow);
+        target.appendChild(header);
 
         const grid = document.createElement('div');
         grid.className = 'config-premade-design-grid';
+
+        const clearCard = document.createElement('button');
+        clearCard.type = 'button';
+        clearCard.className = 'config-premade-design-card config-premade-clear-card';
+        clearCard.setAttribute('aria-label', t('clearPremadeSelection'));
+        const clearIcon = document.createElement('div');
+        clearIcon.className = 'config-premade-clear-icon';
+        clearIcon.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+        clearCard.appendChild(clearIcon);
+        const clearMeta = document.createElement('div');
+        clearMeta.className = 'config-premade-design-meta';
+        const clearLabel = document.createElement('div');
+        clearLabel.className = 'config-premade-design-title';
+        clearLabel.textContent = currentLang === 'ar' ? 'إلغاء' : 'Clear';
+        clearMeta.appendChild(clearLabel);
+        clearCard.appendChild(clearMeta);
+        clearCard.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearPremadeSelection(partId);
+        });
+        grid.appendChild(clearCard);
 
         entries.forEach(entry => {
             const isOutOfStock = isEntryOutOfStock(entry);
