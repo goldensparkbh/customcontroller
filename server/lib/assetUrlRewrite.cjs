@@ -77,7 +77,7 @@ function rewriteFirebaseUrlsInString(urlString, config) {
 }
 
 function rewriteFirebaseMediaDeep(value, config) {
-  if (!config || !config.publicBase || config.enabled === false) return value;
+  if (!config || config.enabled === false) return value;
 
   if (typeof value === "string") return rewriteFirebaseUrlsInString(value, config);
 
@@ -93,18 +93,37 @@ function rewriteFirebaseMediaDeep(value, config) {
 }
 
 /*
- * Applies env-based rewrite rules (PUBLIC_BASE_URL, prefix). No-op if disabled or unset.
+ * True when Spaces is configured enough for `buildSpacesPublicUrl` to produce a
+ * full public URL. Mirrors the fallbacks in spacesPublicUrl.cjs so the rewrite
+ * activates on the same config that makes the /upload endpoint work — even when
+ * DO_SPACES_PUBLIC_BASE_URL is absent (only endpoint/CDN + bucket are set).
+ */
+function hasSpacesPublicTarget(env) {
+  const bucket = String(env.DO_SPACES_BUCKET || "").trim();
+  const publicBase = String(env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
+  const cdnBase = String(env.DO_SPACES_CDN_BASE_URL || "").trim();
+  const endpoint = String(env.DO_SPACES_ENDPOINT || "").trim();
+
+  if (publicBase) return true;
+  if (cdnBase && bucket) return true;
+  if (endpoint && bucket) return true;
+  return false;
+}
+
+/*
+ * Applies env-based rewrite rules (Spaces target + prefix). No-op if disabled or unset.
  */
 function rewriteFirebaseMediaUrlsIfConfigured(payload) {
-  const publicBase = String(process.env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
   const rawFlag = String(process.env.REWRITE_FIREBASE_MEDIA_URLS || "").trim().toLowerCase();
 
   /*
-   * Off only when explicitly false; enable when PUBLIC_BASE_URL is present.
+   * Off only when explicitly false; otherwise enable whenever any Spaces public
+   * target is configured (consistent with the upload URL builder).
    */
   const explicitOff = rawFlag === "false" || rawFlag === "0" || rawFlag === "no";
-  if (explicitOff || !publicBase) return payload;
+  if (explicitOff || !hasSpacesPublicTarget(process.env)) return payload;
 
+  const publicBase = String(process.env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
   const migratedPrefix =
     String(process.env.DO_SPACES_LEGACY_MIGRATE_PREFIX || process.env.DO_SPACES_KEY_PREFIX || "migrated").trim();
 

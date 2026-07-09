@@ -200,11 +200,13 @@ module.exports = function createStoreApi(pool) {
           .filter((item) => item && item.enabled !== false)
           .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
       };
-      res.json({
-        ar: sortList(data.ar),
-        en: sortList(data.en),
-        updatedAt: data.updatedAt || null,
-      });
+      res.json(
+        rewriteFirebaseMediaUrlsIfConfigured({
+          ar: sortList(data.ar),
+          en: sortList(data.en),
+          updatedAt: data.updatedAt || null,
+        })
+      );
     } catch (err) {
       console.error("[homepage banners]", err);
       res.status(500).json({ error: String(err.message || err) });
