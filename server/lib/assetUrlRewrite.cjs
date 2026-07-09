@@ -138,5 +138,6 @@ module.exports = {
   rewriteFirebaseMediaUrlsIfConfigured,
   extractFirebaseStorageObjectPath,
   buildSpacesPublicObjectUrl,
-  rewriteFirebaseMediaDeep
+  rewriteFirebaseMediaDeep,
+  hasSpacesPublicTarget
 };
