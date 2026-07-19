@@ -2,6 +2,10 @@
 
 const { buildSpacesPublicUrl, normalizeSpacesPublicUrl } = require("./spacesPublicUrl.cjs");
 
+const DEFAULT_SPACES_BUCKET = "customcontroller";
+const DEFAULT_MIGRATED_ASSETS_PUBLIC_BASE_URL =
+  "https://customcontroller.fra1.cdn.digitaloceanspaces.com/customcontroller";
+
 /**
  * Rewrite legacy Firebase Storage download URLs embedded in migrated JSON documents
  * to DigitalOcean Spaces (or any S3 public base) URLs.
@@ -71,7 +75,11 @@ function rewriteFirebaseUrlsInString(urlString, config) {
   }
 
   if (trimmed.includes("digitaloceanspaces.com")) {
-    return normalizeSpacesPublicUrl(trimmed, process.env);
+    return normalizeSpacesPublicUrl(trimmed, {
+      ...process.env,
+      DO_SPACES_BUCKET: process.env.DO_SPACES_BUCKET || DEFAULT_SPACES_BUCKET,
+      DO_SPACES_PUBLIC_BASE_URL: config.publicBase
+    });
   }
 
   return urlString;
@@ -101,7 +109,9 @@ function rewriteFirebaseMediaDeep(value, config) {
  */
 function hasSpacesPublicTarget(env) {
   const bucket = String(env.DO_SPACES_BUCKET || "").trim();
-  const migratedAssetsBase = String(env.MIGRATED_ASSETS_PUBLIC_BASE_URL || "").trim();
+  const migratedAssetsBase = String(
+    env.MIGRATED_ASSETS_PUBLIC_BASE_URL || DEFAULT_MIGRATED_ASSETS_PUBLIC_BASE_URL
+  ).trim();
   const publicBase = String(env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
   const cdnBase = String(env.DO_SPACES_CDN_BASE_URL || "").trim();
   const endpoint = String(env.DO_SPACES_ENDPOINT || "").trim();
@@ -127,7 +137,9 @@ function rewriteFirebaseMediaUrlsIfConfigured(payload) {
   if (explicitOff || !hasSpacesPublicTarget(process.env)) return payload;
 
   const publicBase = String(
-    process.env.MIGRATED_ASSETS_PUBLIC_BASE_URL || process.env.DO_SPACES_PUBLIC_BASE_URL || ""
+    process.env.MIGRATED_ASSETS_PUBLIC_BASE_URL ||
+      process.env.DO_SPACES_PUBLIC_BASE_URL ||
+      DEFAULT_MIGRATED_ASSETS_PUBLIC_BASE_URL
   ).trim();
   const migratedPrefix =
     String(process.env.DO_SPACES_LEGACY_MIGRATE_PREFIX || process.env.DO_SPACES_KEY_PREFIX || "migrated").trim();
@@ -144,5 +156,7 @@ module.exports = {
   extractFirebaseStorageObjectPath,
   buildSpacesPublicObjectUrl,
   rewriteFirebaseMediaDeep,
-  hasSpacesPublicTarget
+  hasSpacesPublicTarget,
+  DEFAULT_SPACES_BUCKET,
+  DEFAULT_MIGRATED_ASSETS_PUBLIC_BASE_URL
 };

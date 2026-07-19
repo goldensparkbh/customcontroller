@@ -3,9 +3,9 @@
 /**
  * Build browser-accessible DigitalOcean Spaces URLs.
  *
- * Virtual-hosted origin and CDN URLs both identify the Space in the hostname:
+ * This project's CDN route includes the Space name in the path:
  *   https://{bucket}.{region}.digitaloceanspaces.com/{key}
- *   https://{bucket}.{region}.cdn.digitaloceanspaces.com/{key}
+ *   https://{bucket}.{region}.cdn.digitaloceanspaces.com/{bucket}/{key}
  *
  * A region-only S3 endpoint uses path style instead:
  *   https://{region}.digitaloceanspaces.com/{bucket}/{key}
@@ -38,9 +38,17 @@ function deriveCdnBaseWithBucket(originOrCdnBase, bucket) {
     const labels = parsed.hostname.toLowerCase().split(".");
     const isSpacesHost = parsed.hostname.toLowerCase().endsWith(".digitaloceanspaces.com");
     const isRegionOnlyHost = isSpacesHost && labels.length === 3;
+    const isBucketCdnHost =
+      isSpacesHost &&
+      parsed.hostname.toLowerCase().includes(".cdn.") &&
+      parsed.hostname.toLowerCase().startsWith(`${bucket.toLowerCase()}.`);
     const path = parsed.pathname.replace(/\/+$/u, "");
 
-    if (isRegionOnlyHost && path !== `/${bucket}` && !path.startsWith(`/${bucket}/`)) {
+    if (
+      (isRegionOnlyHost || isBucketCdnHost) &&
+      path !== `/${bucket}` &&
+      !path.startsWith(`/${bucket}/`)
+    ) {
       parsed.pathname = `${path}/${bucket}`;
     }
 
@@ -100,8 +108,7 @@ function normalizeSpacesPublicUrl(urlString, env = process.env) {
     if (!parsed.hostname.includes("digitaloceanspaces.com")) return urlString;
 
     let key = parsed.pathname.replace(/^\/+/u, "");
-    const virtualHosted = parsed.hostname.startsWith(`${bucket}.`);
-    if (virtualHosted && key.startsWith(`${bucket}/`)) {
+    if (key.startsWith(`${bucket}/`)) {
       key = key.slice(bucket.length + 1);
     }
     if (!key) return urlString;

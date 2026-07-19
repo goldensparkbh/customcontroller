@@ -4,8 +4,8 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 /*
- * One-time (idempotent) migration: rewrite legacy Firebase Storage download URLs
- * embedded in the Postgres `documents` table to DigitalOcean Spaces URLs, in place.
+ * One-time (idempotent) migration: rewrite legacy Firebase Storage URLs and
+ * normalize incorrect Spaces origin/CDN URLs embedded in Postgres documents.
  *
  * This bakes the same transform the server does at read-time
  * (`rewriteFirebaseMediaUrlsIfConfigured`) into the stored JSON, so the data no
@@ -25,6 +25,9 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
  *   node server/scripts/rewrite-firebase-urls-in-db.cjs --apply    # write changes
  *   node server/scripts/rewrite-firebase-urls-in-db.cjs --limit=5  # inspect a few docs
  *   node server/scripts/rewrite-firebase-urls-in-db.cjs --apply --verify  # + HEAD-check targets
+ *
+ * This project defaults to:
+ *   https://customcontroller.fra1.cdn.digitaloceanspaces.com/customcontroller/migrated/...
  */
 
 const { Pool } = require("pg");
@@ -83,13 +86,21 @@ async function main() {
   const pool = new Pool(poolOptions(process.env.DATABASE_URL));
   const stats = { scanned: 0, changed: 0, urlsRewritten: 0, verifyMissing: 0 };
   const missingTargets = new Set();
+  let transactionStarted = false;
 
   try {
     const { rows } = await pool.query(
-      "SELECT path, data FROM documents WHERE data::text LIKE '%firebasestorage.googleapis.com%' ORDER BY path"
+      `SELECT path, data
+         FROM documents
+        WHERE data::text LIKE '%firebasestorage.googleapis.com%'
+           OR data::text LIKE '%digitaloceanspaces.com%'
+        ORDER BY path`
     );
-
     const targetRows = LIMIT ? rows.slice(0, LIMIT) : rows;
+    if (APPLY) {
+      await pool.query("BEGIN");
+      transactionStarted = true;
+    }
     console.log(
       `Found ${rows.length} document(s) containing Firebase URLs${LIMIT ? ` (processing first ${targetRows.length})` : ""}.`
     );
@@ -139,7 +150,7 @@ async function main() {
       }
 
       if (LIMIT) {
-        console.log(`  ~ ${row.path}: rewrote ${Math.max(rewrittenCount, 0)} URL(s)`);
+        console.log(`  ~ ${row.path}: normalized asset URLs`);
       }
 
       if (APPLY) {
@@ -150,6 +161,11 @@ async function main() {
       }
     }
 
+    if (transactionStarted) {
+      await pool.query("COMMIT");
+      transactionStarted = false;
+    }
+
     console.log("\n--- Summary ---");
     console.log(`  Documents scanned:        ${stats.scanned}`);
     console.log(`  Documents changed:        ${stats.changed}`);
@@ -157,6 +173,12 @@ async function main() {
     if (VERIFY) console.log(`  Missing target objects:   ${stats.verifyMissing}`);
     if (!APPLY) console.log("\nDry-run only. Re-run with --apply to persist.");
     else console.log("\nChanges written.");
+  } catch (error) {
+    if (transactionStarted) {
+      await pool.query("ROLLBACK");
+      transactionStarted = false;
+    }
+    throw error;
   } finally {
     await pool.end();
   }

@@ -15,7 +15,8 @@ const {
 } = require("../lib/assetUrlRewrite.cjs");
 
 const bucket = "customcontroller";
-const cdnBase = "https://customcontroller.fra1.cdn.digitaloceanspaces.com";
+const cdnHost = "https://customcontroller.fra1.cdn.digitaloceanspaces.com";
+const cdnBase = `${cdnHost}/customcontroller`;
 
 test("extracts decoded object keys from Firebase download URLs", () => {
   const url =
@@ -66,11 +67,11 @@ test("rewrites Firebase assets to the migrated folder on the Spaces CDN", () => 
   );
 });
 
-test("does not duplicate the bucket in virtual-hosted CDN URLs", () => {
+test("includes the bucket exactly once in this project's CDN path", () => {
   assert.equal(
     buildSpacesPublicUrl("migrated/icons/shell.png", {
       DO_SPACES_BUCKET: bucket,
-      DO_SPACES_CDN_BASE_URL: cdnBase
+      DO_SPACES_CDN_BASE_URL: cdnHost
     }),
     `${cdnBase}/migrated/icons/shell.png`
   );
@@ -89,13 +90,26 @@ test("adds the bucket only for a region-only path-style endpoint", () => {
 test("repairs previously generated bucket-prefixed CDN URLs", () => {
   assert.equal(
     normalizeSpacesPublicUrl(
-      `${cdnBase}/${bucket}/migrated/icons/shell.png`,
+      `${cdnHost}/${bucket}/migrated/icons/shell.png`,
       {
         DO_SPACES_BUCKET: bucket,
-        DO_SPACES_CDN_BASE_URL: cdnBase
+        DO_SPACES_CDN_BASE_URL: cdnHost
       }
     ),
     `${cdnBase}/migrated/icons/shell.png`
+  );
+});
+
+test("normalizes the wrong origin URL to the required CDN URL", () => {
+  assert.equal(
+    normalizeSpacesPublicUrl(
+      "https://customcontroller.fra1.digitaloceanspaces.com/migrated/configurator/icons/Buttons_1773950022395",
+      {
+        DO_SPACES_BUCKET: bucket,
+        DO_SPACES_CDN_BASE_URL: cdnHost
+      }
+    ),
+    `${cdnBase}/migrated/configurator/icons/Buttons_1773950022395`
   );
 });
 
@@ -123,6 +137,36 @@ test("dedicated migrated asset base activates rewriting without other Spaces set
       }),
       {
         image: `${cdnBase}/migrated/configurator/icons/backshell.png`
+      }
+    );
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test("project defaults produce the required production CDN URL", () => {
+  const previous = {
+    MIGRATED_ASSETS_PUBLIC_BASE_URL: process.env.MIGRATED_ASSETS_PUBLIC_BASE_URL,
+    DO_SPACES_PUBLIC_BASE_URL: process.env.DO_SPACES_PUBLIC_BASE_URL,
+    DO_SPACES_CDN_BASE_URL: process.env.DO_SPACES_CDN_BASE_URL,
+    DO_SPACES_ENDPOINT: process.env.DO_SPACES_ENDPOINT,
+    DO_SPACES_BUCKET: process.env.DO_SPACES_BUCKET
+  };
+
+  try {
+    for (const key of Object.keys(previous)) delete process.env[key];
+
+    assert.deepEqual(
+      rewriteFirebaseMediaUrlsIfConfigured({
+        image:
+          "https://firebasestorage.googleapis.com/v0/b/ps5-controller.firebasestorage.app/o/configurator%2Ficons%2FButtons_1773950022395?alt=media"
+      }),
+      {
+        image:
+          "https://customcontroller.fra1.cdn.digitaloceanspaces.com/customcontroller/migrated/configurator/icons/Buttons_1773950022395"
       }
     );
   } finally {
