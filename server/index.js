@@ -36,11 +36,19 @@ const envPrimary = pickEnv(
 
 require("dotenv").config(envPrimary ? { path: envPrimary } : {});
 
+const { hasSpacesPublicTarget } = require("./lib/assetUrlRewrite.cjs");
+
 const PORT = Number(process.env.PORT || 8787);
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   console.error("[server] DATABASE_URL is required.");
   process.exit(1);
+}
+if (!hasSpacesPublicTarget(process.env)) {
+  console.warn(
+    "[server] Migrated asset URL rewriting is inactive. Set MIGRATED_ASSETS_PUBLIC_BASE_URL " +
+      "to the public DigitalOcean Space/CDN root."
+  );
 }
 
 const pool = new Pool({
@@ -54,6 +62,7 @@ handlers.injectCommerceDb(commerceDb);
 const createStoreApi = require("./routes/storeApi");
 const createAdminApi = require("./routes/adminApi");
 const { createMaintenanceMiddleware } = require("./lib/maintenanceMode.cjs");
+const { firebaseMediaResponseMiddleware } = require("./lib/firebaseMediaResponseMiddleware.cjs");
 
 const app = express();
 app.disable("x-powered-by");
@@ -76,6 +85,7 @@ app.use(
     }
   })
 );
+app.use(firebaseMediaResponseMiddleware);
 
 app.get("/health", (_req, res) => res.status(200).send("ok"));
 

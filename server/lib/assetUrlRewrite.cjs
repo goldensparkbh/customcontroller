@@ -11,10 +11,11 @@ const { buildSpacesPublicUrl, normalizeSpacesPublicUrl } = require("./spacesPubl
  *
  * Also normalizes wrong origin Spaces URLs to CDN form:
  *   https://bucket.region.digitaloceanspaces.com/key
- *   -> https://bucket.region.cdn.digitaloceanspaces.com/bucket/key
+ *   -> the configured public/CDN base plus /key
  *
  * Env:
- *   DO_SPACES_PUBLIC_BASE_URL  — required to enable (e.g. https://bucket.fra1.digitaloceanspaces.com)
+ *   MIGRATED_ASSETS_PUBLIC_BASE_URL — preferred public root for migrated assets
+ *   DO_SPACES_PUBLIC_BASE_URL  — alternate public root (e.g. https://bucket.fra1.digitaloceanspaces.com)
  *   DO_SPACES_KEY_PREFIX       — same as migration (default: migrated); alias DO_SPACES_LEGACY_MIGRATE_PREFIX
  *   REWRITE_FIREBASE_MEDIA_URLS — set `false` to disable (default when PUBLIC_BASE_URL set: on)
  */
@@ -100,10 +101,12 @@ function rewriteFirebaseMediaDeep(value, config) {
  */
 function hasSpacesPublicTarget(env) {
   const bucket = String(env.DO_SPACES_BUCKET || "").trim();
+  const migratedAssetsBase = String(env.MIGRATED_ASSETS_PUBLIC_BASE_URL || "").trim();
   const publicBase = String(env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
   const cdnBase = String(env.DO_SPACES_CDN_BASE_URL || "").trim();
   const endpoint = String(env.DO_SPACES_ENDPOINT || "").trim();
 
+  if (migratedAssetsBase) return true;
   if (publicBase) return true;
   if (cdnBase && bucket) return true;
   if (endpoint && bucket) return true;
@@ -123,7 +126,9 @@ function rewriteFirebaseMediaUrlsIfConfigured(payload) {
   const explicitOff = rawFlag === "false" || rawFlag === "0" || rawFlag === "no";
   if (explicitOff || !hasSpacesPublicTarget(process.env)) return payload;
 
-  const publicBase = String(process.env.DO_SPACES_PUBLIC_BASE_URL || "").trim();
+  const publicBase = String(
+    process.env.MIGRATED_ASSETS_PUBLIC_BASE_URL || process.env.DO_SPACES_PUBLIC_BASE_URL || ""
+  ).trim();
   const migratedPrefix =
     String(process.env.DO_SPACES_LEGACY_MIGRATE_PREFIX || process.env.DO_SPACES_KEY_PREFIX || "migrated").trim();
 
