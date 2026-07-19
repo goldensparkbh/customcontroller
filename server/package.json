@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test": "node --test test/*.test.cjs",
     "gen:handlers": "node scripts/genCommerceModule.cjs",
     "dev": "node index.js",
     "run:schema": "node run-schema.js",
