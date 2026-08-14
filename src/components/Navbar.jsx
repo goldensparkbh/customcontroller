@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n';
 import { adminMe } from '../services/backendApi.js';
 import CurrencySelect from './CurrencySelect.jsx';
+import { readCartCount } from '../utils/shopCart.js';
 
 const NAV_ITEMS = [
     { to: '/', key: 'navHome', end: true },
@@ -18,6 +19,7 @@ const Navbar = () => {
     const [lang, setLang] = useState(localStorage.getItem('ez_lang') || 'ar');
     const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(readCartCount);
 
     const dict = i18n[lang] || i18n.ar || {};
     const t = (key) => dict[key] || key;
@@ -58,7 +60,18 @@ const Navbar = () => {
 
     useEffect(() => {
         setIsMobileMenuOpen(false);
+        setCartCount(readCartCount());
     }, [location.pathname]);
+
+    useEffect(() => {
+        const syncCart = () => setCartCount(readCartCount());
+        window.addEventListener('ez-cart-change', syncCart);
+        window.addEventListener('storage', syncCart);
+        return () => {
+            window.removeEventListener('ez-cart-change', syncCart);
+            window.removeEventListener('storage', syncCart);
+        };
+    }, []);
 
     useEffect(() => {
         document.body.classList.toggle('mobile-nav-open', isMobileMenuOpen);
@@ -119,6 +132,20 @@ const Navbar = () => {
                         type="button"
                     >
                         {lang === 'ar' ? 'EN' : 'AR'}
+                    </button>
+                    <button
+                        className="nav-cart-btn"
+                        type="button"
+                        aria-label={lang === 'ar' ? 'السلة' : 'Cart'}
+                        onClick={() => navigate('/cart')}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M6 6h15l-1.5 9h-12L6 6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                            <path d="M6 6 5 3H2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            <circle cx="9" cy="20" r="1.4" fill="currentColor" />
+                            <circle cx="18" cy="20" r="1.4" fill="currentColor" />
+                        </svg>
+                        {cartCount > 0 && <span className="nav-cart-badge">{cartCount}</span>}
                     </button>
                     <button
                         className="nav-menu-btn global-nav-menu-btn"

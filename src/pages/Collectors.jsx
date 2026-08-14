@@ -5,7 +5,7 @@ import { i18n } from '../i18n.js';
 const EDITIONS = [
   {
     id: 'obsidian',
-    artistId: 'gold',
+    artistId: 'legend-in-purple',
     image: '/assets/collectors/obsidian.png',
     number: '01',
     run: '50',
@@ -16,7 +16,7 @@ const EDITIONS = [
   },
   {
     id: 'crimson',
-    artistId: 'crimson',
+    artistId: 'shoguns-oath',
     image: '/assets/collectors/crimson.png',
     number: '02',
     run: '40',
@@ -27,7 +27,7 @@ const EDITIONS = [
   },
   {
     id: 'arctic',
-    artistId: 'ice',
+    artistId: 'sakura-bloom',
     image: '/assets/collectors/arctic.png',
     number: '03',
     run: '50',
@@ -38,7 +38,7 @@ const EDITIONS = [
   },
   {
     id: 'void',
-    artistId: 'neon',
+    artistId: 'storm-call',
     image: '/assets/collectors/void.png',
     number: '04',
     run: '30',
@@ -49,7 +49,7 @@ const EDITIONS = [
   },
   {
     id: 'solar',
-    artistId: 'gold',
+    artistId: 'legend-in-purple',
     image: '/assets/collectors/solar.png',
     number: '05',
     run: '40',
@@ -60,7 +60,7 @@ const EDITIONS = [
   },
   {
     id: 'pearl',
-    artistId: 'ice',
+    artistId: 'sakura-bloom',
     image: '/assets/collectors/pearl.png',
     number: '06',
     run: '25',
