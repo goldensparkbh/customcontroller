@@ -8,8 +8,6 @@ import { readCartCount } from '../utils/shopCart.js';
 const NAV_ITEMS = [
     { to: '/', key: 'navHome', end: true },
     { to: '/configurator', key: 'navCustomize', end: true },
-    { to: '/artists', key: 'navArtists' },
-    { to: '/collectors', key: 'navCollectors' },
     { to: '/contact', key: 'navContactUs' }
 ];
 
