@@ -78,10 +78,6 @@ function HomePage() {
     navigate('/configurator');
   };
 
-  const goToCollectors = () => {
-    navigate('/collectors');
-  };
-
   useEffect(() => {
     const onLang = () => {
       const next = localStorage.getItem('ez_lang') || 'ar';
@@ -402,7 +398,6 @@ function HomePage() {
             <p className="hero-note" data-hero-price-bhd style={{ marginTop: '0.75rem', opacity: 0.9 }} />
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
-              <button className="hero-btn secondary" type="button" data-i18n="heroCollectorsBtn" onClick={goToCollectors}></button>
             </div>
           </div>
         </div>
