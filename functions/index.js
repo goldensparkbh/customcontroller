@@ -939,7 +939,9 @@ function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
     const parts = item && item.parts;
     if (!parts || typeof parts !== "object") return;
 
-    addAdjustment("configurator_settings/general", qty);
+    if (!(item && (item.customerOwnController || item.skipBaseController))) {
+      addAdjustment("configurator_settings/general", qty);
+    }
 
     Object.entries(parts).forEach(([partId, partState]) => {
       // Process Color selection (ID is the Firestore document ID, fallback to key)

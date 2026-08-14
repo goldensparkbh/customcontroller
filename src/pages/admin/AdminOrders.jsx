@@ -77,6 +77,9 @@ const getPaymentReference = (order) =>
     order?.paymentDetails?.reference?.transaction ||
     order?.paymentDetails?.id ||
     '';
+const getDiscountCode = (order) => String(order?.discountCode || '').trim().toUpperCase();
+const getDiscountAmount = (order) => Number(order?.discountAmount || 0);
+const orderUsedDiscount = (order) => Boolean(getDiscountCode(order) || getDiscountAmount(order) > 0);
 const getOrderNumberLabel = (order) => `#${padNumericString(getOrderNumber(order), 6)}`;
 const getTrackingNumber = (order) => order?.shipping?.trackingNumber || '';
 const getInventorySyncStatus = (order) => String(order?.inventorySyncStatus || '').trim();
@@ -1203,6 +1206,11 @@ const AdminOrders = ({ lang = 'ar' }) => {
 
                                     <div style={{ ...listCellStyle, fontWeight: 700 }}>
                                         {Number(order.total || 0).toFixed(2)} {order.currency || 'BHD'}
+                                        {orderUsedDiscount(order) ? (
+                                            <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginTop: '0.2rem', fontWeight: 700 }}>
+                                                {isAr ? 'رمز خصم' : 'Discount'}{getDiscountCode(order) ? `: ${getDiscountCode(order)}` : ''}
+                                            </div>
+                                        ) : null}
                                     </div>
 
                                     <div style={listCellStyle}>
@@ -1473,6 +1481,30 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             value={`${Number(selectedOrder.total || 0).toFixed(2)} ${selectedOrder.currency || 'BHD'}`}
                                         />
                                     )}
+                                    {orderUsedDiscount(selectedOrder) ? (
+                                        <>
+                                            <div style={{ height: '0.75rem' }} />
+                                            <div
+                                                style={{
+                                                    padding: '0.7rem 0.8rem',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(251, 191, 36, 0.45)',
+                                                    background: 'rgba(251, 191, 36, 0.12)',
+                                                    color: '#fde68a'
+                                                }}
+                                            >
+                                                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>
+                                                    {isAr ? 'ملاحظة: استخدم رمز خصم' : 'Note: Discount code used'}
+                                                </div>
+                                                <div style={{ fontWeight: 700 }}>
+                                                    {getDiscountCode(selectedOrder) || (isAr ? 'رمز خصم' : 'Discount')}
+                                                    {getDiscountAmount(selectedOrder) > 0
+                                                        ? ` — −${getDiscountAmount(selectedOrder).toFixed(3)} ${selectedOrder.currency || 'BHD'}`
+                                                        : ''}
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : null}
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField
                                         isAr={isAr}

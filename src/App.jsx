@@ -10,6 +10,10 @@ import { CheckoutCountryProvider } from './context/CheckoutCountryContext.jsx';
 // Lazy-load heavy pages to reduce initial JS memory footprint.
 const HomePage = lazy(() => import('./pages/Home.jsx'));
 const ConfiguratorPage = lazy(() => import('./pages/Configurator.jsx'));
+const CollectorsPage = lazy(() => import('./pages/Collectors.jsx'));
+const ArtistsPage = lazy(() => import('./pages/Artists.jsx'));
+const ArtistDetailPage = lazy(() => import('./pages/ArtistDetail.jsx'));
+const ContactPage = lazy(() => import('./pages/Contact.jsx'));
 const CartPage = lazy(() => import('./pages/Cart.jsx'));
 const CheckoutPage = lazy(() => import('./pages/Checkout.jsx'));
 const PaymentPage = lazy(() => import('./pages/Payment.jsx'));
@@ -61,7 +65,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   const location = useLocation();
   const hideNavbarOn = ['/pos'];
-  const shouldHideNavbar = hideNavbarOn.includes(location.pathname);
+  const shouldHideNavbar = hideNavbarOn.includes(location.pathname) || location.pathname.startsWith('/admin');
 
   React.useEffect(() => {
     document.body.classList.toggle('theme-light', localStorage.getItem('ez_theme') === 'light');
@@ -85,7 +89,12 @@ function App() {
       <Suspense fallback={<LoadingState message="Loading..." fullScreen />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/collectors" element={<CollectorsPage />} />
+          <Route path="/artists" element={<ArtistsPage />} />
+          <Route path="/artists/:artistId" element={<ArtistDetailPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/configurator" element={<ConfiguratorPage />} />
+          <Route path="/configurator/own-controller" element={<ConfiguratorPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment" element={<PaymentPage />} />

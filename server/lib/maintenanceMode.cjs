@@ -29,6 +29,8 @@ function isExemptPath(urlPath) {
   if (urlPath === "/store-api/site/status") return true;
   if (urlPath === "/store-api/exchange-rates") return true;
   if (urlPath === "/store-api/geo/currency") return true;
+  if (urlPath === "/store-api/configurator/catalog") return true;
+  if (urlPath === "/api/inStoreOrder") return true;
   return false;
 }
 

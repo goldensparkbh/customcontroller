@@ -79,6 +79,7 @@ const defaultSettings = {
   maintenanceMode: false,
   maintenanceMessageAr: '',
   maintenanceMessageEn: '',
+  inStoreEmployeePassword: '',
   baseControllerLowStockThreshold: 5
 };
 
@@ -159,6 +160,7 @@ const AdminSettings = ({ lang = 'ar' }) => {
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState('success');
   const [hasStoredSmtpPass, setHasStoredSmtpPass] = useState(false);
+  const [hasStoredInStorePass, setHasStoredInStorePass] = useState(false);
 
   const isAr = lang === 'ar';
 
@@ -189,13 +191,15 @@ const AdminSettings = ({ lang = 'ar' }) => {
         if (snapshot && Object.keys(snapshotData).length) {
           const data = snapshotData || {};
           setHasStoredSmtpPass(Boolean(data.smtpPass));
+          setHasStoredInStorePass(Boolean(data.inStoreEmployeePassword));
           setFormData({
             ...defaultSettings,
             ...data,
             smtpHost: String(data.smtpHost || NAMECHEAP_SMTP_HOST).trim() || NAMECHEAP_SMTP_HOST,
             smtpPort: normalizeSmtpPort(data.smtpPort),
             smtpSecure: normalizeSmtpPort(data.smtpPort) === NAMECHEAP_SMTP_PORT_SSL,
-            smtpPass: ''
+            smtpPass: '',
+            inStoreEmployeePassword: ''
           });
         }
       } catch (error) {
@@ -247,10 +251,14 @@ const AdminSettings = ({ lang = 'ar' }) => {
       if (!String(formData.smtpPass || '').trim()) {
         delete nextPayload.smtpPass;
       }
+      if (!String(formData.inStoreEmployeePassword || '').trim()) {
+        delete nextPayload.inStoreEmployeePassword;
+      }
 
       await adminPatchDoc('admin_settings/general', nextPayload);
       setHasStoredSmtpPass(hasStoredSmtpPass || Boolean(String(formData.smtpPass || '').trim()));
-      setFormData((current) => ({ ...current, smtpPass: '' }));
+      setHasStoredInStorePass(hasStoredInStorePass || Boolean(String(formData.inStoreEmployeePassword || '').trim()));
+      setFormData((current) => ({ ...current, smtpPass: '', inStoreEmployeePassword: '' }));
       setMessage(isAr ? 'تم حفظ الإعدادات.' : 'Settings saved.');
       setMessageTone('success');
     } catch (error) {
@@ -380,6 +388,22 @@ const AdminSettings = ({ lang = 'ar' }) => {
                 name="baseControllerLowStockThreshold"
                 value={formData.baseControllerLowStockThreshold}
                 onChange={handleChange}
+                style={fieldStyle}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr), maxWidth: '280px' }}>
+              <span>{isAr ? 'كلمة مرور موظف المتجر (ذراع العميل)' : 'In-store employee password (own controller)'}</span>
+              <input
+                type="password"
+                name="inStoreEmployeePassword"
+                value={formData.inStoreEmployeePassword}
+                onChange={handleChange}
+                autoComplete="new-password"
+                placeholder={
+                  hasStoredInStorePass
+                    ? (isAr ? 'محفوظة. اتركها فارغة للاحتفاظ بها.' : 'Saved. Leave blank to keep it.')
+                    : (isAr ? 'أدخل كلمة مرور الموظف' : 'Set employee password')
+                }
                 style={fieldStyle}
               />
             </label>

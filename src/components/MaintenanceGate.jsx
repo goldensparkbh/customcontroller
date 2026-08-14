@@ -10,7 +10,9 @@ export default function MaintenanceGate({ children }) {
   const location = useLocation();
   const [status, setStatus] = useState(null);
   const bypassMaintenance =
-    location.pathname.startsWith('/admin') || location.pathname.startsWith('/pos');
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/pos') ||
+    location.pathname.startsWith('/configurator/own-controller');
 
   useEffect(() => {
     let alive = true;

@@ -15,6 +15,7 @@ function getFirestore() {
 
 exports.injectCommerceDb = injectCommerceDb;
 const dotenv = require("dotenv");
+const crypto = require("crypto");
 const PDFDocument = require("pdfkit");
 const SVGtoPDF = require("svg-to-pdfkit");
 const fs = require("fs");
@@ -954,7 +955,9 @@ function collectConfiguratorInventoryAdjustments(items, multiplier = 1) {
     const parts = item && item.parts;
     if (!parts || typeof parts !== "object") return;
 
-    addAdjustment("configurator_settings/general", qty);
+    if (!(item && (item.customerOwnController || item.skipBaseController))) {
+      addAdjustment("configurator_settings/general", qty);
+    }
 
     Object.entries(parts).forEach(([partId, partState]) => {
       // Process Color selection (ID is the Firestore document ID, fallback to key)
@@ -2160,6 +2163,129 @@ async function sendOrderNotificationEmails({ req, orderId, orderDoc, settings })
   return emailNotifications;
 }
 
+function passwordsMatch(stored, provided) {
+  const left = String(stored || "");
+  const right = String(provided || "");
+  if (!left || !right) return false;
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function handleInStoreOrder(req, res) {
+  const body = req.body || {};
+  const db = getFirestore();
+  const adminSettings = await getGeneralAdminSettings();
+  const storedPassword = String(adminSettings.inStoreEmployeePassword || "").trim();
+  if (!storedPassword) {
+    return res.status(400).json({ error: "password_not_configured" });
+  }
+  if (!passwordsMatch(storedPassword, body.employeePassword)) {
+    return res.status(401).json({ error: "invalid_password" });
+  }
+
+  const amounts = getNormalizedOrderAmounts(body);
+  if (!Array.isArray(amounts.items) || !amounts.items.length) {
+    return res.status(400).json({ error: "empty_order" });
+  }
+
+  const items = amounts.items.map((item) => ({
+    ...item,
+    quantity: toFiniteNumber(item && item.quantity, 1) || 1,
+    customerOwnController: true,
+    skipBaseController: true
+  }));
+  const subtotal = roundMoney(items.reduce((sum, item) => sum + getOrderLineTotal(item), 0));
+  const computedTotal = subtotal;
+  const clientTotal = roundMoney(Number(body.total));
+  if (Number.isFinite(clientTotal) && Math.abs(computedTotal - clientTotal) > 0.02) {
+    return res.status(400).json({
+      error: "total_mismatch",
+      computedTotal,
+      clientTotal
+    });
+  }
+
+  const orderNumber = await allocateCounterValue("orders", 500000);
+  const orderDoc = {
+    customer: {
+      firstName: body.firstName || "Walk-in",
+      lastName: body.lastName || "Own controller",
+      first_name: body.firstName || "Walk-in",
+      last_name: body.lastName || "Own controller",
+      email: body.email || "",
+      phone: body.phoneFull || body.phone || ""
+    },
+    shipping: {
+      method: "store_pickup",
+      country: "BH",
+      city: body.city || "Manama",
+      state: "",
+      addressLine: "Customer own controller",
+      address: "Customer own controller",
+      cost: 0
+    },
+    items,
+    orderNumber,
+    subtotal,
+    discountCode: "",
+    discountAmount: 0,
+    total: computedTotal,
+    currency: body.currency || "BHD",
+    status: "Paid",
+    urgency: "Normal",
+    paymentStatus: "Paid",
+    paymentReference: "",
+    paymentDetails: {},
+    paymentMethod: "in_store",
+    payment_method: "in_store",
+    source: "in_store_own_controller",
+    customerOwnController: true,
+    skipBaseController: true,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  };
+
+  const docRef = await db.collection("orders").add(orderDoc);
+  let inventorySyncStatus = "not_required";
+  let inventoryAdjustments = [];
+  let inventorySyncError = "";
+
+  try {
+    inventoryAdjustments = await applyOrderInventoryAdjustments(items, {
+      orderId: docRef.id,
+      orderNumber
+    });
+    inventorySyncStatus = inventoryAdjustments.length ? "completed" : "not_required";
+  } catch (inventoryError) {
+    inventorySyncStatus = "failed";
+    console.error("[inStoreOrder] inventory sync error", inventoryError);
+    inventorySyncError = inventoryError.message || "Inventory deduction failed";
+  }
+
+  try {
+    const orderUpdate = {
+      inventorySyncStatus,
+      updatedAt: FieldValue.serverTimestamp()
+    };
+    if (inventoryAdjustments.length) orderUpdate.inventoryAdjustments = inventoryAdjustments;
+    if (inventorySyncError) orderUpdate.inventorySyncError = inventorySyncError;
+    await docRef.update(orderUpdate);
+  } catch (orderUpdateError) {
+    console.error("[inStoreOrder] post-create update error", orderUpdateError);
+  }
+
+  return res.json({
+    success: true,
+    orderId: docRef.id,
+    orderNumber,
+    inventorySyncStatus,
+    total: orderDoc.total,
+    status: "Paid"
+  });
+}
+
 async function orderHandler(req, res) {
 res.set("Access-Control-Allow-Origin", "*");
 res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -2207,6 +2333,9 @@ try {
   }
   if (postPath === "/abandonedCart/recover") {
     return await handleAbandonedCartRecover(req, res);
+  }
+  if (postPath === "/inStoreOrder") {
+    return await handleInStoreOrder(req, res);
   }
   if (postPath !== "/createOrder") {
     return res.status(404).json({ error: "not_found" });

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { fetchConfiguratorCatalog } from '../services/backendApi.js';
 import { bootstrapGeoPreferences } from '../lib/geoPreferences.js';
 import { i18n } from '../i18n';
@@ -111,6 +112,7 @@ const configuratorMarkup = `
 </div>
 <!-- FIXED BOTTOM BAR: total + add to cart -->
 <div class="controller-bottom-bar">
+<div class="own-controller-note" data-i18n="ownControllerNote" hidden>Base price 0.000 BD — the customer is using their own controller.</div>
 <div class="nav-amount-block">
 <div class="nav-amount-label" data-i18n="totalLabel">الإجمالي</div>
 <div class="nav-amount-value" id="summaryAmount">د.ب 0.00</div>
@@ -136,15 +138,29 @@ const configuratorMarkup = `
             <path d="M3 4h2l2.2 10.5a2 2 0 0 0 2 1.5h8.5a2 2 0 0 0 2-1.5l1.6-7.5H6.2"></path>
           </svg>
         </span>
+        <span class="place-order-label" data-i18n="inStorePlaceOrder" hidden>Place Order</span>
       </button>
 </div>
 </div>
 </div>
 <div class="part-tooltip" id="partTooltip"></div>
+<div class="employee-password-overlay" id="employeePasswordOverlay" hidden>
+  <div class="employee-password-modal" role="dialog" aria-modal="true" aria-labelledby="employeePasswordTitle">
+    <h2 id="employeePasswordTitle" data-i18n="employeePasswordLabel">Employee Password :</h2>
+    <input class="employee-password-input" id="employeePasswordInput" type="password" autocomplete="current-password" />
+    <p class="employee-password-error" id="employeePasswordError" hidden></p>
+    <div class="employee-password-actions">
+      <button class="employee-password-cancel" id="employeePasswordCancel" type="button" data-i18n="employeePasswordCancel">Cancel</button>
+      <button class="employee-password-submit" id="employeePasswordSubmit" type="button" data-i18n="employeePasswordSubmit">Place Order</button>
+    </div>
+  </div>
+</div>
 `;
 
 const ConfiguratorPage = () => {
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const ownControllerMode = location.pathname.startsWith('/configurator/own-controller');
 
   useEffect(() => {
     bootstrapGeoPreferences({ force: true }).catch(() => {});
@@ -156,7 +172,13 @@ const ConfiguratorPage = () => {
        * Legacy `configurator-logic.js` reads `__CONFIG_DATA__.i18n` at load time.
        * Set defaults before any await so a failed catalog fetch does not leave i18n empty.
        */
-      window.__CONFIG_DATA__ = { i18n, baseControllerPrice: 0, baseControllerQty: null, baseControllerLowStockThreshold: 5 };
+      window.__CONFIG_DATA__ = {
+        i18n,
+        baseControllerPrice: 0,
+        baseControllerQty: null,
+        baseControllerLowStockThreshold: 5,
+        ownControllerMode
+      };
       window.__CONFIG_FIREBASE_DATA__ = window.__CONFIG_FIREBASE_DATA__ || [];
 
       try {
@@ -178,8 +200,11 @@ const ConfiguratorPage = () => {
           }).filter((opt) => opt.active !== false)
         }));
 
-        const basePrice = Number(catalog.basePrice) || 0;
-        const baseQuantity = catalog.baseQuantity != null ? Number(catalog.baseQuantity) : null;
+        const catalogBasePrice = Number(catalog.basePrice) || 0;
+        const basePrice = ownControllerMode ? 0 : catalogBasePrice;
+        const baseQuantity = ownControllerMode
+          ? null
+          : (catalog.baseQuantity != null ? Number(catalog.baseQuantity) : null);
         const baseControllerLowStockThreshold = Number(catalog.baseControllerLowStockThreshold);
         const lowStockThreshold = Number.isFinite(baseControllerLowStockThreshold) && baseControllerLowStockThreshold >= 0
           ? baseControllerLowStockThreshold
@@ -190,7 +215,8 @@ const ConfiguratorPage = () => {
           i18n,
           baseControllerPrice: basePrice,
           baseControllerQty: baseQuantity,
-          baseControllerLowStockThreshold: lowStockThreshold
+          baseControllerLowStockThreshold: lowStockThreshold,
+          ownControllerMode
         };
       } catch (err) {
         console.error("Configurator catalog fetch error:", err);
@@ -201,11 +227,12 @@ const ConfiguratorPage = () => {
     };
 
     loadFirebaseData();
-  }, []);
+  }, [ownControllerMode]);
 
   useEffect(() => {
     if (loading) return;
     document.body.classList.add('configurator-page-active');
+    document.body.classList.toggle('own-controller-page', ownControllerMode);
     const introFrame = window.requestAnimationFrame(() => {
       document.body.classList.add('configurator-intro-active');
     });
@@ -232,6 +259,7 @@ const ConfiguratorPage = () => {
       }
       document.body.classList.remove('configurator-page-active');
       document.body.classList.remove('configurator-intro-active');
+      document.body.classList.remove('own-controller-page');
       window.cancelAnimationFrame(introFrame);
       window.clearTimeout(introTimeout);
       const script = document.getElementById('ez-configurator-logic-script');
@@ -239,7 +267,7 @@ const ConfiguratorPage = () => {
         document.body.removeChild(script);
       }
     };
-  }, [loading]);
+  }, [loading, ownControllerMode]);
 
   if (loading) {
     const currentLang = localStorage.getItem('ez_lang') || 'ar';

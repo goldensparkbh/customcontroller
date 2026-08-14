@@ -216,8 +216,9 @@
 
     // Persistent state
     const configData = window.__CONFIG_DATA__ || {};
-    let baseControllerPrice = configData.baseControllerPrice || 0;
-    let baseControllerQty = configData.baseControllerQty;
+    const ownControllerMode = !!configData.ownControllerMode;
+    let baseControllerPrice = ownControllerMode ? 0 : (configData.baseControllerPrice || 0);
+    let baseControllerQty = ownControllerMode ? null : configData.baseControllerQty;
     let baseControllerLowStockThreshold = Number(configData.baseControllerLowStockThreshold);
     if (!Number.isFinite(baseControllerLowStockThreshold) || baseControllerLowStockThreshold < 0) {
         baseControllerLowStockThreshold = 5;
@@ -518,7 +519,7 @@
         if (nName.includes("originalcontroller") || nName.includes("basecontroller")) {
             const basePrice = (typeof item.rate === "number" ? item.rate : (parseFloat(item.rate) || parseFloat(item.unit_price) || 0)) || 0;
             if (!Number.isNaN(basePrice) && basePrice > 0) {
-                baseControllerPrice = basePrice;
+                baseControllerPrice = ownControllerMode ? 0 : basePrice;
                 log.reason = "Base controller price found: " + basePrice;
             }
             return;
@@ -863,22 +864,23 @@
         return entries;
     }
 
-    /** Clear color/option picks on regular parts covered by a pre-made design (one-way only). */
+    /** Clear color picks on regular parts when a pre-made design is chosen (premade always wins). */
     function clearRegularPartsCoveredByPremade(premadeOption) {
         if (!premadeOption || premadeOption.type !== "premade") return;
         const affected = Array.isArray(premadeOption.affectedParts) && premadeOption.affectedParts.length
             ? premadeOption.affectedParts
-            : [];
+            : ALL_PARTS.filter(p => p.componentType !== "premade").map(p => p.id);
         if (!affected.length) return;
 
-        affected.forEach(affectedPartId => {
-            const targetPart = ALL_PARTS.find(p => p.id === affectedPartId);
+        ALL_PARTS.forEach(targetPart => {
             if (!targetPart || targetPart.componentType === "premade") return;
-
-            configState[affectedPartId] = null;
-            optionState[affectedPartId] = [];
-            selectedPriceByPart[affectedPartId] = 0;
-            selectedOptionPriceByPart[affectedPartId] = 0;
+            const covered = affected.includes(targetPart.id);
+            configState[targetPart.id] = null;
+            selectedPriceByPart[targetPart.id] = 0;
+            if (covered) {
+                optionState[targetPart.id] = [];
+                selectedOptionPriceByPart[targetPart.id] = 0;
+            }
         });
     }
 
@@ -1060,7 +1062,7 @@
             if (!active) return false;
             const affected = Array.isArray(active.affectedParts) && active.affectedParts.length
                 ? active.affectedParts
-                : [];
+                : ALL_PARTS.filter((regular) => regular.componentType !== "premade").map((regular) => regular.id);
             return affected.includes(partId);
         });
     }
@@ -1229,7 +1231,7 @@
             currentPanel,
             currentSide
         };
-        localStorage.setItem("ps5Config", JSON.stringify(state));
+        localStorage.setItem(ownControllerMode ? "ps5ConfigOwn" : "ps5Config", JSON.stringify(state));
     }
 
     function getRenderedLayerImage(partId) {
@@ -1284,7 +1286,7 @@
 
     function loadConfigFromStorage() {
         try {
-            const saved = localStorage.getItem("ps5Config");
+            const saved = localStorage.getItem(ownControllerMode ? "ps5ConfigOwn" : "ps5Config");
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (parsed.configState) Object.assign(configState, parsed.configState);
@@ -1552,7 +1554,7 @@
         syncStackLayerVisibility(stack.premade, part, true);
 
         const colorKey = configState[partId];
-        const col = colorKey ? palette.find(c => c.key === colorKey) : null;
+        const col = (!useFullFacePremade && colorKey) ? palette.find(c => c.key === colorKey) : null;
         setStackImage(stack.color, col?.image, col?.secondImage);
         syncStackLayerVisibility(stack.color, part, false);
 
@@ -2716,15 +2718,186 @@
         return canvas.toDataURL("image/jpeg", 0.7);
     }
 
+    function buildCartItemFromSnapshot(snapshot, extra = {}) {
+        return {
+            id: Date.now(),
+            name: t("productName"),
+            total: snapshot.total,
+            unitPrice: snapshot.total,
+            quantity: 1,
+            parts: snapshot.parts,
+            previewFrontLayers: extra.previewFrontLayers || collectVisibleFaceLayers("front"),
+            previewBackLayers: extra.previewBackLayers || collectVisibleFaceLayers("back"),
+            previewFront: extra.previewFront || "",
+            previewBack: extra.previewBack || "",
+            customerOwnController: ownControllerMode,
+            skipBaseController: ownControllerMode
+        };
+    }
+
+    function snapshotHasCustomization(snapshot) {
+        return Object.values(snapshot.parts).some((p) => {
+            if (p.color) return true;
+            const opts = Array.isArray(p.options) ? p.options : (p.option ? [p.option] : []);
+            return opts.some((o) => o && o.key && o.key !== "standard");
+        });
+    }
+
+    const employeeOverlay = document.getElementById("employeePasswordOverlay");
+    const employeeInput = document.getElementById("employeePasswordInput");
+    const employeeError = document.getElementById("employeePasswordError");
+    const employeeSubmit = document.getElementById("employeePasswordSubmit");
+    const employeeCancel = document.getElementById("employeePasswordCancel");
+    const placeOrderLabel = addToCartBtn ? addToCartBtn.querySelector(".place-order-label") : null;
+    const cartIcon = addToCartBtn ? addToCartBtn.querySelector(".cart-icon") : null;
+
+    function setEmployeeError(message) {
+        if (!employeeError) return;
+        if (!message) {
+            employeeError.hidden = true;
+            employeeError.textContent = "";
+            return;
+        }
+        employeeError.hidden = false;
+        employeeError.textContent = message;
+    }
+
+    function closeEmployeeModal() {
+        if (!employeeOverlay) return;
+        employeeOverlay.hidden = true;
+        setEmployeeError("");
+        if (employeeInput) employeeInput.value = "";
+    }
+
+    function openEmployeeModal() {
+        if (!employeeOverlay) return;
+        setEmployeeError("");
+        employeeOverlay.hidden = false;
+        window.setTimeout(() => employeeInput && employeeInput.focus(), 30);
+    }
+
+    if (ownControllerMode && addToCartBtn) {
+        addToCartBtn.classList.add("is-place-order");
+        addToCartBtn.setAttribute("aria-label", t("inStorePlaceOrder") || "Place Order");
+        if (cartIcon) cartIcon.hidden = true;
+        if (placeOrderLabel) {
+            placeOrderLabel.hidden = false;
+            placeOrderLabel.textContent = t("inStorePlaceOrder") || "Place Order";
+        }
+        const ownNote = document.querySelector(".own-controller-note");
+        if (ownNote) {
+            ownNote.hidden = false;
+            ownNote.textContent = t("ownControllerNote") || ownNote.textContent;
+        }
+    }
+
+    async function submitInStoreOrder(employeePassword) {
+        const snapshot = getSnapshot();
+        if (!snapshotHasCustomization(snapshot)) {
+            alert(t("alertNone"));
+            return;
+        }
+
+        setZohoLoading(true);
+        if (addToCartBtn) addToCartBtn.disabled = true;
+        if (employeeSubmit) employeeSubmit.disabled = true;
+
+        let cartItem = buildCartItemFromSnapshot(snapshot);
+        try {
+            cartItem = buildCartItemFromSnapshot(snapshot, {
+                previewFrontLayers: collectVisibleFaceLayers("front"),
+                previewBackLayers: collectVisibleFaceLayers("back"),
+                previewFront: await buildPreviewImage(snapshot, "front"),
+                previewBack: await buildPreviewImage(snapshot, "back")
+            });
+        } catch (previewErr) {
+            console.warn("In-store preview generation failed", previewErr);
+        }
+
+        try {
+            const res = await fetch("/api/inStoreOrder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    employeePassword,
+                    cart: [cartItem],
+                    subtotal: snapshot.total,
+                    shippingCost: 0,
+                    total: snapshot.total,
+                    currency: "BHD",
+                    firstName: "Walk-in",
+                    lastName: "Own controller",
+                    shippingMethod: "store_pickup",
+                    country: "BH",
+                    city: "Manama"
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.success) {
+                const errCode = data && data.error;
+                const message =
+                    errCode === "invalid_password" ? (t("employeePasswordInvalid") || "Incorrect password.") :
+                    errCode === "password_not_configured" ? (t("employeePasswordMissing") || "Employee password is not set.") :
+                    (data.error || data.message || t("orderFailed") || "Order failed");
+                setEmployeeError(message);
+                return;
+            }
+            closeEmployeeModal();
+            alert(t("inStoreOrderPlaced") || "Order placed.");
+            clearAllSelections();
+        } catch (err) {
+            console.error("In-store order error", err);
+            setEmployeeError(t("orderFailed") || "Order failed");
+        } finally {
+            setZohoLoading(false);
+            if (addToCartBtn) addToCartBtn.disabled = false;
+            if (employeeSubmit) employeeSubmit.disabled = false;
+        }
+    }
+
+    if (employeeCancel) employeeCancel.addEventListener("click", closeEmployeeModal);
+    if (employeeOverlay) {
+        employeeOverlay.addEventListener("click", (e) => {
+            if (e.target === employeeOverlay) closeEmployeeModal();
+        });
+    }
+    if (employeeSubmit) {
+        employeeSubmit.addEventListener("click", () => {
+            const password = employeeInput ? employeeInput.value : "";
+            if (!String(password).trim()) {
+                setEmployeeError(t("employeePasswordRequired") || "Enter the employee password.");
+                return;
+            }
+            submitInStoreOrder(password);
+        });
+    }
+    if (employeeInput) {
+        employeeInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                employeeSubmit && employeeSubmit.click();
+            }
+        });
+    }
+
     if (addToCartBtn) {
         addToCartBtn.addEventListener("click", async () => {
+            if (ownControllerMode) {
+                const snapshot = getSnapshot();
+                if (!snapshotHasCustomization(snapshot)) {
+                    alert(t("alertNone"));
+                    return;
+                }
+                openEmployeeModal();
+                return;
+            }
+
             if (isBaseControllerOutOfStock()) {
                 alert(t("outOfStock") || "Out of Stock");
                 return;
             }
             const snapshot = getSnapshot();
-            const hasCustom = Object.values(snapshot.parts).some(p => p.color || (p.option && p.option.key !== "standard"));
-            if (!hasCustom) {
+            if (!snapshotHasCustomization(snapshot)) {
                 alert(t("alertNone"));
                 return;
             }
@@ -2738,16 +2911,12 @@
                 const previewFront = await buildPreviewImage(snapshot, "front");
                 const previewBack = await buildPreviewImage(snapshot, "back");
 
-                const cartItem = {
-                    id: Date.now(),
-                    name: t("productName"),
-                    total: snapshot.total,
-                    parts: snapshot.parts,
-                    previewFrontLayers: previewFrontLayers,
-                    previewBackLayers: previewBackLayers,
-                    previewFront: previewFront,
-                    previewBack: previewBack
-                };
+                const cartItem = buildCartItemFromSnapshot(snapshot, {
+                    previewFrontLayers,
+                    previewBackLayers,
+                    previewFront,
+                    previewBack
+                });
 
                 const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
                 cart.push(cartItem);
@@ -2757,14 +2926,7 @@
                 console.error("Cart Preview Generation Error:", err);
                 setZohoLoading(false);
                 addToCartBtn.disabled = false;
-                const cartItem = {
-                    id: Date.now(),
-                    name: t("productName"),
-                    total: snapshot.total,
-                    parts: snapshot.parts,
-                    previewFrontLayers: collectVisibleFaceLayers("front"),
-                    previewBackLayers: collectVisibleFaceLayers("back")
-                };
+                const cartItem = buildCartItemFromSnapshot(snapshot);
                 const cart = JSON.parse(localStorage.getItem("ezCart") || "[]");
                 cart.push(cartItem);
                 localStorage.setItem("ezCart", JSON.stringify(cart));

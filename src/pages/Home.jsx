@@ -56,7 +56,6 @@ function FeatureIcon({ type }) {
 function HomePage() {
   const navigate = useNavigate();
   const { formatFromBhd } = useCurrency();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [trackIndex, setTrackIndex] = useState(0);
   const [bannerTransition, setBannerTransition] = useState(true);
@@ -77,6 +76,10 @@ function HomePage() {
 
   const goToConfigurator = () => {
     navigate('/configurator');
+  };
+
+  const goToCollectors = () => {
+    navigate('/collectors');
   };
 
   useEffect(() => {
@@ -257,9 +260,7 @@ function HomePage() {
       contactForm?.reset();
     };
 
-    const mobileLangToggle = document.getElementById('mobileLangToggle');
     langToggle?.addEventListener('click', handleLangToggle);
-    mobileLangToggle?.addEventListener('click', handleLangToggle);
     contactForm?.addEventListener('submit', handleContactSubmit);
 
     applyLangAttributes();
@@ -270,17 +271,9 @@ function HomePage() {
       document.body.style.overflowY = '';
       document.documentElement.style.overflowY = '';
       langToggle?.removeEventListener('click', handleLangToggle);
-      mobileLangToggle?.removeEventListener('click', handleLangToggle);
       contactForm?.removeEventListener('submit', handleContactSubmit);
     };
   }, []);
-
-  useEffect(() => {
-    document.body.classList.toggle('mobile-nav-open', isMobileMenuOpen);
-    return () => document.body.classList.remove('mobile-nav-open');
-  }, [isMobileMenuOpen]);
-
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const goToBanner = useCallback((targetIndex) => {
     if (bannerSlides.length <= 1) return;
@@ -350,12 +343,6 @@ function HomePage() {
 
   return (
     <div className="home-page">
-      <div className={`mobile-nav-overlay ${isMobileMenuOpen ? 'open' : ''}`} onClick={closeMobileMenu}></div>
-      <aside className={`mobile-nav-drawer ${isMobileMenuOpen ? 'open' : ''}`} id="mobileNavDrawer" aria-hidden={!isMobileMenuOpen}>
-        <button className="mobile-nav-link mobile-nav-cta" type="button" data-i18n="navBuildCta" onClick={() => { goToConfigurator(); closeMobileMenu(); }}></button>
-        <button className="mobile-nav-link mobile-nav-lang" id="mobileLangToggle" type="button">EN</button>
-      </aside>
-
       <section className="hero">
         <video className="hero-video" autoPlay muted loop playsInline>
           <source src="/assets/back.mp4" type="video/mp4" />
@@ -415,6 +402,7 @@ function HomePage() {
             <p className="hero-note" data-hero-price-bhd style={{ marginTop: '0.75rem', opacity: 0.9 }} />
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
+              <button className="hero-btn secondary" type="button" data-i18n="heroCollectorsBtn" onClick={goToCollectors}></button>
             </div>
           </div>
         </div>
