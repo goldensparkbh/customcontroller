@@ -90,8 +90,19 @@ const normalizeOptionRecord = (id, raw = {}) => ({
     })
 });
 
-function isColorLikeOptionType(type) {
-    return type === 'color' || type === 'custom';
+function patternCircleStyle(imageUrl, size) {
+    return {
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        backgroundImage: imageUrl ? `url(${JSON.stringify(imageUrl)})` : 'none',
+        backgroundRepeat: 'round',
+        backgroundPosition: '0 0',
+        backgroundSize: 'auto',
+        border: '2px solid rgba(255,255,255,0.2)',
+        flexShrink: 0,
+        overflow: 'hidden'
+    };
 }
 
 const fieldStyle = {
@@ -1109,15 +1120,15 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                                 {isColorLikeOptionType(sub.type) ? (
                                                     <div
-                                                        style={{
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '50%',
-                                                            background: sub.icon
-                                                                ? `center / cover no-repeat url(${sub.icon})`
-                                                                : (sub.hex || '#fff'),
-                                                            border: '2px solid rgba(255,255,255,0.2)'
-                                                        }}
+                                                        style={sub.icon
+                                                            ? patternCircleStyle(sub.icon, '32px')
+                                                            : {
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '50%',
+                                                                background: sub.hex || '#fff',
+                                                                border: '2px solid rgba(255,255,255,0.2)'
+                                                            }}
                                                     ></div>
                                                 ) : (
                                                     sub.icon ? <img src={sub.icon} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /> : <div style={{ width: '32px', height: '32px', background: '#333', borderRadius: '4px' }}></div>
@@ -1272,16 +1283,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                                 />
                                                 {subIconPreview && (
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
-                                                        <div
-                                                            style={{
-                                                                width: '48px',
-                                                                height: '48px',
-                                                                borderRadius: '50%',
-                                                                background: `center / cover no-repeat url(${subIconPreview})`,
-                                                                border: '2px solid rgba(255,255,255,0.25)',
-                                                                flexShrink: 0
-                                                            }}
-                                                        />
+                                                        <div style={patternCircleStyle(subIconPreview, '48px')} />
                                                         <button
                                                             type="button"
                                                             onClick={() => {

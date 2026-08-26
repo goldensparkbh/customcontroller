@@ -2205,7 +2205,13 @@
                 swatch.style.border = "1px dashed #30363d";
             } else {
                 if (isOutOfStock) swatch.classList.add("is-out-of-stock");
-                if (entry.icon) {
+                if (entry.icon && !isOption) {
+                    swatch.classList.add("cd-swatch-pattern");
+                    swatch.style.backgroundImage = `url(${JSON.stringify(entry.icon)})`;
+                    if (entry.hex && String(entry.hex).startsWith("#")) {
+                        swatch.style.backgroundColor = entry.hex;
+                    }
+                } else if (entry.icon) {
                     const swImg = document.createElement("img");
                     swImg.className = "cd-swatch-icon-img";
                     swImg.src = entry.icon;
