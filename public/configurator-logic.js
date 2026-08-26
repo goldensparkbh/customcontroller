@@ -670,7 +670,8 @@
                     if (componentType === 'regular' && isPremade) return;
                     if (componentType === 'premade' && !isPremade) return;
 
-                    const isGamemode = !isPremade && (opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers"));
+                    const isCustom = !isPremade && opt.type === "custom";
+                    const isGamemode = !isPremade && !isCustom && (opt.type === 'gamemode' || (opt.name.toLowerCase().includes("gamemode") || opt.name.toLowerCase().includes("performance") || fbPart.id === "sticks" || fbPart.id === "bumpersTriggers"));
                     const nName = (opt.name || "").toLowerCase();
                     const isTransparent = (nName.includes("transparent") || nName.includes("trans"));
 
@@ -683,9 +684,10 @@
                         type: isPremade ? 'premade' : (isGamemode ? 'gamemode' : 'color'),
                         isGamemode: isGamemode,
                         isPremade: isPremade,
+                        isCustom: isCustom,
                         image: opt.image || null, // The overlay stack image!
                         secondImage: opt.secondImage || null,
-                        icon: opt.icon || ((isGamemode || isPremade) && opt.image ? opt.image : null), // Display in palette
+                        icon: opt.icon || ((isGamemode || isPremade) && opt.image ? opt.image : null),
                         isTransparent: isTransparent,
                         affectedParts: Array.isArray(opt.affectedParts) && opt.affectedParts.length ? opt.affectedParts : [partId],
                         // Gamemode Dependency Fields
@@ -2231,6 +2233,17 @@
             }
 
             cell.appendChild(swatch);
+
+            if (!isOption) {
+                const label = document.createElement("div");
+                label.className = "cd-color-name cd-swatch-caption";
+                if (entry.isNullOption) {
+                    label.textContent = t("paletteNone") || (currentLang === "ar" ? "بدون" : "None");
+                } else {
+                    label.textContent = entry.valName || entry.key || "";
+                }
+                cell.appendChild(label);
+            }
 
             if (entry.image) {
                 const warmEntryImage = () => queueImageWarmup(entry.image, { priority: "high", retain: true });

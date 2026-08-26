@@ -90,6 +90,10 @@ const normalizeOptionRecord = (id, raw = {}) => ({
     })
 });
 
+function isColorLikeOptionType(type) {
+    return type === 'color' || type === 'custom';
+}
+
 const fieldStyle = {
     width: '100%',
     padding: '0.7rem 0.8rem',
@@ -513,9 +517,9 @@ const AdminParts = ({ lang = 'ar' }) => {
                 priority: safeFiniteInt(subPriority, 1)
             };
 
-            if (effectiveType === 'color') {
+            if (isColorLikeOptionType(effectiveType)) {
                 data.hex = subColorHex || '#ffffff';
-                data.icon = null;
+                data.icon = iconUrl || '';
                 data.affectedParts = null;
             } else if (effectiveType === 'premade') {
                 data.hex = null;
@@ -1050,6 +1054,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                     >
                                         <option value="all">All Types</option>
                                         <option value="color">Colors Only</option>
+                                        <option value="custom">Custom Colors Only</option>
                                         <option value="gamemode">Gamemodes Only</option>
                                         {!isPremadeComponent(selectedPart) && null}
                                     </select>
@@ -1091,7 +1096,9 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             || (subFilterActive === 'inactive' && !isActive);
 
                                         // 3. Type
-                                        const matchesType = subFilterType === 'all' || sub.type === subFilterType;
+                                        const matchesType = subFilterType === 'all'
+                                            || sub.type === subFilterType
+                                            || (subFilterType === 'color' && isColorLikeOptionType(sub.type));
 
                                         return matchesQuery && matchesActive && matchesType;
                                     })
@@ -1100,8 +1107,18 @@ const AdminParts = ({ lang = 'ar' }) => {
 
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                {sub.type === 'color' ? (
-                                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: sub.hex || '#fff', border: '2px solid rgba(255,255,255,0.2)' }}></div>
+                                                {isColorLikeOptionType(sub.type) ? (
+                                                    <div
+                                                        style={{
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '50%',
+                                                            background: sub.icon
+                                                                ? `center / cover no-repeat url(${sub.icon})`
+                                                                : (sub.hex || '#fff'),
+                                                            border: '2px solid rgba(255,255,255,0.2)'
+                                                        }}
+                                                    ></div>
                                                 ) : (
                                                     sub.icon ? <img src={sub.icon} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /> : <div style={{ width: '32px', height: '32px', background: '#333', borderRadius: '4px' }}></div>
                                                 )}
@@ -1190,6 +1207,7 @@ const AdminParts = ({ lang = 'ar' }) => {
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Type:</label>
                                         <select value={subType} onChange={e => setSubType(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }}>
                                             <option value="color">Color</option>
+                                            <option value="custom">Custom Color (pattern)</option>
                                             <option value="gamemode">Game Mode / Performance</option>
                                         </select>
                                     </div>
@@ -1221,13 +1239,63 @@ const AdminParts = ({ lang = 'ar' }) => {
                                             <img src={subIconPreview || subImagePreview} alt="Preview" style={{ height: '80px', marginTop: '0.5rem', display: 'block', background: 'var(--admin-hover)', padding: '4px', borderRadius: '4px' }} />
                                         )}
                                     </div>
-                                ) : subType === 'color' ? (
+                                ) : isColorLikeOptionType(subType) ? (
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Color Hex (Palette Swatch):</label>
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                            <input type="color" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '40px', height: '40px', padding: '0', cursor: 'pointer', border: 'none', borderRadius: '4px' }} />
-                                            <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} placeholder="#RRGGBB" />
-                                        </div>
+                                        {subType === 'color' && (
+                                            <>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>Color Hex (Palette Swatch):</label>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <input type="color" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '40px', height: '40px', padding: '0', cursor: 'pointer', border: 'none', borderRadius: '4px' }} />
+                                                    <input type="text" value={subColorHex} onChange={e => setSubColorHex(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--admin-border)', background: 'var(--admin-raised)', color: 'var(--admin-text-strong)' }} placeholder="#RRGGBB" />
+                                                </div>
+                                            </>
+                                        )}
+                                        {subType === 'custom' && (
+                                            <div style={{ marginTop: subType === 'color' ? '1rem' : 0 }}>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--admin-text-secondary)' }}>
+                                                    {isAr ? 'نمط الدائرة (مثلاً فايبر أسود)' : 'Swatch pattern (shown in the color circle)'}
+                                                </label>
+                                                <p style={{ margin: '0 0 0.6rem', fontSize: '0.8rem', color: 'var(--admin-muted)' }}>
+                                                    {isAr
+                                                        ? 'ارفع صورة النمط لتظهر داخل دائرة اللون في قسم الألوان الصلبة بدل اللون المسطح.'
+                                                        : 'Upload a texture such as fiber black. It appears inside the color circle in Solid Colors instead of a flat hex.'}
+                                                </p>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files && e.target.files[0];
+                                                        setSubIconFile(file || null);
+                                                        if (file) setSubIconPreview(URL.createObjectURL(file));
+                                                    }}
+                                                    style={{ color: 'var(--admin-text-strong)' }}
+                                                />
+                                                {subIconPreview && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                                                        <div
+                                                            style={{
+                                                                width: '48px',
+                                                                height: '48px',
+                                                                borderRadius: '50%',
+                                                                background: `center / cover no-repeat url(${subIconPreview})`,
+                                                                border: '2px solid rgba(255,255,255,0.25)',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSubIconFile(null);
+                                                                setSubIconPreview('');
+                                                            }}
+                                                            style={{ background: 'transparent', color: '#ff7b72', border: '1px solid #f85149', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                        >
+                                                            {isAr ? 'إزالة النمط' : 'Remove pattern'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 ) : subType === 'gamemode' ? (
                                     <div>
