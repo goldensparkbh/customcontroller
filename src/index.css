@@ -2147,7 +2147,7 @@ html[dir="rtl"] .part-name {
 }
 
 .controller-face .premade-face-overlay {
-  z-index: 12;
+  z-index: 8;
 }
 
 .part-layer {

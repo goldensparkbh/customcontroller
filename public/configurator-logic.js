@@ -864,23 +864,23 @@
         return entries;
     }
 
-    /** Clear color picks on regular parts when a pre-made design is chosen (premade always wins). */
-    function clearRegularPartsCoveredByPremade(premadeOption) {
-        if (!premadeOption || premadeOption.type !== "premade") return;
-        const affected = Array.isArray(premadeOption.affectedParts) && premadeOption.affectedParts.length
-            ? premadeOption.affectedParts
-            : ALL_PARTS.filter(p => p.componentType !== "premade").map(p => p.id);
-        if (!affected.length) return;
+    function getPremadeCoveredRegularPartIds(premadeOption) {
+        if (!premadeOption || premadeOption.type !== "premade") return [];
+        const regularIds = ALL_PARTS.filter(p => p.componentType !== "premade").map(p => p.id);
+        const raw = Array.isArray(premadeOption.affectedParts) ? premadeOption.affectedParts : [];
+        const covered = raw.filter(id => regularIds.includes(id));
+        // Full-face designs with no coverage list still replace the current regular customizations.
+        return covered.length ? covered : regularIds;
+    }
 
-        ALL_PARTS.forEach(targetPart => {
-            if (!targetPart || targetPart.componentType === "premade") return;
-            const covered = affected.includes(targetPart.id);
-            configState[targetPart.id] = null;
-            selectedPriceByPart[targetPart.id] = 0;
-            if (covered) {
-                optionState[targetPart.id] = [];
-                selectedOptionPriceByPart[targetPart.id] = 0;
-            }
+    /** Reset covered regular parts when a pre-made design is first chosen. Later picks stay and render on top. */
+    function clearRegularPartsCoveredByPremade(premadeOption) {
+        const affected = getPremadeCoveredRegularPartIds(premadeOption);
+        affected.forEach(affectedPartId => {
+            configState[affectedPartId] = null;
+            optionState[affectedPartId] = [];
+            selectedPriceByPart[affectedPartId] = 0;
+            selectedOptionPriceByPart[affectedPartId] = 0;
         });
     }
 
@@ -1060,10 +1060,7 @@
             if (p.componentType !== "premade") return false;
             const active = getActivePremadeSelectionForComponent(p.id);
             if (!active) return false;
-            const affected = Array.isArray(active.affectedParts) && active.affectedParts.length
-                ? active.affectedParts
-                : ALL_PARTS.filter((regular) => regular.componentType !== "premade").map((regular) => regular.id);
-            return affected.includes(partId);
+            return getPremadeCoveredRegularPartIds(active).includes(partId);
         });
     }
 
@@ -1076,7 +1073,7 @@
             frontImg.className = "part-layer-img premade-face-overlay";
             frontImg.dataset.premadeComponentId = part.id;
             frontImg.alt = "";
-            frontImg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;pointer-events:none;z-index:12;display:none;";
+            frontImg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;pointer-events:none;z-index:8;display:none;";
 
             const backImg = document.createElement("img");
             backImg.className = "part-layer-img premade-face-overlay";
@@ -1278,7 +1275,7 @@
             if (!active) return;
             const src = side === "back" ? active.secondImage : active.image;
             if (!src || domLayers.some((layer) => layer.src === src)) return;
-            overlayLayers.push({ src, opacity: 1, zIndex: 12 });
+            overlayLayers.push({ src, opacity: 1, zIndex: 8 });
         });
 
         return [...domLayers, ...overlayLayers].sort((a, b) => a.zIndex - b.zIndex);
@@ -1554,7 +1551,7 @@
         syncStackLayerVisibility(stack.premade, part, true);
 
         const colorKey = configState[partId];
-        const col = (!useFullFacePremade && colorKey) ? palette.find(c => c.key === colorKey) : null;
+        const col = colorKey ? palette.find(c => c.key === colorKey) : null;
         setStackImage(stack.color, col?.image, col?.secondImage);
         syncStackLayerVisibility(stack.color, part, false);
 
@@ -1575,7 +1572,6 @@
 
     function restorePersistedSelections() {
         ensurePartStateDefaults();
-        enforcePremadeCoverageClears();
         ALL_PARTS.forEach((part) => syncPartVisualState(part.id));
         setSide(currentSide === "back" ? "back" : "front");
         syncBaseImages();
