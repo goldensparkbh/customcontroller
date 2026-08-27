@@ -90,6 +90,10 @@ const normalizeOptionRecord = (id, raw = {}) => ({
     })
 });
 
+function isColorLikeOptionType(type) {
+    return type === 'color' || type === 'custom';
+}
+
 function patternCircleStyle(imageUrl, size) {
     return {
         width: size,
