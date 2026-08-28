@@ -10,6 +10,7 @@ import AdminPayments from './admin/AdminPayments';
 import AdminCustomers from './admin/AdminCustomers';
 import AdminItems from './admin/AdminItems';
 import AdminParts from './admin/AdminParts';
+import AdminArtistProducts from './admin/AdminArtistProducts';
 import AdminInventoryMaster from './admin/AdminInventoryMaster';
 import AdminSettings from './admin/AdminSettings';
 import AdminTranslations from './admin/AdminTranslations';
@@ -34,7 +35,7 @@ const AdminDashboard = () => {
         const storedTab = window.localStorage.getItem(ADMIN_ACTIVE_TAB_KEY);
         const tabs = [
             'orders', 'invoices', 'payments', 'customers',
-            'inventory', 'items', 'parts',
+            'inventory', 'items', 'parts', 'artistProducts',
             'abandonedCarts', 'discountCodes', 'homeBanners', 'translations', 'settings'
         ];
         return tabs.includes(storedTab) ? storedTab : 'orders';
@@ -67,7 +68,8 @@ const AdminDashboard = () => {
             items: [
                 { id: 'inventory', label: t('admin.sidebar.tabs.inventoryMaster') },
                 { id: 'items', label: t('admin.sidebar.tabs.normalItems') },
-                { id: 'parts', label: t('admin.sidebar.tabs.configPart') }
+                { id: 'parts', label: t('admin.sidebar.tabs.configPart') },
+                { id: 'artistProducts', label: t('admin.sidebar.tabs.artistProducts') }
             ]
         },
         {
@@ -362,6 +364,7 @@ const AdminDashboard = () => {
                     {activeTab === 'inventory' && <AdminInventoryMaster lang={lang} />}
                     {activeTab === 'items' && <AdminItems lang={lang} />}
                     {activeTab === 'parts' && <AdminParts lang={lang} />}
+                    {activeTab === 'artistProducts' && <AdminArtistProducts lang={lang} />}
                     {activeTab === 'abandonedCarts' && <AdminAbandonedCarts lang={lang} />}
                     {activeTab === 'discountCodes' && <AdminDiscountCodes lang={lang} />}
                     {activeTab === 'homeBanners' && <AdminHomeBanners lang={lang} />}

@@ -4,6 +4,8 @@ import { ARTISTS, SHOP_CATEGORIES } from '../data/artists.js';
 import { i18n } from '../i18n.js';
 import ShopPrice from '../components/ShopPrice.jsx';
 import { addShopDesignToCart } from '../utils/shopCart.js';
+import { fetchArtistCatalog } from '../services/backendApi.js';
+import LoadingState from '../components/LoadingState.jsx';
 
 function CartIcon() {
   return (
@@ -45,6 +47,7 @@ function ArtistsPage() {
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('newest');
+  const [catalog, setCatalog] = useState(null);
   const isAr = lang === 'ar';
   const t = (key) => (i18n[lang] && i18n[lang][key]) || (i18n.en && i18n.en[key]) || key;
 
@@ -52,6 +55,20 @@ function ArtistsPage() {
     const onLang = () => setLang(localStorage.getItem('ez_lang') || 'ar');
     window.addEventListener('ez-lang-change', onLang);
     return () => window.removeEventListener('ez-lang-change', onLang);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    fetchArtistCatalog()
+      .then((products) => {
+        if (alive) setCatalog(Array.isArray(products) ? products : []);
+      })
+      .catch(() => {
+        if (alive) setCatalog([]);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -66,17 +83,23 @@ function ArtistsPage() {
     };
   }, []);
 
+  const source = catalog && catalog.length ? catalog : ARTISTS;
   const designs = useMemo(() => {
-    const list = category === 'all' ? ARTISTS.slice() : ARTISTS.filter((item) => item.category === category);
+    const list = category === 'all' ? source.slice() : source.filter((item) => item.category === category);
     if (sort === 'price-high') return list.sort((a, b) => b.price - a.price);
     if (sort === 'price-low') return list.sort((a, b) => a.price - b.price);
     return list;
-  }, [category, sort]);
+  }, [category, sort, source]);
 
   const addDesign = (event, design) => {
     event.stopPropagation();
+    if (design.quantity != null && Number(design.quantity) <= 0) return;
     addShopDesignToCart(design, { lang });
   };
+
+  if (catalog === null) {
+    return <LoadingState message={t('loadingConfigurator')} fullScreen={false} />;
+  }
 
   return (
     <div className="shop-page">
@@ -177,6 +200,7 @@ function ArtistsPage() {
                   type="button"
                   className="shop-card-cart"
                   aria-label={t('addToCart')}
+                  disabled={design.quantity != null && Number(design.quantity) <= 0}
                   onClick={(event) => addDesign(event, design)}
                 >
                   <CartIcon />

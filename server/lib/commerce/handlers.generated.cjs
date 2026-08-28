@@ -1024,7 +1024,8 @@ async function resolveNormalItemDocPath(db, item) {
     const normalizedPath = candidate.includes("/") ? candidate.replace(/^\/+/, "") : `items/${candidate}`;
 
     // Validate path is supported (either Normal Items or Configurator Options)
-    const isSupported = normalizedPath.startsWith("items/") || 
+    const isSupported = normalizedPath.startsWith("items/") ||
+                        normalizedPath.startsWith("artist_products/") ||
                         normalizedPath.startsWith("configurator_parts/") ||
                         normalizedPath.match(/^configurator_parts\/[^/]+\/options\/[^/]+$/);
 
@@ -1038,12 +1039,16 @@ async function resolveNormalItemDocPath(db, item) {
   if (itemNumber) {
     const itemNumberSnap = await db.collection("items").where("itemNumber", "==", itemNumber).limit(1).get();
     if (!itemNumberSnap.empty) return itemNumberSnap.docs[0].ref.path;
+    const artistNumberSnap = await db.collection("artist_products").where("itemNumber", "==", itemNumber).limit(1).get();
+    if (!artistNumberSnap.empty) return artistNumberSnap.docs[0].ref.path;
   }
 
   const barcode = normalizeNumericString(item?.barcode);
   if (barcode) {
     const barcodeSnap = await db.collection("items").where("barcode", "==", barcode).limit(1).get();
     if (!barcodeSnap.empty) return barcodeSnap.docs[0].ref.path;
+    const artistBarcodeSnap = await db.collection("artist_products").where("barcode", "==", barcode).limit(1).get();
+    if (!artistBarcodeSnap.empty) return artistBarcodeSnap.docs[0].ref.path;
   }
 
   return "";
@@ -1192,7 +1197,8 @@ async function applyOrderInventoryAdjustments(items, metadata = {}, multiplier =
         path: docPath,
         sourceType: docPath.startsWith("configurator_parts/") ?
           "configurator_option" :
-          (docPath === "configurator_settings/general" ? "base_controller" : "normal_item"),
+          (docPath === "configurator_settings/general" ? "base_controller" :
+            (docPath.startsWith("artist_products/") ? "artist_product" : "normal_item")),
         quantity,
         deducted: nextInventory.deducted,
         remaining: nextInventory.quantity,

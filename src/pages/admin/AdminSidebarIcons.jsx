@@ -102,6 +102,7 @@ const NAV_ICON_MAP = {
     inventory: IconInventory,
     items: IconItems,
     parts: IconParts,
+    artistProducts: IconItems,
     abandonedCarts: IconAbandonedCarts,
     discountCodes: IconDiscountCodes,
     homeBanners: IconHomeBanners,

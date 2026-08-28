@@ -122,6 +122,18 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                 });
             });
 
+            const artistSnapshot = await adminListDocs('artist_products/');
+            const artistRecords = artistSnapshot.docs.map((snapshot) => {
+                const { path, ...data } = snapshot;
+                void path;
+                return normalizeMasterRecord({
+                    id: snapshot.id,
+                    raw: { ...data, name: data.nameEn || data.name, category: data.category },
+                    sourceType: 'artist',
+                    sourceLabel: isAr ? 'منتج فنان' : 'Artist Product'
+                });
+            });
+
             const partsSnapshot = await adminListDocs('configurator_parts/');
             const rootParts = partsSnapshot.docs.filter((d) => /^configurator_parts\/[^/]+$/u.test(d.path));
 
@@ -145,7 +157,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                 });
             }
 
-            setRecords([...itemRecords, ...partOptionsRecords]);
+            setRecords([...itemRecords, ...artistRecords, ...partOptionsRecords]);
         } catch (e) {
             console.error("Error fetching inventory:", e);
         }
@@ -226,6 +238,9 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
             if (selectedRecord.sourceType === 'normal') {
                 payload.showOnline = formState.showOnline;
                 await adminPatchDoc(`items/${selectedRecord.documentId}`, payload);
+            } else if (selectedRecord.sourceType === 'artist') {
+                payload.showOnline = formState.showOnline;
+                await adminPatchDoc(`artist_products/${selectedRecord.documentId}`, payload);
             } else {
                 await adminPatchDoc(
                     `configurator_parts/${selectedRecord.partId}/options/${selectedRecord.documentId}`,
@@ -263,6 +278,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                     <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} style={fieldStyle}>
                         <option value="all">{isAr ? "جميع المصادر" : "All Sources"}</option>
                         <option value="normal">{isAr ? "منتجات عادية" : "Normal Items"}</option>
+                        <option value="artist">{isAr ? "منتجات الفنانين" : "Artist Products"}</option>
                         <option value="configurator">{isAr ? "أجزاء المخصص" : "Configurator Options"}</option>
                     </select>
                 </label>
@@ -318,7 +334,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                                     {record.sourceType === 'configurator' ? `${isAr ? "جزء:" : "Part:"} ${record.sourceLabel}` : (record.category || (isAr ? 'بدون تصنيف' : 'Uncategorized'))}
                                 </div>
                             </div>
-                            <div>{record.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : (isAr ? 'خيار مخصص' : 'Configurator Option')}</div>
+                            <div>{record.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : record.sourceType === 'artist' ? (isAr ? 'منتج فنان' : 'Artist Product') : (isAr ? 'خيار مخصص' : 'Configurator Option')}</div>
                             <div>{formatInventoryMoney(record.sellPrice ?? record.price)}</div>
                             <div>{record.quantity ?? 0}</div>
                             <div>{Number(record.quantity || 0) > 0 ? (isAr ? 'متوفر' : 'In Stock') : (isAr ? 'نفد' : 'Out')}</div>
@@ -366,7 +382,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                             <div style={{ textAlign: adminAlign(isAr) }}>
                                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--admin-text)' }}>{selectedRecord.name}</div>
                                 <div style={{ marginTop: '0.3rem', color: 'var(--admin-muted)' }}>
-                                    #{padNumericString(selectedRecord.itemNumber)} · {selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`}
+                                    #{padNumericString(selectedRecord.itemNumber)} · {selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : selectedRecord.sourceType === 'artist' ? (isAr ? 'منتج فنان' : 'Artist Product') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`}
                                 </div>
                             </div>
 
@@ -412,7 +428,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                                     <div style={{ height: '0.75rem' }} />
                                     <DetailField isAr={isAr} label={isAr ? "الباركود" : "Barcode"} value={selectedRecord.barcode} />
                                     <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "المصدر" : "Source"} value={selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`} />
+                                    <DetailField isAr={isAr} label={isAr ? "المصدر" : "Source"} value={selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : selectedRecord.sourceType === 'artist' ? (isAr ? 'منتج فنان' : 'Artist Product') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`} />
                                 </div>
 
                                 <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
@@ -424,7 +440,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
                                 </div>
                             </div>
 
-                            {selectedRecord.sourceType === 'normal' && (
+                            {(selectedRecord.sourceType === 'normal' || selectedRecord.sourceType === 'artist') && (
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--admin-text)', flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: isAr ? 'flex-end' : 'flex-start' }}>
                                     <input
                                         type="checkbox"

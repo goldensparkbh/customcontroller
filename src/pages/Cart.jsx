@@ -175,6 +175,16 @@ const CartPage = () => {
     const newQty = (targetItem.quantity || 1) + delta;
 
     if (delta > 0) {
+      const target = cartItems[index];
+      const artistStock = target.stockQty != null ? Number(target.stockQty) : null;
+      if (target.productKind === 'artist' && Number.isFinite(artistStock) && newQty > artistStock) {
+        const msg = lang === 'ar'
+          ? `عذرًا، الكمية المتاحة لهذا التصميم هي ${artistStock}.`
+          : `Sorry, only ${artistStock} of this design are available.`;
+        alert(msg);
+        return;
+      }
+
       // 1. Aggregate required stock across all items in the cart
       const stockUsage = new Map();
       newCart.forEach((item, idx) => {

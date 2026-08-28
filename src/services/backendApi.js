@@ -73,6 +73,20 @@ async function adminFetch(path, opts = {}) {
 
 /* -------------------------------------------------------------------------- */
 
+export async function fetchArtistCatalog() {
+  const res = await fetch("/store-api/artists/catalog");
+  if (!res.ok) throw new Error(await readError(res));
+  const j = await res.json();
+  return Array.isArray(j.products) ? j.products : [];
+}
+
+export async function fetchArtistProduct(id) {
+  const res = await fetch(`/store-api/artists/${encodeURIComponent(id)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await readError(res));
+  return res.json();
+}
+
 export async function fetchConfiguratorCatalog() {
   const res = await fetch("/store-api/configurator/catalog");
   if (!res.ok) throw new Error(await readError(res));

@@ -47,6 +47,7 @@ module.exports = function createStoreApi(pool) {
   r.get("/pos/catalog", async (_req, res) => {
     try {
       const itemRows = await dao.pathsRegex(pool, "^items/[^/]+$");
+      const artistRows = await dao.pathsRegex(pool, "^artist_products/[^/]+$");
       const partRows = await dao.pathsRegex(pool, "^configurator_parts/[^/]+$");
 
       const items = [];
@@ -64,6 +65,27 @@ module.exports = function createStoreApi(pool) {
           category: it.category || "General",
           image: it.images?.[0] || null,
           isCustom: false
+        });
+      });
+
+      artistRows.forEach((row) => {
+        const m = row.path.match(/^artist_products\/([^/]+)$/u);
+        if (!m) return;
+        const it = row.data || {};
+        if (it.showOnline === false || it.active === false) return;
+        const images = Array.isArray(it.images) && it.images.length ? it.images : [it.image].filter(Boolean);
+        items.push({
+          id: m[1],
+          name: it.nameEn || it.name || "",
+          sku: it.barcode || it.itemNumber || m[1],
+          price: Number(it.sellPrice || it.price || 0) || 0,
+          stock: it.quantity || 0,
+          category: it.category || "Artists",
+          image: images[0] || null,
+          isCustom: false,
+          inventoryDocPath: `artist_products/${m[1]}`,
+          productKind: "artist",
+          skipBaseController: true
         });
       });
 
@@ -88,6 +110,71 @@ module.exports = function createStoreApi(pool) {
       res.json(rewriteFirebaseMediaUrlsIfConfigured({ items, parts }));
     } catch (err) {
       console.error("[pos catalog]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
+
+  function publicArtistProduct(id, data) {
+    if (!data || data.showOnline === false || data.active === false) return null;
+    const images = Array.isArray(data.images) && data.images.length
+      ? data.images.filter(Boolean)
+      : [data.image].filter(Boolean);
+    const price = Number(data.sellPrice != null ? data.sellPrice : data.price) || 0;
+    return {
+      id,
+      category: data.category || "premium",
+      price,
+      quantity: Number(data.quantity) || 0,
+      image: images[0] || "",
+      gallery: images,
+      nameEn: data.nameEn || data.name || "",
+      nameAr: data.nameAr || data.nameEn || data.name || "",
+      artistEn: data.artistEn || "",
+      artistAr: data.artistAr || data.artistEn || "",
+      categoryEn: data.categoryEn || "",
+      categoryAr: data.categoryAr || "",
+      cardEn: data.cardEn || data.description || "",
+      cardAr: data.cardAr || data.cardEn || data.description || "",
+      bioEn: data.bioEn || "",
+      bioAr: data.bioAr || data.bioEn || "",
+      storyEn: data.storyEn || "",
+      storyAr: data.storyAr || data.storyEn || "",
+      itemNumber: data.itemNumber || "",
+      barcode: data.barcode || "",
+      inventoryDocPath: `artist_products/${id}`,
+      skipBaseController: true,
+      productKind: "artist"
+    };
+  }
+
+  r.get("/artists/catalog", async (_req, res) => {
+    try {
+      const rows = await dao.pathsRegex(pool, "^artist_products/[^/]+$");
+      const products = [];
+      rows.forEach((row) => {
+        const m = row.path.match(/^artist_products\/([^/]+)$/u);
+        if (!m) return;
+        const product = publicArtistProduct(m[1], row.data || {});
+        if (product) products.push(product);
+      });
+      products.sort((a, b) => String(a.nameEn).localeCompare(String(b.nameEn)));
+      res.json(rewriteFirebaseMediaUrlsIfConfigured({ products }));
+    } catch (err) {
+      console.error("[artists catalog]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
+
+  r.get("/artists/:id", async (req, res) => {
+    try {
+      const id = String(req.params.id || "").trim();
+      if (!id) return res.status(400).json({ error: "bad_id" });
+      const row = await dao.getRow(pool, `artist_products/${id}`);
+      const product = publicArtistProduct(id, row && row.data ? row.data : null);
+      if (!product) return res.status(404).json({ error: "not_found" });
+      res.json(rewriteFirebaseMediaUrlsIfConfigured(product));
+    } catch (err) {
+      console.error("[artist product]", err);
       res.status(500).json({ error: String(err.message || err) });
     }
   });

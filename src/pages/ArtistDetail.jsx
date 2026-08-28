@@ -4,6 +4,8 @@ import { getArtistById, SHOP_UPGRADES } from '../data/artists.js';
 import { i18n } from '../i18n.js';
 import ShopPrice from '../components/ShopPrice.jsx';
 import { addShopDesignToCart } from '../utils/shopCart.js';
+import { fetchArtistProduct } from '../services/backendApi.js';
+import LoadingState from '../components/LoadingState.jsx';
 
 function CartIcon() {
   return (
@@ -43,10 +45,10 @@ function BadgeIcon({ type }) {
 function ArtistDetailPage() {
   const { artistId } = useParams();
   const navigate = useNavigate();
-  const design = getArtistById(artistId);
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [activeShot, setActiveShot] = useState(0);
   const [selectedUpgrades, setSelectedUpgrades] = useState([]);
+  const [design, setDesign] = useState(undefined);
   const isAr = lang === 'ar';
   const t = (key) => (i18n[lang] && i18n[lang][key]) || (i18n.en && i18n.en[key]) || key;
 
@@ -70,6 +72,26 @@ function ArtistDetailPage() {
     };
   }, [artistId]);
 
+  useEffect(() => {
+    let alive = true;
+    setDesign(undefined);
+    fetchArtistProduct(artistId)
+      .then((product) => {
+        if (!alive) return;
+        setDesign(product || getArtistById(artistId) || null);
+      })
+      .catch(() => {
+        if (alive) setDesign(getArtistById(artistId) || null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [artistId]);
+
+  if (design === undefined) {
+    return <LoadingState message={t('loadingConfigurator')} />;
+  }
+
   if (!design) return <Navigate to="/artists" replace />;
 
   const gallery = design.gallery?.length ? design.gallery : [design.image];
@@ -90,6 +112,7 @@ function ArtistDetailPage() {
   };
 
   const addToCart = () => {
+    if (design.quantity != null && Number(design.quantity) <= 0) return;
     const upgrades = SHOP_UPGRADES.filter((item) => selectedUpgrades.includes(item.id));
     addShopDesignToCart(design, { upgrades, image: mainImage, lang });
     navigate('/cart');
@@ -161,7 +184,12 @@ function ArtistDetailPage() {
             </ul>
           </div>
 
-          <button type="button" className="shop-add-btn" onClick={addToCart}>
+          <button
+            type="button"
+            className="shop-add-btn"
+            onClick={addToCart}
+            disabled={design.quantity != null && Number(design.quantity) <= 0}
+          >
             <CartIcon />
             {t('addToCart')}
           </button>

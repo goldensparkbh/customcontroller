@@ -13,8 +13,9 @@ export function addShopDesignToCart(design, { upgrades = [], image, lang = 'en' 
   const selected = Array.isArray(upgrades) ? upgrades : [];
   const upgradeTotal = selected.reduce((sum, item) => sum + Number(item.price || 0), 0);
   const unitPrice = Number(design.price || 0) + upgradeTotal;
+  const previewSrc = image || design.image || '';
   const config = {
-    Artist: isAr ? design.artistAr : design.artistEn,
+    Artist: isAr ? (design.artistAr || design.artistEn) : design.artistEn,
     Series: isAr ? design.categoryAr : design.categoryEn
   };
   selected.forEach((item) => {
@@ -23,12 +24,22 @@ export function addShopDesignToCart(design, { upgrades = [], image, lang = 'en' 
 
   const cartItem = {
     id: Date.now(),
-    name: isAr ? design.nameAr : design.nameEn,
+    name: isAr ? (design.nameAr || design.nameEn) : design.nameEn,
     unitPrice,
     total: unitPrice,
     quantity: 1,
-    previewFront: image || design.image,
-    config
+    previewFront: previewSrc,
+    previewFrontLayers: previewSrc ? [{ src: previewSrc, opacity: 1, zIndex: 1 }] : [],
+    previewBack: '',
+    previewBackLayers: [],
+    config,
+    productKind: 'artist',
+    skipBaseController: true,
+    inventoryDocPath: design.inventoryDocPath || (design.id ? `artist_products/${design.id}` : ''),
+    productId: design.id,
+    itemNumber: design.itemNumber || '',
+    barcode: design.barcode || '',
+    stockQty: design.quantity != null ? Number(design.quantity) : null
   };
 
   const cart = JSON.parse(localStorage.getItem('ezCart') || '[]');
