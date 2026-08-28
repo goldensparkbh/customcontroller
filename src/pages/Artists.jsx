@@ -4,7 +4,8 @@ import { ARTISTS, SHOP_CATEGORIES } from '../data/artists.js';
 import { i18n } from '../i18n.js';
 import ShopPrice from '../components/ShopPrice.jsx';
 import { addShopDesignToCart } from '../utils/shopCart.js';
-import { fetchArtistCatalog } from '../services/backendApi.js';
+import { fetchArtistCatalog, fetchArtistCategories } from '../services/backendApi.js';
+import { withAllCategory } from '../lib/artistProducts.js';
 import LoadingState from '../components/LoadingState.jsx';
 
 function CartIcon() {
@@ -48,6 +49,7 @@ function ArtistsPage() {
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('newest');
   const [catalog, setCatalog] = useState(null);
+  const [shopCategories, setShopCategories] = useState(SHOP_CATEGORIES);
   const isAr = lang === 'ar';
   const t = (key) => (i18n[lang] && i18n[lang][key]) || (i18n.en && i18n.en[key]) || key;
 
@@ -59,12 +61,20 @@ function ArtistsPage() {
 
   useEffect(() => {
     let alive = true;
-    fetchArtistCatalog()
-      .then((products) => {
-        if (alive) setCatalog(Array.isArray(products) ? products : []);
+    Promise.all([fetchArtistCatalog(), fetchArtistCategories()])
+      .then(([products, categories]) => {
+        if (!alive) return;
+        setCatalog(Array.isArray(products) ? products : []);
+        setShopCategories(
+          Array.isArray(categories) && categories.length
+            ? withAllCategory(categories)
+            : SHOP_CATEGORIES
+        );
       })
       .catch(() => {
-        if (alive) setCatalog([]);
+        if (!alive) return;
+        setCatalog([]);
+        setShopCategories(SHOP_CATEGORIES);
       });
     return () => {
       alive = false;
@@ -84,6 +94,12 @@ function ArtistsPage() {
   }, []);
 
   const source = catalog && catalog.length ? catalog : ARTISTS;
+
+  useEffect(() => {
+    if (!shopCategories.some((item) => item.id === category)) {
+      setCategory('all');
+    }
+  }, [shopCategories, category]);
   const designs = useMemo(() => {
     const list = category === 'all' ? source.slice() : source.filter((item) => item.category === category);
     if (sort === 'price-high') return list.sort((a, b) => b.price - a.price);
@@ -141,8 +157,8 @@ function ArtistsPage() {
 
       <section className="shop-toolbar">
         <div className="shop-filters" role="tablist">
-          {SHOP_CATEGORIES.map((item) => {
-            const count = item.id === 'all' ? ARTISTS.length : ARTISTS.filter((design) => design.category === item.id).length;
+          {shopCategories.map((item) => {
+            const count = item.id === 'all' ? source.length : source.filter((design) => design.category === item.id).length;
             const label = isAr ? item.ar : item.en;
             return (
               <button

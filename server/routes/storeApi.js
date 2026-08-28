@@ -147,6 +147,34 @@ module.exports = function createStoreApi(pool) {
     };
   }
 
+  r.get("/artists/categories", async (_req, res) => {
+    try {
+      const rows = await dao.pathsRegex(pool, "^artist_categories/[^/]+$");
+      const categories = [];
+      rows.forEach((row) => {
+        const m = row.path.match(/^artist_categories\/([^/]+)$/u);
+        if (!m) return;
+        const data = row.data || {};
+        const id = String(data.id || m[1] || "").trim();
+        if (!id || id === "all") return;
+        categories.push({
+          id,
+          en: data.en || data.categoryEn || "",
+          ar: data.ar || data.categoryAr || data.en || "",
+          sortOrder: Number.isFinite(Number(data.sortOrder)) ? Number(data.sortOrder) : 0
+        });
+      });
+      categories.sort((a, b) => {
+        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+        return String(a.en).localeCompare(String(b.en));
+      });
+      res.json({ categories });
+    } catch (err) {
+      console.error("[artist categories]", err);
+      res.status(500).json({ error: String(err.message || err) });
+    }
+  });
+
   r.get("/artists/catalog", async (_req, res) => {
     try {
       const rows = await dao.pathsRegex(pool, "^artist_products/[^/]+$");

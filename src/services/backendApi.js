@@ -73,6 +73,13 @@ async function adminFetch(path, opts = {}) {
 
 /* -------------------------------------------------------------------------- */
 
+export async function fetchArtistCategories() {
+  const res = await fetch("/store-api/artists/categories");
+  if (!res.ok) throw new Error(await readError(res));
+  const j = await res.json();
+  return Array.isArray(j.categories) ? j.categories : [];
+}
+
 export async function fetchArtistCatalog() {
   const res = await fetch("/store-api/artists/catalog");
   if (!res.ok) throw new Error(await readError(res));
