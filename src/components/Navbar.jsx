@@ -82,7 +82,7 @@ const Navbar = () => {
         localStorage.setItem('ez_lang', newLang);
         window.dispatchEvent(new CustomEvent('ez-lang-change', { detail: { lang: newLang } }));
 
-        if (window.location.pathname.startsWith('/configurator')) {
+        if (window.location.pathname.startsWith('/configurator') || window.location.pathname === '/local') {
             window.location.reload();
         }
     };

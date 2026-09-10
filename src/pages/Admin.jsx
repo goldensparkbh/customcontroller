@@ -18,6 +18,7 @@ import AdminAbandonedCarts from './admin/AdminAbandonedCarts';
 import AdminDiscountCodes from './admin/AdminDiscountCodes';
 import AdminHomeBanners from './admin/AdminHomeBanners';
 import AdminStockAlerts from './admin/AdminStockAlerts';
+import AdminPageHeader from './admin/components/AdminPageHeader.jsx';
 import { AdminNavIcon, IconLogout } from './admin/AdminSidebarIcons';
 
 const ADMIN_ACTIVE_TAB_KEY = 'ez_admin_active_tab';
@@ -91,7 +92,25 @@ const AdminDashboard = () => {
         }
     ];
 
-    const navButtonActiveBackground = 'var(--button-primary-bg)';
+    const navPageKey = {
+        orders: 'orders',
+        invoices: 'invoices',
+        payments: 'payments',
+        customers: 'customers',
+        inventory: 'inventory',
+        items: 'items',
+        parts: 'parts',
+        artistProducts: 'artistProducts',
+        abandonedCarts: 'abandonedCarts',
+        discountCodes: 'discountCodes',
+        homeBanners: 'homeBanners',
+        translations: 'translations',
+        settings: 'settings'
+    };
+
+    const showStockAlert = ['inventory', 'items', 'parts', 'artistProducts', 'settings'].includes(activeTab);
+    const activeNav = navigationGroups.flatMap((g) => g.items).find((tab) => tab.id === activeTab);
+    const pageGuide = t(`admin.pages.${navPageKey[activeTab] || 'orders'}`);
 
     const toggleLanguage = () => {
         const newLang = lang === 'ar' ? 'en' : 'ar';
@@ -148,148 +167,44 @@ const AdminDashboard = () => {
             }}
         >
             <aside
+                className="admin-sidebar"
                 style={{
-                    background: 'var(--admin-surface)',
                     borderRight: isAr ? 'none' : '1px solid var(--admin-border)',
                     borderLeft: isAr ? '1px solid var(--admin-border)' : 'none',
-                    padding: '2rem 1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'stretch',
-                    gap: '8px',
-                    minHeight: 0,
-                    overflowY: 'auto',
-                    /* Arabic: right column; English: left column */
                     gridColumn: isAr ? 2 : 1,
                     gridRow: 1,
                     direction: isAr ? 'rtl' : 'ltr',
                     textAlign: isAr ? 'right' : 'left'
                 }}
             >
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        flexDirection: 'row',
-                        /* With aside direction rtl/ltr, flex-start = right cluster (AR) or left cluster (EN) */
-                        justifyContent: 'flex-start',
-                        gap: '10px',
-                        marginBottom: '1.5rem',
-                        width: '100%'
-                    }}
-                >
-                    <h2
-                        style={{
-                            fontSize: '18px',
-                            fontWeight: 700,
-                            color: 'var(--admin-muted)',
-                            margin: 0,
-                            textTransform: 'uppercase',
-                            letterSpacing: '1px',
-                            textAlign: isAr ? 'right' : 'left'
-                        }}
-                    >
-                        {t('admin.panelTitle')}
-                    </h2>
-                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                <div className="admin-sidebar__brand">
+                    <h2 className="admin-sidebar__title">{t('admin.panelTitle')}</h2>
+                    <div className="admin-sidebar__tools">
                         <button
                             type="button"
+                            className="admin-sidebar__tool"
                             onClick={toggleTheme}
                             title={isLight ? (isAr ? 'الوضع الداكن' : 'Dark mode') : (isAr ? 'الوضع الفاتح' : 'Light mode')}
                             aria-label={isLight ? (isAr ? 'الوضع الداكن' : 'Dark mode') : (isAr ? 'الوضع الفاتح' : 'Light mode')}
-                            style={{
-                                background: 'var(--admin-hover)',
-                                border: '1px solid var(--admin-border)',
-                                color: 'var(--admin-text-secondary)',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                lineHeight: 1
-                            }}
                         >
                             {isLight ? '🌙' : '☀️'}
                         </button>
-                        <button
-                            type="button"
-                            onClick={toggleLanguage}
-                            style={{
-                                background: 'var(--admin-hover)',
-                                border: '1px solid var(--admin-border)',
-                                color: 'var(--admin-text-secondary)',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                fontWeight: 600
-                            }}
-                        >
-                            {lang === 'ar' ? 'English' : 'العربية'}
+                        <button type="button" className="admin-sidebar__tool" onClick={toggleLanguage}>
+                            {lang === 'ar' ? 'EN' : 'عربي'}
                         </button>
                     </div>
                 </div>
 
                 {navigationGroups.map((group) => (
-                    <div key={group.id} style={{ display: 'grid', gap: '6px', width: '100%' }}>
-                        {group.label ? (
-                            <div
-                                style={{
-                                    padding: '0.45rem 0.25rem 0.15rem',
-                                    color: 'var(--admin-muted)',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 700,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.08em',
-                                    textAlign: isAr ? 'right' : 'left',
-                                    width: '100%'
-                                }}
-                            >
-                                {group.label}
-                            </div>
-                        ) : null}
-
+                    <div key={group.id} className="admin-nav-group">
+                        {group.label ? <div className="admin-nav-group__label">{group.label}</div> : null}
                         {group.items.map((tab) => (
                             <button
                                 key={tab.id}
                                 type="button"
+                                className={`admin-nav-item${activeTab === tab.id ? ' is-active' : ''}`}
                                 onClick={() => setActiveTab(tab.id)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'flex-start',
-                                    gap: '10px',
-                                    width: '100%',
-                                    boxSizing: 'border-box',
-                                    padding: '12px 14px',
-                                    paddingInlineStart: group.label ? '12px' : undefined,
-                                    background: activeTab === tab.id ? navButtonActiveBackground : 'transparent',
-                                    color: activeTab === tab.id ? 'var(--admin-on-primary)' : 'var(--admin-text-secondary)',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    textAlign: isAr ? 'right' : 'left',
-                                    fontSize: '15px',
-                                    fontWeight: 600,
-                                    transition: 'all 0.2s',
-                                    boxShadow: activeTab === tab.id
-                                        ? 'var(--button-primary-shadow), 0 0 0 1px rgba(240,246,252,0.1)'
-                                        : 'none'
-                                }}
-                                onMouseOver={(event) => {
-                                    if (activeTab !== tab.id) {
-                                        event.currentTarget.style.background = 'var(--admin-hover)';
-                                        event.currentTarget.style.color = 'var(--admin-text-secondary)';
-                                        event.currentTarget.style.boxShadow = 'none';
-                                    }
-                                }}
-                                onMouseOut={(event) => {
-                                    if (activeTab !== tab.id) {
-                                        event.currentTarget.style.background = 'transparent';
-                                        event.currentTarget.style.color = 'var(--admin-text-secondary)';
-                                        event.currentTarget.style.boxShadow = 'none';
-                                    }
-                                }}
+                                style={{ textAlign: isAr ? 'right' : 'left' }}
                             >
                                 <AdminNavIcon tabId={tab.id} />
                                 <span style={{ flex: 1, minWidth: 0 }}>{tab.label}</span>
@@ -300,32 +215,9 @@ const AdminDashboard = () => {
 
                 <button
                     type="button"
+                    className="admin-nav-item admin-sidebar__logout"
                     onClick={handleLogout}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        gap: '10px',
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        padding: '12px 14px',
-                        background: 'transparent',
-                        color: '#eb3942',
-                        border: '1px solid #eb3942',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        textAlign: isAr ? 'right' : 'left',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        marginTop: 'auto',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(event) => {
-                        event.currentTarget.style.background = 'rgba(235, 57, 66, 0.1)';
-                    }}
-                    onMouseOut={(event) => {
-                        event.currentTarget.style.background = 'transparent';
-                    }}
+                    style={{ textAlign: isAr ? 'right' : 'left' }}
                 >
                     <IconLogout style={{ color: 'inherit' }} />
                     <span style={{ flex: 1, minWidth: 0 }}>{t('admin.sidebar.logout')}</span>
@@ -348,13 +240,13 @@ const AdminDashboard = () => {
                     className="admin-main-content"
                     style={{ textAlign: isAr ? 'right' : 'left' }}
                 >
-                    <h1 className="admin-page-title">
-                        {navigationGroups.flatMap(g => g.items).find((tab) => tab.id === activeTab)?.label}
-                    </h1>
+                    <AdminPageHeader title={activeNav?.label} subtitle={pageGuide} />
 
-                    <div className="admin-stock-alert">
-                        <AdminStockAlerts lang={lang} />
-                    </div>
+                    {showStockAlert ? (
+                        <div className="admin-stock-alert">
+                            <AdminStockAlerts lang={lang} />
+                        </div>
+                    ) : null}
 
                     <div className="admin-page-shell">
                     {activeTab === 'orders' && <AdminOrders lang={lang} />}

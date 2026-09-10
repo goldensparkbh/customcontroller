@@ -740,11 +740,8 @@ const AdminParts = ({ lang = 'ar' }) => {
                         </button>
                     </div>
                 </div>
-                <button
-                    onClick={handleOpenAddPart}
-                    style={{ padding: '0.6rem 1.2rem', background: '#238636', border: '1px solid rgba(240,246,252,0.1)', color: 'var(--admin-on-primary)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-                >
-                    {isAr ? "+ إضافة جزء جديد" : "+ Add New Part"}
+                <button type="button" className="admin-btn admin-btn--primary" onClick={handleOpenAddPart}>
+                    {isAr ? "+ إضافة جزء جديد" : "+ Add new part"}
                 </button>
             </div>
 

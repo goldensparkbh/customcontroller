@@ -217,7 +217,8 @@
     // Persistent state
     const configData = window.__CONFIG_DATA__ || {};
     const ownControllerMode = !!configData.ownControllerMode;
-    let baseControllerPrice = ownControllerMode ? 0 : (configData.baseControllerPrice || 0);
+    const zeroBasePriceMode = !!configData.zeroBasePriceMode;
+    let baseControllerPrice = (ownControllerMode || zeroBasePriceMode) ? 0 : (configData.baseControllerPrice || 0);
     let baseControllerQty = ownControllerMode ? null : configData.baseControllerQty;
     let baseControllerLowStockThreshold = Number(configData.baseControllerLowStockThreshold);
     if (!Number.isFinite(baseControllerLowStockThreshold) || baseControllerLowStockThreshold < 0) {
@@ -519,7 +520,7 @@
         if (nName.includes("originalcontroller") || nName.includes("basecontroller")) {
             const basePrice = (typeof item.rate === "number" ? item.rate : (parseFloat(item.rate) || parseFloat(item.unit_price) || 0)) || 0;
             if (!Number.isNaN(basePrice) && basePrice > 0) {
-                baseControllerPrice = ownControllerMode ? 0 : basePrice;
+                baseControllerPrice = (ownControllerMode || zeroBasePriceMode) ? 0 : basePrice;
                 log.reason = "Base controller price found: " + basePrice;
             }
             return;

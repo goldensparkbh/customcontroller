@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { adminListDocs, adminPatchDoc } from '../../services/backendApi.js';
 import { i18n } from '../../i18n';
-import { adminAlign } from './adminUi.js';
-import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
+import AdminTable, { AdminTableRow } from './components/AdminTable.jsx';
+import AdminDetailModal from './components/AdminDetailModal.jsx';
+import AdminStockBadge from './components/AdminStockBadge.jsx';
+import { adminAlign } from './adminUi.js';
 import {
     buildInventoryPayload,
     formatInventoryDate,
@@ -17,34 +19,12 @@ import {
     padNumericString
 } from './recordNumbers';
 
-const LIST_COLUMNS = '0.8fr 0.9fr 1.7fr 1fr 0.75fr 0.75fr 0.8fr';
+import InventoryPricingEditor from './InventoryPricingEditor';
 
-const panelStyle = {
-    background: 'var(--admin-surface)',
-    border: '1px solid var(--admin-border)',
-    borderRadius: '10px',
-    overflow: 'hidden'
-};
-
-const modalOverlayStyle = {
-    position: 'fixed',
-    inset: 0,
-    background: 'var(--admin-overlay-soft)',
-    backdropFilter: 'blur(6px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem',
-    zIndex: 1200
-};
-
-const fieldStyle = {
-    width: '100%',
-    padding: '0.7rem 0.8rem',
-    borderRadius: '8px',
-    border: '1px solid var(--admin-border)',
-    background: 'var(--admin-raised)',
-    color: 'var(--admin-text)'
+const sourceLabelFor = (record, isAr) => {
+    if (record.sourceType === 'normal') return isAr ? 'منتج متجر' : 'Shop item';
+    if (record.sourceType === 'artist') return isAr ? 'تصميم فنان' : 'Artist design';
+    return isAr ? 'خيار مخصص' : 'Configurator option';
 };
 
 const normalizeMasterRecord = ({ id, raw, sourceType, sourceLabel, partId = '', partTitle = '' }) => ({
@@ -190,6 +170,7 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
             const matchesStock =
                 stockFilter === 'all' ||
                 (stockFilter === 'in_stock' && qty > 0) ||
+                (stockFilter === 'low_stock' && qty > 0 && qty <= 5) ||
                 (stockFilter === 'out_of_stock' && qty <= 0);
             const haystack = [
                 record.name,
@@ -203,6 +184,16 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
             return matchesSource && matchesStock && matchesSearch;
         });
     }, [records, searchQuery, sourceFilter, stockFilter]);
+
+    const stockStats = useMemo(() => {
+        const qtyOf = (record) => Number(record.quantity || 0);
+        return {
+            total: records.length,
+            inStock: records.filter((record) => qtyOf(record) > 5).length,
+            low: records.filter((record) => qtyOf(record) > 0 && qtyOf(record) <= 5).length,
+            out: records.filter((record) => qtyOf(record) <= 0).length
+        };
+    }, [records]);
 
     const selectedRecord = useMemo(
         () => records.find((record) => record.id === selectedRecordId) || null,
@@ -260,236 +251,168 @@ const AdminInventoryMaster = ({ lang = 'ar' }) => {
 
     if (loading) return <LoadingState message={isAr ? "جاري تحميل المخزون..." : "Loading inventory..."} minHeight="32vh" />;
 
+    const tableColumns = [
+        { key: 'id', label: isAr ? 'الرقم' : 'ID', mono: true },
+        { key: 'barcode', label: t('admin.inventory.columns.barcode'), mono: true },
+        { key: 'item', label: t('admin.inventory.columns.item') },
+        { key: 'source', label: t('admin.inventory.columns.source') },
+        { key: 'price', label: t('admin.inventory.columns.price'), numeric: true },
+        { key: 'qty', label: t('admin.inventory.columns.quantity'), numeric: true },
+        { key: 'status', label: t('admin.inventory.status') }
+    ];
+
     return (
         <div style={{ display: 'grid', gap: '1rem', direction: isAr ? 'rtl' : 'ltr' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1.5fr) repeat(2, minmax(180px, 0.8fr))', gap: '0.9rem' }}>
-                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
-                    <span style={{ color: 'var(--admin-muted)' }}>{isAr ? "البحث بالاسم، الرقم أو الباركود" : "Search by item, item number, or barcode"}</span>
+            <div className="admin-stat-grid">
+                <div className="admin-stat-card">
+                    <div className="admin-stat-card__label">{t('admin.inventory.statsTotal')}</div>
+                    <div className="admin-stat-card__value">{stockStats.total}</div>
+                </div>
+                <div className="admin-stat-card">
+                    <div className="admin-stat-card__label">{t('admin.inventory.statsIn')}</div>
+                    <div className="admin-stat-card__value">{stockStats.inStock}</div>
+                </div>
+                <div className="admin-stat-card">
+                    <div className="admin-stat-card__label">{t('admin.inventory.statsLow')}</div>
+                    <div className="admin-stat-card__value">{stockStats.low}</div>
+                </div>
+                <div className="admin-stat-card">
+                    <div className="admin-stat-card__label">{t('admin.inventory.statsOut')}</div>
+                    <div className="admin-stat-card__value">{stockStats.out}</div>
+                </div>
+            </div>
+
+            <div className="admin-toolbar-filters">
+                <label className="admin-field">
+                    <span>{isAr ? "البحث بالاسم، الرقم أو الباركود" : "Search by name, item number, or barcode"}</span>
                     <input
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
                         placeholder={t('admin.inventory.search')}
-                        style={fieldStyle}
                     />
                 </label>
-
-                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
-                    <span style={{ color: 'var(--admin-muted)' }}>{isAr ? "المصدر" : "Source"}</span>
-                    <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} style={fieldStyle}>
-                        <option value="all">{isAr ? "جميع المصادر" : "All Sources"}</option>
-                        <option value="normal">{isAr ? "منتجات عادية" : "Normal Items"}</option>
-                        <option value="artist">{isAr ? "منتجات الفنانين" : "Artist Products"}</option>
-                        <option value="configurator">{isAr ? "أجزاء المخصص" : "Configurator Options"}</option>
+                <label className="admin-field">
+                    <span>{isAr ? "المصدر" : "Source"}</span>
+                    <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+                        <option value="all">{isAr ? "جميع المصادر" : "All sources"}</option>
+                        <option value="normal">{isAr ? "منتجات المتجر" : "Shop items"}</option>
+                        <option value="artist">{isAr ? "تصاميم الفنانين" : "Artist designs"}</option>
+                        <option value="configurator">{isAr ? "أجزاء المخصص" : "Configurator options"}</option>
                     </select>
                 </label>
-
-                <label style={{ display: 'grid', gap: '0.45rem', textAlign: adminAlign(isAr) }}>
-                    <span style={{ color: 'var(--admin-muted)' }}>{isAr ? "المخزون" : "Stock"}</span>
-                    <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)} style={fieldStyle}>
+                <label className="admin-field">
+                    <span>{isAr ? "المخزون" : "Stock"}</span>
+                    <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)}>
                         <option value="all">{t('admin.inventory.all')}</option>
                         <option value="in_stock">{t('admin.inventory.inStock')}</option>
+                        <option value="low_stock">{t('admin.inventory.lowStock')}</option>
                         <option value="out_of_stock">{t('admin.inventory.outStock')}</option>
                     </select>
                 </label>
             </div>
 
             <div style={{ color: 'var(--admin-muted)', textAlign: adminAlign(isAr) }}>
-                {filteredRecords.length} {isAr ? "سجل مخزون" : "inventory record(s)"}
+                {filteredRecords.length} {t('admin.inventory.records')}
             </div>
 
-            <section className="admin-oracle-list">
-                <div
-                    className="admin-oracle-list__header-grid"
-                    style={{
-                        gridTemplateColumns: LIST_COLUMNS,
-                        textAlign: adminAlign(isAr)
-                    }}
-                >
-                    <div>{isAr ? "الرقم" : "ID"}</div>
-                    <div>{t('admin.inventory.columns.barcode')}</div>
-                    <div>{t('admin.inventory.columns.item')}</div>
-                    <div>{t('admin.inventory.columns.source')}</div>
-                    <div>{t('admin.inventory.columns.price')}</div>
-                    <div>{t('admin.inventory.columns.quantity')}</div>
-                    <div>{t('admin.inventory.status')}</div>
-                </div>
-
-                <div className="admin-oracle-list__body" style={{ display: 'grid' }}>
-                    {filteredRecords.map((record) => (
-                        <button
-                            key={record.id}
-                            type="button"
-                            onClick={() => openDetail(record)}
-                            className="admin-oracle-list__row-btn"
-                            style={{
-                                gridTemplateColumns: LIST_COLUMNS,
-                                textAlign: adminAlign(isAr)
-                            }}
-                        >
-                            <div style={{ fontFamily: 'Consolas, monospace' }}>#{padNumericString(record.itemNumber)}</div>
-                            <div style={{ fontFamily: 'Consolas, monospace' }}>{record.barcode}</div>
-                            <div>
-                                <div>{record.name}</div>
-                                <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>
-                                    {record.sourceType === 'configurator' ? `${isAr ? "جزء:" : "Part:"} ${record.sourceLabel}` : (record.category || (isAr ? 'بدون تصنيف' : 'Uncategorized'))}
-                                </div>
+            <AdminTable
+                lang={lang}
+                columns={tableColumns}
+                emptyMessage={isAr ? "لا توجد سجلات مخزون تطابق الفلتر الحالي." : "No inventory records matched your filters."}
+            >
+                {filteredRecords.map((record) => (
+                    <AdminTableRow key={record.id} onClick={() => openDetail(record)}>
+                        <td className="admin-table__cell--mono">#{padNumericString(record.itemNumber)}</td>
+                        <td className="admin-table__cell--mono">{record.barcode}</td>
+                        <td>
+                            <div className="admin-cell-title">{record.name}</div>
+                            <div className="admin-cell-meta">
+                                {record.sourceType === 'configurator'
+                                    ? `${isAr ? "جزء:" : "Part:"} ${record.partTitle || record.sourceLabel}`
+                                    : (record.category || (isAr ? 'بدون تصنيف' : 'Uncategorized'))}
                             </div>
-                            <div>{record.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : record.sourceType === 'artist' ? (isAr ? 'منتج فنان' : 'Artist Product') : (isAr ? 'خيار مخصص' : 'Configurator Option')}</div>
-                            <div>{formatInventoryMoney(record.sellPrice ?? record.price)}</div>
-                            <div>{record.quantity ?? 0}</div>
-                            <div>{Number(record.quantity || 0) > 0 ? (isAr ? 'متوفر' : 'In Stock') : (isAr ? 'نفد' : 'Out')}</div>
-                        </button>
-                    ))}
-                    {filteredRecords.length === 0 && (
-                        <div className="admin-oracle-list__empty" style={{ textAlign: adminAlign(isAr) }}>
-                            {isAr ? "لا توجد سجلات مخزون تطابق الفلتر الحالي." : "No inventory records matched your filters."}
+                        </td>
+                        <td><span className="admin-chip">{sourceLabelFor(record, isAr)}</span></td>
+                        <td className="admin-table__cell--numeric">{formatInventoryMoney(record.sellPrice ?? record.price)}</td>
+                        <td className="admin-table__cell--numeric">{record.quantity ?? 0}</td>
+                        <td><AdminStockBadge qty={record.quantity} lang={lang} /></td>
+                    </AdminTableRow>
+                ))}
+            </AdminTable>
+
+            <AdminDetailModal
+                open={detailOpen && !!selectedRecord}
+                onClose={() => setDetailOpen(false)}
+                isAr={isAr}
+                width="min(900px, 100%)"
+                title={selectedRecord?.name}
+                subtitle={selectedRecord ? `#${padNumericString(selectedRecord.itemNumber)} · ${sourceLabelFor(selectedRecord, isAr)}` : ''}
+            >
+                {selectedRecord && (
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+                            <button type="button" className="admin-btn admin-btn--primary" onClick={handleSave} disabled={saving}>
+                                {saving ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ المخزون' : 'Save inventory')}
+                            </button>
                         </div>
-                    )}
-                </div>
-            </section>
-
-            {detailOpen && selectedRecord && (
-                <div onClick={() => setDetailOpen(false)} style={modalOverlayStyle}>
-                    <div
-                        onClick={(event) => event.stopPropagation()}
-                        onMouseDown={(event) => event.stopPropagation()}
-                        style={{
-                            width: 'min(900px, 100%)',
-                            maxHeight: '90vh',
-                            overflowY: 'auto',
-                            background: 'var(--admin-surface)',
-                            border: '1px solid var(--admin-border)',
-                            borderRadius: '14px',
-                            boxShadow: '0 24px 80px rgba(0,0,0,0.45)'
-                        }}
-                    >
-                        <div
-                            style={{
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 1,
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                gap: '1rem',
-                                flexWrap: 'wrap',
-                                alignItems: 'center',
-                                padding: '1.25rem 1.5rem',
-                                borderBottom: '1px solid var(--admin-border)',
-                                background: 'var(--admin-surface)',
-                                flexDirection: isAr ? 'row-reverse' : 'row'
-                            }}
-                        >
-                            <div style={{ textAlign: adminAlign(isAr) }}>
-                                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--admin-text)' }}>{selectedRecord.name}</div>
-                                <div style={{ marginTop: '0.3rem', color: 'var(--admin-muted)' }}>
-                                    #{padNumericString(selectedRecord.itemNumber)} · {selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : selectedRecord.sourceType === 'artist' ? (isAr ? 'منتج فنان' : 'Artist Product') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`}
-                                </div>
+                        <div className="admin-detail-grid">
+                            <div className="admin-detail-card">
+                                <DetailField isAr={isAr} label={isAr ? "رقم الصنف" : "Item number"} value={padNumericString(selectedRecord.itemNumber)} />
+                                <div style={{ height: '0.75rem' }} />
+                                <DetailField isAr={isAr} label={isAr ? "الباركود" : "Barcode"} value={selectedRecord.barcode} />
+                                <div style={{ height: '0.75rem' }} />
+                                <DetailField isAr={isAr} label={isAr ? "المصدر" : "Source"} value={sourceLabelFor(selectedRecord, isAr)} />
                             </div>
-
-                            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setDetailOpen(false)}
-                                    style={{
-                                        padding: '0.55rem 0.8rem',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--admin-border-strong)',
-                                        background: 'var(--admin-raised)',
-                                        color: 'var(--admin-text)',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {isAr ? 'إغلاق' : 'Close'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    style={{
-                                        padding: '0.55rem 0.9rem',
-                                        borderRadius: '6px',
-                                        border: 'none',
-                                        background: '#238636',
-                                        color: 'var(--admin-on-primary)',
-                                        fontWeight: 700,
-                                        cursor: saving ? 'not-allowed' : 'pointer',
-                                        opacity: saving ? 0.7 : 1
-                                    }}
-                                >
-                                    {saving ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ المخزون' : 'Save Inventory')}
-                                </button>
+                            <div className="admin-detail-card">
+                                <DetailField isAr={isAr} label={isAr ? "سعر البيع" : "Sell price"} value={formatInventoryMoney(selectedRecord.sellPrice ?? selectedRecord.price)} />
+                                <div style={{ height: '0.75rem' }} />
+                                <DetailField isAr={isAr} label={isAr ? "سعر الشراء" : "Purchase price"} value={formatInventoryMoney(selectedRecord.purchasePrice)} />
+                                <div style={{ height: '0.75rem' }} />
+                                <DetailField isAr={isAr} label={t('admin.inventory.inHand')} value={<AdminStockBadge qty={selectedRecord.quantity} lang={lang} />} />
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '1rem', padding: '1.25rem 1.5rem', direction: isAr ? 'rtl' : 'ltr', textAlign: adminAlign(isAr) }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.9rem' }}>
-                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField isAr={isAr} label={isAr ? "رقم الصنف" : "Item Number"} value={padNumericString(selectedRecord.itemNumber)} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "الباركود" : "Barcode"} value={selectedRecord.barcode} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "المصدر" : "Source"} value={selectedRecord.sourceType === 'normal' ? (isAr ? 'منتج عادي' : 'Normal Item') : selectedRecord.sourceType === 'artist' ? (isAr ? 'منتج فنان' : 'Artist Product') : `${isAr ? 'مخصص' : 'Configurator'} / ${selectedRecord.sourceLabel}`} />
-                                </div>
+                        {(selectedRecord.sourceType === 'normal' || selectedRecord.sourceType === 'artist') && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--admin-text)' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={formState.showOnline}
+                                    onChange={(event) => setFormState((current) => ({ ...current, showOnline: event.target.checked }))}
+                                />
+                                {isAr ? "عرض في المتجر" : "Show online"}
+                            </label>
+                        )}
 
-                                <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '0.9rem' }}>
-                                    <DetailField isAr={isAr} label={isAr ? "سعر البيع" : "Sell Price"} value={formatInventoryMoney(selectedRecord.sellPrice ?? selectedRecord.price)} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={isAr ? "سعر الشراء" : "Purchase Price"} value={formatInventoryMoney(selectedRecord.purchasePrice)} />
-                                    <div style={{ height: '0.75rem' }} />
-                                    <DetailField isAr={isAr} label={t('admin.inventory.inHand')} value={String(selectedRecord.quantity ?? 0)} />
-                                </div>
-                            </div>
+                        <InventoryPricingEditor
+                            rows={formState.inventoryDetails}
+                            onChange={(inventoryDetails) => setFormState((current) => ({ ...current, inventoryDetails }))}
+                            title={isAr ? "حركات المخزون" : "Stock movements"}
+                            description={isAr ? "أضف حركة لزيادة أو إنقاص الكمية مع التاريخ والسبب. الأسعار تُدار من شاشة المنتج الأصلية." : "Add a movement to increase or decrease quantity, with date and reason. Prices are edited on the original product screen."}
+                            lang={lang}
+                        />
 
-                            {(selectedRecord.sourceType === 'normal' || selectedRecord.sourceType === 'artist') && (
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--admin-text)', flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: isAr ? 'flex-end' : 'flex-start' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={formState.showOnline}
-                                        onChange={(event) => setFormState((current) => ({ ...current, showOnline: event.target.checked }))}
-                                    />
-                                    {isAr ? "عرض في المتجر" : "Show Online"}
-                                </label>
-                            )}
-
-                            <InventoryPricingEditor
-                                rows={formState.inventoryDetails}
-                                onChange={(inventoryDetails) => setFormState((current) => ({ ...current, inventoryDetails }))}
-                                title={isAr ? "حركات المخزون" : "Stock Movements"}
-                                description={isAr ? "أضف حركات المخزون بالكمية والتاريخ والسبب. يتم إدارة الأسعار من المنتج الأصلي." : "Add stock movements with quantity, date, and reason. Pricing is managed on the original item or configurator option."}
-                                lang={lang}
-                            />
-
-                            <div style={{ background: 'var(--admin-raised)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem', textAlign: adminAlign(isAr) }}>{t('admin.inventory.history')}</div>
-                                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                                    {(formState.inventoryDetails || []).map((row, index) => (
-                                        <div
-                                            key={row.id || `inventory-entry-${index}`}
-                                            style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                                                gap: '0.75rem',
-                                                padding: '0.85rem',
-                                                borderRadius: '8px',
-                                                border: Number(row.quantity || 0) < 0 ? '1px solid rgba(248,113,113,0.35)' : '1px solid var(--admin-border)',
-                                                background: Number(row.quantity || 0) < 0 ? 'rgba(127,29,29,0.18)' : 'var(--admin-hover-alt)'
-                                            }}
-                                        >
-                                            <DetailField isAr={isAr} label={t('admin.inventory.reason')} value={getInventoryReasonLabel(row.reason, lang)} />
-                                            <DetailField isAr={isAr} label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
-                                            <DetailField isAr={isAr} label={t('admin.inventory.columns.quantity')} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
-                                            <DetailField isAr={isAr} label={isAr ? "ملاحظة / المصدر" : "Note / Source"} value={row.note || row.source || (isAr ? 'يدوي' : 'manual')} />
-                                        </div>
-                                    ))}
-                                    {(!formState.inventoryDetails || formState.inventoryDetails.length === 0) && (
-                                        <div style={{ color: 'var(--admin-muted)', textAlign: adminAlign(isAr) }}>{isAr ? "لا توجد حركات مخزون مسجلة." : "No inventory movements recorded."}</div>
-                                    )}
-                                </div>
+                        <div className="admin-detail-card">
+                            <div style={{ fontWeight: 700, color: 'var(--admin-text)', marginBottom: '0.75rem' }}>{t('admin.inventory.history')}</div>
+                            <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                {(formState.inventoryDetails || []).map((row, index) => (
+                                    <div
+                                        key={row.id || `inventory-entry-${index}`}
+                                        className={`admin-movement-card${Number(row.quantity || 0) < 0 ? ' is-out' : ''}`}
+                                    >
+                                        <DetailField isAr={isAr} label={t('admin.inventory.reason')} value={getInventoryReasonLabel(row.reason, lang)} />
+                                        <DetailField isAr={isAr} label={isAr ? "التاريخ" : "Date"} value={formatInventoryDate(row.date)} />
+                                        <DetailField isAr={isAr} label={t('admin.inventory.columns.quantity')} value={`${Number(row.quantity || 0) > 0 ? '+' : ''}${row.quantity ?? 0}`} />
+                                        <DetailField isAr={isAr} label={isAr ? "ملاحظة / المصدر" : "Note / source"} value={row.note || row.source || (isAr ? 'يدوي' : 'manual')} />
+                                    </div>
+                                ))}
+                                {(!formState.inventoryDetails || formState.inventoryDetails.length === 0) && (
+                                    <div style={{ color: 'var(--admin-muted)' }}>{isAr ? "لا توجد حركات مخزون مسجلة." : "No inventory movements recorded."}</div>
+                                )}
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </AdminDetailModal>
         </div>
     );
 };

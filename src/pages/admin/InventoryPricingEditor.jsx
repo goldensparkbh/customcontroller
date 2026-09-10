@@ -107,19 +107,8 @@ const InventoryPricingEditor = ({
                     <div style={{ marginTop: '0.2rem', fontSize: '0.82rem', color: 'var(--admin-muted)' }}>{description}</div>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() => setShowAddModal(true)}
-                    style={{
-                        padding: '0.6rem 0.9rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--admin-border-strong)',
-                        background: 'var(--admin-hover-alt)',
-                        color: 'var(--admin-text)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    {isAr ? "إضافة مخزون" : "Add Inventory"}
+                <button type="button" className="admin-btn admin-btn--primary" onClick={() => setShowAddModal(true)}>
+                    {isAr ? "إضافة مخزون" : "Add stock"}
                 </button>
             </div>
 
@@ -135,8 +124,8 @@ const InventoryPricingEditor = ({
                                 gap: '0.8rem',
                                 padding: '0.9rem',
                                 borderRadius: '8px',
-                                border: isOutgoing ? '1px solid rgba(248, 113, 113, 0.35)' : '1px solid var(--admin-border)',
-                                background: isOutgoing ? 'rgba(127, 29, 29, 0.18)' : 'var(--admin-hover-alt)'
+                                border: isOutgoing ? '1px solid var(--admin-danger-text)' : '1px solid var(--admin-border)',
+                                background: isOutgoing ? 'var(--admin-danger-bg)' : 'var(--admin-hover-alt)'
                             }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
@@ -155,7 +144,7 @@ const InventoryPricingEditor = ({
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                                    <span style={{ color: isOutgoing ? '#fca5a5' : '#86efac', fontWeight: 700 }}>
+                                    <span style={{ color: isOutgoing ? 'var(--admin-danger-text)' : 'var(--admin-ok-text)', fontWeight: 700 }}>
                                         {quantity > 0 ? '+' : ''}{quantity}
                                     </span>
                                     <button

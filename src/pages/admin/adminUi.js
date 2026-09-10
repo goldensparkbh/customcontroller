@@ -19,7 +19,7 @@ export const adminFieldStyle = {
   padding: '0.72rem 0.8rem',
   borderRadius: '8px',
   border: '1px solid var(--admin-border)',
-  background: 'var(--admin-raised)',
+  background: 'var(--admin-input-bg)',
   color: 'var(--admin-input-text)',
   outline: 'none'
 };

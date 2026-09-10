@@ -12,7 +12,8 @@ export default function MaintenanceGate({ children }) {
   const bypassMaintenance =
     location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/pos') ||
-    location.pathname.startsWith('/configurator/own-controller');
+    location.pathname.startsWith('/configurator/own-controller') ||
+    location.pathname === '/local';
 
   useEffect(() => {
     let alive = true;

@@ -9,6 +9,7 @@ import {
 } from '../../services/backendApi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
+import AdminStockBadge from './components/AdminStockBadge.jsx';
 import { i18n } from '../../i18n';
 import {
     buildInventoryPayload,
@@ -303,21 +304,9 @@ const AdminItems = ({ lang = 'ar' }) => {
     return (
         <div style={{ display: 'grid', gap: '1rem', direction: isAr ? 'rtl' : 'ltr' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--admin-muted)' }}>{isAr ? "إدارة مخزون المنتجات العادية من قائمة واحدة. انقر فوق صف الصنف لمزيد من التفاصيل." : "Manage normal inventory items from a single list. Click an item row for full details."}</div>
-                <button
-                    type="button"
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.7rem 1rem',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: '#238636',
-                        color: 'var(--admin-on-primary)',
-                        fontWeight: 700,
-                        cursor: 'pointer'
-                    }}
-                >
-                    {isAr ? "إضافة منتج جديد" : "Add New Item"}
+                <div style={{ color: 'var(--admin-muted)' }}>{isAr ? "أنشئ منتجات المتجر هنا. الكميات تظهر في «كل المخزون» أيضاً." : "Create shop products here. Quantities also appear under All stock."}</div>
+                <button type="button" className="admin-btn admin-btn--primary" onClick={openCreateModal}>
+                    {isAr ? "إضافة منتج جديد" : "Add new item"}
                 </button>
             </div>
 
@@ -371,8 +360,12 @@ const AdminItems = ({ lang = 'ar' }) => {
                                 <div style={listCellStyle}>{item.category || 'N/A'}</div>
                                 <div style={listCellStyle}>{formatInventoryMoney(item.sellPrice ?? item.price)}</div>
                                 <div style={listCellStyle}>{formatInventoryMoney(item.purchasePrice)}</div>
-                                <div style={listCellStyle}>{item.quantity ?? 0}</div>
-                                <div style={listCellStyle}>{item.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}</div>
+                                <div style={listCellStyle}><AdminStockBadge qty={item.quantity} lang={lang} /></div>
+                                <div style={listCellStyle}>
+                                    <span className={`admin-badge ${item.showOnline ? 'admin-badge--ok' : 'admin-badge--neutral'}`}>
+                                        {item.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}
+                                    </span>
+                                </div>
                             </button>
                         );
                     })}

@@ -95,6 +95,7 @@ function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/configurator" element={<ConfiguratorPage />} />
           <Route path="/configurator/own-controller" element={<ConfiguratorPage />} />
+          <Route path="/local" element={<ConfiguratorPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment" element={<PaymentPage />} />

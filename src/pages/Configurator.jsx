@@ -161,6 +161,7 @@ const ConfiguratorPage = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const ownControllerMode = location.pathname.startsWith('/configurator/own-controller');
+  const zeroBasePriceMode = location.pathname === '/local';
 
   useEffect(() => {
     bootstrapGeoPreferences({ force: true }).catch(() => {});
@@ -177,7 +178,8 @@ const ConfiguratorPage = () => {
         baseControllerPrice: 0,
         baseControllerQty: null,
         baseControllerLowStockThreshold: 5,
-        ownControllerMode
+        ownControllerMode,
+        zeroBasePriceMode
       };
       window.__CONFIG_FIREBASE_DATA__ = window.__CONFIG_FIREBASE_DATA__ || [];
 
@@ -201,7 +203,7 @@ const ConfiguratorPage = () => {
         }));
 
         const catalogBasePrice = Number(catalog.basePrice) || 0;
-        const basePrice = ownControllerMode ? 0 : catalogBasePrice;
+        const basePrice = (ownControllerMode || zeroBasePriceMode) ? 0 : catalogBasePrice;
         const baseQuantity = ownControllerMode
           ? null
           : (catalog.baseQuantity != null ? Number(catalog.baseQuantity) : null);
@@ -216,7 +218,8 @@ const ConfiguratorPage = () => {
           baseControllerPrice: basePrice,
           baseControllerQty: baseQuantity,
           baseControllerLowStockThreshold: lowStockThreshold,
-          ownControllerMode
+          ownControllerMode,
+          zeroBasePriceMode
         };
       } catch (err) {
         console.error("Configurator catalog fetch error:", err);
@@ -227,7 +230,7 @@ const ConfiguratorPage = () => {
     };
 
     loadFirebaseData();
-  }, [ownControllerMode]);
+  }, [ownControllerMode, zeroBasePriceMode]);
 
   useEffect(() => {
     if (loading) return;
@@ -267,7 +270,7 @@ const ConfiguratorPage = () => {
         document.body.removeChild(script);
       }
     };
-  }, [loading, ownControllerMode]);
+  }, [loading, ownControllerMode, zeroBasePriceMode]);
 
   if (loading) {
     const currentLang = localStorage.getItem('ez_lang') || 'ar';

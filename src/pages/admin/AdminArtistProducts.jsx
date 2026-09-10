@@ -9,6 +9,7 @@ import {
 } from '../../services/backendApi.js';
 import InventoryPricingEditor from './InventoryPricingEditor';
 import LoadingState from '../../components/LoadingState.jsx';
+import AdminStockBadge from './components/AdminStockBadge.jsx';
 import {
     DEFAULT_ARTIST_CATEGORIES,
     categoryLabels,
@@ -405,19 +406,15 @@ const AdminArtistProducts = ({ lang = 'ar' }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ color: 'var(--admin-muted)' }}>
                     {isAr
-                        ? 'أنشئ تصاميم صفحة الفنانين مع الصور والمخزون. الشراء يستخدم نفس سلة ودفع المخصص.'
-                        : 'Create Artists page designs with photos and stock. Purchase uses the same cart, checkout, and payment as the configurator.'}
+                        ? 'الفئات أولاً، ثم التصاميم. الكمية تُخصم عند الدفع مثل بقية المخزون.'
+                        : 'Categories first, then designs. Quantity deducts at payment like other stock.'}
                 </div>
-                <button
-                    type="button"
-                    onClick={openCreate}
-                    style={{ padding: '0.7rem 1rem', borderRadius: '8px', border: 'none', background: '#238636', color: 'var(--admin-on-primary)', fontWeight: 700, cursor: 'pointer' }}
-                >
-                    {isAr ? 'إضافة تصميم' : 'Add Design'}
+                <button type="button" className="admin-btn admin-btn--primary" onClick={openCreate}>
+                    {isAr ? 'إضافة تصميم' : 'Add design'}
                 </button>
             </div>
 
-            <section style={{ background: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: '10px', padding: '1rem 1.15rem' }}>
+            <section className="admin-panel admin-panel--padded">
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem' }}>
                     <div>
                         <div style={{ fontWeight: 700, color: 'var(--admin-text)' }}>{isAr ? 'فئات صفحة الفنانين' : 'Artist categories'}</div>
@@ -450,11 +447,11 @@ const AdminArtistProducts = ({ lang = 'ar' }) => {
                         <input type="number" value={categoryForm.sortOrder} onChange={(e) => setCategoryForm((current) => ({ ...current, sortOrder: e.target.value }))} style={fieldStyle} />
                     </label>
                     <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-                        <button type="submit" disabled={savingCategory} style={{ padding: '0.65rem 0.9rem', borderRadius: 6, border: 'none', background: '#1f6feb', color: 'var(--admin-on-primary)', fontWeight: 700, cursor: savingCategory ? 'wait' : 'pointer' }}>
+                        <button type="submit" disabled={savingCategory} className="admin-btn admin-btn--accent">
                             {editingCategoryId ? (isAr ? 'تحديث الفئة' : 'Update category') : (isAr ? 'إضافة فئة' : 'Add category')}
                         </button>
                         {editingCategoryId && (
-                            <button type="button" onClick={resetCategoryForm} style={{ padding: '0.65rem 0.9rem', borderRadius: 6, border: '1px solid var(--admin-border)', background: 'transparent', color: 'var(--admin-text-secondary)', cursor: 'pointer' }}>
+                            <button type="button" onClick={resetCategoryForm} className="admin-btn">
                                 {isAr ? 'إلغاء' : 'Cancel'}
                             </button>
                         )}
@@ -468,10 +465,10 @@ const AdminArtistProducts = ({ lang = 'ar' }) => {
                                 <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)' }}>{item.id} · {isAr ? item.en : item.ar}</div>
                             </div>
                             <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                <button type="button" onClick={() => openEditCategory(item)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#1f6feb', color: 'var(--admin-on-primary)', cursor: 'pointer' }}>
+                                <button type="button" className="admin-btn admin-btn--accent" onClick={() => openEditCategory(item)}>
                                     {isAr ? 'تعديل' : 'Edit'}
                                 </button>
-                                <button type="button" onClick={() => handleDeleteCategory(item)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #f85149', background: 'transparent', color: '#ff7b72', cursor: 'pointer' }}>
+                                <button type="button" className="admin-btn admin-btn--danger" onClick={() => handleDeleteCategory(item)}>
                                     {isAr ? 'حذف' : 'Delete'}
                                 </button>
                             </div>
@@ -531,13 +528,15 @@ const AdminArtistProducts = ({ lang = 'ar' }) => {
                             </div>
                             <div>{isAr ? product.categoryAr : product.categoryEn}</div>
                             <div>{formatInventoryMoney(product.sellPrice ?? product.price)}</div>
-                            <div>{product.quantity ?? 0}</div>
-                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                <span>{product.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}</span>
-                                <button type="button" onClick={() => openEdit(product)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#1f6feb', color: 'var(--admin-on-primary)', cursor: 'pointer' }}>
+                            <div><AdminStockBadge qty={product.quantity} lang={lang} /></div>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <span className={`admin-badge ${product.showOnline ? 'admin-badge--ok' : 'admin-badge--neutral'}`}>
+                                    {product.showOnline ? (isAr ? 'ظاهر' : 'Live') : (isAr ? 'مخفي' : 'Hidden')}
+                                </span>
+                                <button type="button" className="admin-btn admin-btn--accent" onClick={() => openEdit(product)}>
                                     {isAr ? 'تعديل' : 'Edit'}
                                 </button>
-                                <button type="button" onClick={() => handleDelete(product.id)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #f85149', background: 'transparent', color: '#ff7b72', cursor: 'pointer' }}>
+                                <button type="button" className="admin-btn admin-btn--danger" onClick={() => handleDelete(product.id)}>
                                     {isAr ? 'حذف' : 'Delete'}
                                 </button>
                             </div>
