@@ -74,17 +74,10 @@ function HomePage() {
     ? trackIndex % bannerSlides.length
     : 0;
 
-  const [showEntryModal, setShowEntryModal] = useState(false);
-
   const t = (key) => (i18n[lang] && i18n[lang][key]) || (i18n.en && i18n.en[key]) || key;
 
   const goToConfigurator = () => {
-    setShowEntryModal(true);
-  };
-
-  const chooseControllerEntry = (mode) => {
-    setShowEntryModal(false);
-    navigate(mode === 'own' ? '/configurator/own-controller' : '/local');
+    navigate('/configurator');
   };
 
   useEffect(() => {
@@ -365,37 +358,6 @@ function HomePage() {
 
   return (
     <div className="home-page">
-      {showEntryModal ? (
-        <div
-          className="home-entry-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="homeEntryTitle"
-          onClick={() => setShowEntryModal(false)}
-        >
-          <div className="home-entry-modal" onClick={(event) => event.stopPropagation()}>
-            <h2 id="homeEntryTitle">{t('homeEntryTitle')}</h2>
-            <p>{t('homeEntrySub')}</p>
-            <div className="home-entry-choices">
-              <button type="button" className="home-entry-choice" onClick={() => chooseControllerEntry('local')}>
-                <span>
-                  <strong>{t('homeEntryNew')}</strong>
-                  <span>{t('homeEntryNewHint')}</span>
-                </span>
-                <em>{formatFromBhd(27)}</em>
-              </button>
-              <button type="button" className="home-entry-choice" onClick={() => chooseControllerEntry('own')}>
-                <span>
-                  <strong>{t('homeEntryUpgrade')}</strong>
-                  <span>{t('homeEntryUpgradeHint')}</span>
-                </span>
-                <em>{formatFromBhd(0)}</em>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <section className="hero">
         <video className="hero-video" autoPlay muted loop playsInline>
           <source src="/assets/back.mp4" type="video/mp4" />
