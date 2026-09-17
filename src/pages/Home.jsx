@@ -417,9 +417,6 @@ function HomePage() {
             <p className="hero-note" data-hero-price-bhd style={{ marginTop: '0.75rem', opacity: 0.9 }} />
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
-              <button className="hero-btn secondary" type="button" onClick={() => navigate('/artists')}>
-                {t('homeArtistsBtn')}
-              </button>
             </div>
           </div>
         </div>
