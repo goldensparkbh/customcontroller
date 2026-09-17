@@ -74,36 +74,15 @@ function HomePage() {
     ? trackIndex % bannerSlides.length
     : 0;
 
-  const [showEntryModal, setShowEntryModal] = useState(() => {
-    try {
-      return !sessionStorage.getItem('ez_controller_entry');
-    } catch {
-      return true;
-    }
-  });
+  const [showEntryModal, setShowEntryModal] = useState(false);
 
   const t = (key) => (i18n[lang] && i18n[lang][key]) || (i18n.en && i18n.en[key]) || key;
 
   const goToConfigurator = () => {
-    let entry = '';
-    try {
-      entry = sessionStorage.getItem('ez_controller_entry') || '';
-    } catch {
-      entry = '';
-    }
-    if (!entry) {
-      setShowEntryModal(true);
-      return;
-    }
-    navigate(entry === 'own' ? '/configurator/own-controller' : '/local');
+    setShowEntryModal(true);
   };
 
   const chooseControllerEntry = (mode) => {
-    try {
-      sessionStorage.setItem('ez_controller_entry', mode);
-    } catch {
-      /* ignore */
-    }
     setShowEntryModal(false);
     navigate(mode === 'own' ? '/configurator/own-controller' : '/local');
   };
@@ -387,8 +366,14 @@ function HomePage() {
   return (
     <div className="home-page">
       {showEntryModal ? (
-        <div className="home-entry-overlay" role="dialog" aria-modal="true" aria-labelledby="homeEntryTitle">
-          <div className="home-entry-modal">
+        <div
+          className="home-entry-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="homeEntryTitle"
+          onClick={() => setShowEntryModal(false)}
+        >
+          <div className="home-entry-modal" onClick={(event) => event.stopPropagation()}>
             <h2 id="homeEntryTitle">{t('homeEntryTitle')}</h2>
             <p>{t('homeEntrySub')}</p>
             <div className="home-entry-choices">
