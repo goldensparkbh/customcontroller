@@ -217,8 +217,8 @@
     // Persistent state
     const configData = window.__CONFIG_DATA__ || {};
     const ownControllerMode = !!configData.ownControllerMode;
-    const zeroBasePriceMode = !!configData.zeroBasePriceMode;
-    let baseControllerPrice = (ownControllerMode || zeroBasePriceMode) ? 0 : (configData.baseControllerPrice || 0);
+    const localNewControllerMode = !!configData.localNewControllerMode;
+    let baseControllerPrice = ownControllerMode ? 0 : (configData.baseControllerPrice || 0);
     let baseControllerQty = ownControllerMode ? null : configData.baseControllerQty;
     let baseControllerLowStockThreshold = Number(configData.baseControllerLowStockThreshold);
     if (!Number.isFinite(baseControllerLowStockThreshold) || baseControllerLowStockThreshold < 0) {
@@ -520,7 +520,7 @@
         if (nName.includes("originalcontroller") || nName.includes("basecontroller")) {
             const basePrice = (typeof item.rate === "number" ? item.rate : (parseFloat(item.rate) || parseFloat(item.unit_price) || 0)) || 0;
             if (!Number.isNaN(basePrice) && basePrice > 0) {
-                baseControllerPrice = (ownControllerMode || zeroBasePriceMode) ? 0 : basePrice;
+                baseControllerPrice = ownControllerMode ? 0 : basePrice;
                 log.reason = "Base controller price found: " + basePrice;
             }
             return;
@@ -2747,7 +2747,8 @@
             previewFront: extra.previewFront || "",
             previewBack: extra.previewBack || "",
             customerOwnController: ownControllerMode,
-            skipBaseController: ownControllerMode
+            skipBaseController: ownControllerMode,
+            localCheckout: localNewControllerMode
         };
     }
 
@@ -2835,7 +2836,9 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    employeePassword,
+                    employeePassword: employeePassword,
+                    staffCode: employeePassword,
+                    source: ownControllerMode ? "in_store_own_controller" : "in_store_local",
                     cart: [cartItem],
                     subtotal: snapshot.total,
                     shippingCost: 0,

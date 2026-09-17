@@ -74,8 +74,38 @@ function HomePage() {
     ? trackIndex % bannerSlides.length
     : 0;
 
+  const [showEntryModal, setShowEntryModal] = useState(() => {
+    try {
+      return !sessionStorage.getItem('ez_controller_entry');
+    } catch {
+      return true;
+    }
+  });
+
+  const t = (key) => (i18n[lang] && i18n[lang][key]) || (i18n.en && i18n.en[key]) || key;
+
   const goToConfigurator = () => {
-    navigate('/configurator');
+    let entry = '';
+    try {
+      entry = sessionStorage.getItem('ez_controller_entry') || '';
+    } catch {
+      entry = '';
+    }
+    if (!entry) {
+      setShowEntryModal(true);
+      return;
+    }
+    navigate(entry === 'own' ? '/configurator/own-controller' : '/local');
+  };
+
+  const chooseControllerEntry = (mode) => {
+    try {
+      sessionStorage.setItem('ez_controller_entry', mode);
+    } catch {
+      /* ignore */
+    }
+    setShowEntryModal(false);
+    navigate(mode === 'own' ? '/configurator/own-controller' : '/local');
   };
 
   useEffect(() => {
@@ -97,8 +127,13 @@ function HomePage() {
         const data = await fetchHomeBanners();
         if (!alive) return;
         const locale = lang === 'ar' ? 'ar' : 'en';
-        const remote = Array.isArray(data[locale]) ? data[locale] : [];
-        setBannerSlides(remote.length ? remote : getDefaultHomeBanners(locale));
+        const remote = Array.isArray(data[locale])
+          ? data[locale].filter((item) => item && item.enabled !== false)
+          : [];
+        const hasSaved = Boolean(data.updatedAt)
+          || (Array.isArray(data.ar) && data.ar.length > 0)
+          || (Array.isArray(data.en) && data.en.length > 0);
+        setBannerSlides(remote.length ? remote : (hasSaved ? [] : getDefaultHomeBanners(locale)));
         setTrackIndex(0);
         setBannerTransition(true);
       } catch {
@@ -309,6 +344,18 @@ function HomePage() {
     const style = hasImage ? { backgroundImage: `url("${slide.imageUrl}")` } : undefined;
 
     if (slide.linkUrl) {
+      if (slide.linkUrl.startsWith('#')) {
+        return (
+          <button
+            type="button"
+            className={`${className} home-banner-slide--link`}
+            style={style}
+            onClick={() => document.querySelector(slide.linkUrl)?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            {content}
+          </button>
+        );
+      }
       const isExternal = /^https?:\/\//i.test(slide.linkUrl);
       if (isExternal) {
         return (
@@ -339,6 +386,31 @@ function HomePage() {
 
   return (
     <div className="home-page">
+      {showEntryModal ? (
+        <div className="home-entry-overlay" role="dialog" aria-modal="true" aria-labelledby="homeEntryTitle">
+          <div className="home-entry-modal">
+            <h2 id="homeEntryTitle">{t('homeEntryTitle')}</h2>
+            <p>{t('homeEntrySub')}</p>
+            <div className="home-entry-choices">
+              <button type="button" className="home-entry-choice" onClick={() => chooseControllerEntry('local')}>
+                <span>
+                  <strong>{t('homeEntryNew')}</strong>
+                  <span>{t('homeEntryNewHint')}</span>
+                </span>
+                <em>{formatFromBhd(27)}</em>
+              </button>
+              <button type="button" className="home-entry-choice" onClick={() => chooseControllerEntry('own')}>
+                <span>
+                  <strong>{t('homeEntryUpgrade')}</strong>
+                  <span>{t('homeEntryUpgradeHint')}</span>
+                </span>
+                <em>{formatFromBhd(0)}</em>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="hero">
         <video className="hero-video" autoPlay muted loop playsInline>
           <source src="/assets/back.mp4" type="video/mp4" />
@@ -398,6 +470,9 @@ function HomePage() {
             <p className="hero-note" data-hero-price-bhd style={{ marginTop: '0.75rem', opacity: 0.9 }} />
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
+              <button className="hero-btn secondary" type="button" onClick={() => navigate('/artists')}>
+                {t('homeArtistsBtn')}
+              </button>
             </div>
           </div>
         </div>

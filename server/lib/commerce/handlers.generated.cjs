@@ -2179,15 +2179,36 @@ function passwordsMatch(stored, provided) {
   return crypto.timingSafeEqual(a, b);
 }
 
+function resolveInStoreStaff(settings, providedCode) {
+  const code = String(providedCode || "").trim();
+  const staffList = Array.isArray(settings.inStoreStaff) ? settings.inStoreStaff : [];
+  for (const member of staffList) {
+    if (!member) continue;
+    if (passwordsMatch(member.code, code)) {
+      return {
+        id: String(member.id || "").trim() || "staff",
+        name: String(member.name || "").trim() || "Staff"
+      };
+    }
+  }
+  const fallback = String(settings.inStoreEmployeePassword || "").trim();
+  if (fallback && passwordsMatch(fallback, code)) {
+    return { id: "legacy", name: "Staff" };
+  }
+  return null;
+}
+
 async function handleInStoreOrder(req, res) {
   const body = req.body || {};
   const db = getFirestore();
   const adminSettings = await getGeneralAdminSettings();
+  const staffList = Array.isArray(adminSettings.inStoreStaff) ? adminSettings.inStoreStaff.filter((row) => row && String(row.code || "").trim()) : [];
   const storedPassword = String(adminSettings.inStoreEmployeePassword || "").trim();
-  if (!storedPassword) {
+  if (!staffList.length && !storedPassword) {
     return res.status(400).json({ error: "password_not_configured" });
   }
-  if (!passwordsMatch(storedPassword, body.employeePassword)) {
+  const staff = resolveInStoreStaff(adminSettings, body.staffCode || body.employeePassword);
+  if (!staff) {
     return res.status(401).json({ error: "invalid_password" });
   }
 
@@ -2196,14 +2217,17 @@ async function handleInStoreOrder(req, res) {
     return res.status(400).json({ error: "empty_order" });
   }
 
+  const ownController = body.customerOwnController === true || body.source === "in_store_own_controller";
   const items = amounts.items.map((item) => ({
     ...item,
     quantity: toFiniteNumber(item && item.quantity, 1) || 1,
-    customerOwnController: true,
-    skipBaseController: true
+    customerOwnController: ownController || item.customerOwnController === true,
+    skipBaseController: ownController || item.skipBaseController === true
   }));
   const subtotal = roundMoney(items.reduce((sum, item) => sum + getOrderLineTotal(item), 0));
-  const computedTotal = subtotal;
+  const shippingCost = roundMoney(Number.isFinite(Number(body.shippingCost)) ? Number(body.shippingCost) : amounts.shippingCost);
+  const discountAmount = roundMoney(Number(body.discountAmount) || 0);
+  const computedTotal = roundMoney(Math.max(0, subtotal + shippingCost - discountAmount));
   const clientTotal = roundMoney(Number(body.total));
   if (Number.isFinite(clientTotal) && Math.abs(computedTotal - clientTotal) > 0.02) {
     return res.status(400).json({
@@ -2214,41 +2238,51 @@ async function handleInStoreOrder(req, res) {
   }
 
   const orderNumber = await allocateCounterValue("orders", 500000);
+  const shippingMethod = body.shippingMethod || (ownController ? "store_pickup" : "delivery");
   const orderDoc = {
     customer: {
       firstName: body.firstName || "Walk-in",
-      lastName: body.lastName || "Own controller",
+      lastName: body.lastName || (ownController ? "Own controller" : "Local"),
       first_name: body.firstName || "Walk-in",
-      last_name: body.lastName || "Own controller",
+      last_name: body.lastName || (ownController ? "Own controller" : "Local"),
       email: body.email || "",
       phone: body.phoneFull || body.phone || ""
     },
     shipping: {
-      method: "store_pickup",
+      method: shippingMethod,
       country: "BH",
       city: body.city || "Manama",
       state: "",
-      addressLine: "Customer own controller",
-      address: "Customer own controller",
-      cost: 0
+      addressLine: body.addressLine1 || body.address || (ownController ? "Customer own controller" : ""),
+      address: body.address || body.addressLine1 || (ownController ? "Customer own controller" : ""),
+      blockNumber: body.blockNumber || "",
+      roadNumber: body.roadNumber || "",
+      houseBuildingNumber: body.houseBuildingNumber || "",
+      flat: body.flat || "",
+      cost: shippingCost
     },
     items,
     orderNumber,
     subtotal,
-    discountCode: "",
-    discountAmount: 0,
+    discountCode: body.discountCode || "",
+    discountAmount,
     total: computedTotal,
     currency: body.currency || "BHD",
     status: "Paid",
     urgency: "Normal",
     paymentStatus: "Paid",
-    paymentReference: "",
-    paymentDetails: {},
+    paymentReference: staff.name,
+    paymentDetails: {
+      staffId: staff.id,
+      staffName: staff.name
+    },
     paymentMethod: "in_store",
     payment_method: "in_store",
-    source: "in_store_own_controller",
-    customerOwnController: true,
-    skipBaseController: true,
+    source: body.source || (ownController ? "in_store_own_controller" : "in_store_local"),
+    staffId: staff.id,
+    staffName: staff.name,
+    customerOwnController: ownController,
+    skipBaseController: ownController,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   };
@@ -2288,7 +2322,9 @@ async function handleInStoreOrder(req, res) {
     orderNumber,
     inventorySyncStatus,
     total: orderDoc.total,
-    status: "Paid"
+    status: "Paid",
+    staffId: staff.id,
+    staffName: staff.name
   });
 }
 

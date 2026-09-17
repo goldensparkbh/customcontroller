@@ -5,6 +5,7 @@ import { i18n } from '../i18n.js';
 import ShopPrice from '../components/ShopPrice.jsx';
 import { addShopDesignToCart } from '../utils/shopCart.js';
 import { fetchArtistProduct } from '../services/backendApi.js';
+import { isArtistSold } from '../lib/artistProducts.js';
 import LoadingState from '../components/LoadingState.jsx';
 
 function CartIcon() {
@@ -19,25 +20,26 @@ function CartIcon() {
 }
 
 function BadgeIcon({ type }) {
+  const props = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   if (type === 'quality') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 3 5 6.5v5.2c0 4.2 2.8 7.9 7 9.3 4.2-1.4 7-5.1 7-9.3V6.5L12 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <svg {...props} aria-hidden="true">
+        <path d="M12 3 5 6.5v5.2c0 4.2 2.8 7.9 7 9.3 4.2-1.4 7-5.1 7-9.3V6.5L12 3Z" />
       </svg>
     );
   }
   if (type === 'paint') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M4 20c2-1 3-3 3-5 0-2 2-4 5-4 4 0 7 3 7 7 0 1-.2 2-.6 3H4Z" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M14 4c1.2 1.4 2 3.2 2 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <svg {...props} aria-hidden="true">
+        <path d="M4 20c2-1 3-3 3-5 0-2 2-4 5-4 4 0 7 3 7 7 0 1-.2 2-.6 3H4Z" />
+        <path d="M14 4c1.2 1.4 2 3.2 2 5" />
       </svg>
     );
   }
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M12 5v2.2M12 16.8V19M5 12h2.2M16.8 12H19M7.2 7.2l1.6 1.6M15.2 15.2l1.6 1.6M16.8 7.2l-1.6 1.6M8.8 15.2l-1.6 1.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg {...props} aria-hidden="true">
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 5v2.2M12 16.8V19M5 12h2.2M16.8 12H19M7.2 7.2l1.6 1.6M15.2 15.2l1.6 1.6M16.8 7.2l-1.6 1.6M8.8 15.2l-1.6 1.6" />
     </svg>
   );
 }
@@ -94,6 +96,7 @@ function ArtistDetailPage() {
 
   if (!design) return <Navigate to="/artists" replace />;
 
+  const sold = isArtistSold(design);
   const gallery = design.gallery?.length ? design.gallery : [design.image];
   const mainImage = gallery[activeShot] || design.image;
   const upgradeTotal = SHOP_UPGRADES
@@ -112,14 +115,14 @@ function ArtistDetailPage() {
   };
 
   const addToCart = () => {
-    if (design.quantity != null && Number(design.quantity) <= 0) return;
+    if (sold) return;
     const upgrades = SHOP_UPGRADES.filter((item) => selectedUpgrades.includes(item.id));
     addShopDesignToCart(design, { upgrades, image: mainImage, lang });
     navigate('/cart');
   };
 
   return (
-    <div className="shop-page shop-detail-page">
+    <div className={`shop-page shop-detail-page${sold ? ' is-sold' : ''}`}>
       <nav className="shop-crumbs" aria-label="Breadcrumb">
         <Link to="/">{t('navHome')}</Link>
         <span>/</span>
@@ -133,6 +136,7 @@ function ArtistDetailPage() {
       <div className="shop-detail">
         <div className="shop-gallery">
           <div className="shop-gallery-main">
+            {sold ? <span className="shop-sold-badge">{t('shopSold')}</span> : null}
             <img src={mainImage} alt={isAr ? design.nameAr : design.nameEn} />
           </div>
           <div className="shop-thumbs">
@@ -160,7 +164,6 @@ function ArtistDetailPage() {
           <p className="shop-card-cat">{isAr ? design.categoryAr : design.categoryEn}</p>
           <h1>{isAr ? design.nameAr : design.nameEn}</h1>
           <p className="shop-artist">{t('shopArtBy')} {isAr ? design.artistAr : design.artistEn}</p>
-          <p className="shop-info-copy">{isAr ? design.bioAr : design.bioEn}</p>
           <p className="shop-info-copy">{isAr ? design.storyAr : design.storyEn}</p>
           <ShopPrice amountBhd={total} className="shop-detail-price" />
 
@@ -188,7 +191,7 @@ function ArtistDetailPage() {
             type="button"
             className="shop-add-btn"
             onClick={addToCart}
-            disabled={design.quantity != null && Number(design.quantity) <= 0}
+            disabled={sold}
           >
             <CartIcon />
             {t('addToCart')}

@@ -41,6 +41,10 @@ export function categoryLabels(categoryId, categories = DEFAULT_ARTIST_CATEGORIE
   };
 }
 
+export function isArtistSold(design) {
+  return design != null && design.quantity != null && Number(design.quantity) <= 0;
+}
+
 export function mapArtistProductRecord(id, raw = {}) {
   const images = Array.isArray(raw.images) && raw.images.length
     ? raw.images.filter(Boolean)
@@ -48,7 +52,7 @@ export function mapArtistProductRecord(id, raw = {}) {
   const category = raw.category && raw.category !== 'all' ? raw.category : '';
   const labels = categoryLabels(category);
   const price = Number(raw.sellPrice != null ? raw.sellPrice : raw.price) || 0;
-  const quantity = Number(raw.quantity) || 0;
+  const quantity = raw.quantity == null || raw.quantity === '' ? null : Number(raw.quantity);
 
   return {
     id,

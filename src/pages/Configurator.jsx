@@ -161,7 +161,7 @@ const ConfiguratorPage = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const ownControllerMode = location.pathname.startsWith('/configurator/own-controller');
-  const zeroBasePriceMode = location.pathname === '/local';
+  const localNewControllerMode = location.pathname === '/local';
 
   useEffect(() => {
     bootstrapGeoPreferences({ force: true }).catch(() => {});
@@ -179,7 +179,8 @@ const ConfiguratorPage = () => {
         baseControllerQty: null,
         baseControllerLowStockThreshold: 5,
         ownControllerMode,
-        zeroBasePriceMode
+        localNewControllerMode,
+        zeroBasePriceMode: false
       };
       window.__CONFIG_FIREBASE_DATA__ = window.__CONFIG_FIREBASE_DATA__ || [];
 
@@ -203,7 +204,7 @@ const ConfiguratorPage = () => {
         }));
 
         const catalogBasePrice = Number(catalog.basePrice) || 0;
-        const basePrice = (ownControllerMode || zeroBasePriceMode) ? 0 : catalogBasePrice;
+        const basePrice = ownControllerMode ? 0 : catalogBasePrice;
         const baseQuantity = ownControllerMode
           ? null
           : (catalog.baseQuantity != null ? Number(catalog.baseQuantity) : null);
@@ -219,7 +220,8 @@ const ConfiguratorPage = () => {
           baseControllerQty: baseQuantity,
           baseControllerLowStockThreshold: lowStockThreshold,
           ownControllerMode,
-          zeroBasePriceMode
+          localNewControllerMode,
+          zeroBasePriceMode: false
         };
       } catch (err) {
         console.error("Configurator catalog fetch error:", err);
@@ -230,12 +232,13 @@ const ConfiguratorPage = () => {
     };
 
     loadFirebaseData();
-  }, [ownControllerMode, zeroBasePriceMode]);
+  }, [ownControllerMode, localNewControllerMode]);
 
   useEffect(() => {
     if (loading) return;
     document.body.classList.add('configurator-page-active');
     document.body.classList.toggle('own-controller-page', ownControllerMode);
+    document.body.classList.toggle('local-controller-page', localNewControllerMode);
     const introFrame = window.requestAnimationFrame(() => {
       document.body.classList.add('configurator-intro-active');
     });
@@ -263,6 +266,7 @@ const ConfiguratorPage = () => {
       document.body.classList.remove('configurator-page-active');
       document.body.classList.remove('configurator-intro-active');
       document.body.classList.remove('own-controller-page');
+      document.body.classList.remove('local-controller-page');
       window.cancelAnimationFrame(introFrame);
       window.clearTimeout(introTimeout);
       const script = document.getElementById('ez-configurator-logic-script');
@@ -270,7 +274,7 @@ const ConfiguratorPage = () => {
         document.body.removeChild(script);
       }
     };
-  }, [loading, ownControllerMode, zeroBasePriceMode]);
+  }, [loading, ownControllerMode, localNewControllerMode]);
 
   if (loading) {
     const currentLang = localStorage.getItem('ez_lang') || 'ar';

@@ -72,7 +72,9 @@ const getCustomerName = (order) => {
 const getPaymentMethod = (order) => order?.payment_method || order?.paymentMethod || 'tap';
 const getPaymentStatus = (order) => order?.paymentStatus || 'Pending';
 const getPaymentReference = (order) =>
+    order?.staffName ||
     order?.paymentReference ||
+    order?.paymentDetails?.staffName ||
     order?.paymentDetails?.reference?.payment ||
     order?.paymentDetails?.reference?.transaction ||
     order?.paymentDetails?.id ||
@@ -1217,6 +1219,7 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                         <div>{getPaymentMethod(order)}</div>
                                         <div style={{ fontSize: '0.76rem', color: 'var(--admin-muted)', marginTop: '0.2rem' }}>
                                             {getPaymentStatus(order)}
+                                            {order.staffName ? ` · ${order.staffName}` : ''}
                                         </div>
                                     </div>
 
@@ -1465,6 +1468,8 @@ const AdminOrders = ({ lang = 'ar' }) => {
                                             <DetailField isAr={isAr} label={isAr ? "حالة الدفع" : "Payment Status"} value={getPaymentStatus(selectedOrder)} />
                                             <div style={{ height: '0.75rem' }} />
                                             <DetailField isAr={isAr} label={isAr ? "المرجع" : "Reference"} value={getPaymentReference(selectedOrder)} />
+                                            <div style={{ height: '0.75rem' }} />
+                                            <DetailField isAr={isAr} label={isAr ? "الموظف" : "Staff"} value={selectedOrder.staffName || selectedOrder.paymentDetails?.staffName} />
                                         </>
                                     )}
                                 </div>

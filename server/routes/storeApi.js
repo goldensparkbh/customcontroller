@@ -124,7 +124,7 @@ module.exports = function createStoreApi(pool) {
       id,
       category: data.category || "premium",
       price,
-      quantity: Number(data.quantity) || 0,
+      quantity: data.quantity == null || data.quantity === "" ? null : Number(data.quantity),
       image: images[0] || "",
       gallery: images,
       nameEn: data.nameEn || data.name || "",

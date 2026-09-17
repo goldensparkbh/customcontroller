@@ -56,7 +56,9 @@ export function getPaymentStatus(order) {
 
 export function getPaymentReference(order) {
   return (
+    order?.staffName ||
     order?.paymentReference ||
+    order?.paymentDetails?.staffName ||
     order?.paymentDetails?.reference?.payment ||
     order?.paymentDetails?.reference?.transaction ||
     order?.paymentDetails?.id ||

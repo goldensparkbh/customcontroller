@@ -1,8 +1,7 @@
 export const SHOP_UPGRADES = [
   { id: 'mouse-clicks', price: 8, nameEn: 'Mouse Clicks', nameAr: 'نقرات الماوس' },
   { id: 'xl-battery', price: 7, nameEn: 'XL Battery', nameAr: 'بطارية XL' },
-  { id: 'tmr-analog', price: 19, nameEn: 'TMR Analog', nameAr: 'أنالوج TMR' },
-  { id: 'remap-kit', price: 14, nameEn: 'Remap Kit', nameAr: 'طقم إعادة التعيين' }
+  { id: 'tmr-analog', price: 19, nameEn: 'TMR Analog', nameAr: 'أنالوج TMR' }
 ];
 
 export const SHOP_CATEGORIES = [

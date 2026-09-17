@@ -86,7 +86,7 @@ function getOrCreateAbandonSessionId() {
 const CheckoutPage = () => {
   const formRef = useRef(null);
   const { formatFromBhd, chargeNote } = useCurrency();
-  const { country, phonePrefix: countryPhonePrefix } = useCheckoutCountry();
+  const { country, phonePrefix: countryPhonePrefix, setCountry } = useCheckoutCountry();
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [cartItems, setCartItems] = useState([]);
   const [abandonSessionId] = useState(() => getOrCreateAbandonSessionId());
@@ -102,6 +102,7 @@ const CheckoutPage = () => {
     phonePrefix: '973',
     phone: '',
     email: '',
+    staffCode: '',
     shippingType: 'delivery',
     city: '',
     state: '',
@@ -147,10 +148,11 @@ const CheckoutPage = () => {
   const t = (key) => (i18n[lang] && i18n[lang][key]) ? i18n[lang][key] : key;
 
   // Calculation Logic
+  const isLocalCheckout = cartItems.some((item) => item && item.localCheckout);
   const itemsCount = cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0);
   const subtotal = cartItems.reduce((acc, item) => acc + ((item.unitPrice || item.total || 0) * (item.quantity || 1)), 0);
 
-  const isBahrain = country === 'BH';
+  const isBahrain = isLocalCheckout || country === 'BH';
   const isSaudi = country === 'SA';
   const requiresAddress = isBahrain ? formData.shippingType === 'delivery' : true;
 
@@ -178,6 +180,12 @@ const CheckoutPage = () => {
     setAppliedDiscount(null);
     setDiscountMessage('');
   }, [cartFingerprint, formData.shippingType, country]);
+  useEffect(() => {
+    if (!isLocalCheckout) return;
+    setCountry('BH');
+    setFormData((prev) => ({ ...prev, phonePrefix: '973' }));
+  }, [isLocalCheckout, setCountry]);
+
   const shippingOptions = useMemo(() => {
     const deliveryFee = formatFromBhd(2);
     const intlPerPair = formatFromBhd(5);
@@ -185,10 +193,7 @@ const CheckoutPage = () => {
       return [
         {
           value: 'delivery',
-          label:
-            lang === 'ar'
-              ? `توصيل - خلال 6-7 أيام عمل (${deliveryFee})`
-              : `Delivery - 6-7 business days (${deliveryFee})`
+          label: `${t('shippingBahrainDelivery')} (${deliveryFee})`
         },
         {
           value: 'pickup',
@@ -218,7 +223,7 @@ const CheckoutPage = () => {
   const buildOrderData = () => {
     const composedAddress = [
       isSaudi && formData.saudiUnifiedAddress ? `Unified Address ${formData.saudiUnifiedAddress}` : '',
-      formData.address,
+      isLocalCheckout ? '' : formData.address,
       formData.blockNumber ? `Block ${formData.blockNumber}` : '',
       formData.roadNumber ? `Road ${formData.roadNumber}` : '',
       formData.houseBuildingNumber ? `House/Building ${formData.houseBuildingNumber}` : '',
@@ -288,7 +293,9 @@ const CheckoutPage = () => {
       addressLine1: composedAddress,
       abandonSessionId,
       discountCode: appliedDiscount?.code || '',
-      discountAmount: discountAmount || 0
+      discountAmount: discountAmount || 0,
+      localCheckout: isLocalCheckout,
+      staffCode: formData.staffCode
     };
 
     if (!requiresAddress) {
@@ -347,8 +354,13 @@ const CheckoutPage = () => {
     if (cartItems.length === 0) return alert(t('alertNoItems') || 'Cart is empty');
 
     const tapPk = getTapPublicKey();
-    if (!tapPk) {
+    if (!isLocalCheckout && !tapPk) {
       alert(t('tapPublicKeyMissing'));
+      return;
+    }
+
+    if (isLocalCheckout && !String(formData.staffCode || '').trim()) {
+      alert(t('staffCodeRequired'));
       return;
     }
 
@@ -358,6 +370,40 @@ const CheckoutPage = () => {
       const orderData = buildOrderData();
       localStorage.removeItem('ezOrderResult');
       localStorage.setItem('ezOrderDraft', JSON.stringify(orderData));
+
+      if (isLocalCheckout) {
+        const response = await fetch('/api/inStoreOrder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...orderData,
+            staffCode: formData.staffCode,
+            employeePassword: formData.staffCode,
+            source: 'in_store_local',
+            customerOwnController: false
+          })
+        });
+        const result = await parseJsonSafe(response);
+        if (!response.ok || !result?.success) {
+          const errCode = result && result.error;
+          const message =
+            errCode === 'invalid_password' ? (t('employeePasswordInvalid') || t('staffCodeRequired')) :
+            errCode === 'password_not_configured' ? (t('employeePasswordMissing')) :
+            (result?.error || result?.message || t('orderFailed') || 'Order failed');
+          throw new Error(message);
+        }
+        localStorage.setItem('ezOrderResult', JSON.stringify({
+          success: true,
+          orderId: result.orderId,
+          orderNumber: result.orderNumber,
+          total: result.total,
+          staffName: result.staffName
+        }));
+        localStorage.removeItem('ezCart');
+        localStorage.removeItem('ezOrderDraft');
+        window.location.href = '/order-success';
+        return;
+      }
 
       if (!(Number(orderData.total) > 0)) {
         throw new Error('Invalid order total');
@@ -404,10 +450,12 @@ const CheckoutPage = () => {
         {/* Left: Form */}
         <div className="checkout-form-panel" style={{ flex: '2 1 600px', background: '#1c1f28', padding: '2rem', borderRadius: '8px' }}>
           <form className="checkout-form-stack" ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {!isLocalCheckout && (
             <div>
               <label>{t('countryLabel') || 'Country *'}</label>
               <CheckoutCountrySelect variant="form" />
             </div>
+            )}
 
             {isBahrain && (
               <div className="checkout-shipping-box" style={{ background: '#222', padding: '1rem', borderRadius: '4px' }}>
@@ -449,6 +497,9 @@ const CheckoutPage = () => {
             <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem' }}>
               <div className="checkout-phone-code" style={{ flex: '0 0 120px' }}>
                 <label>{t('phonePrefixLabel') || 'Code'} *</label>
+                {isLocalCheckout ? (
+                  <input name="phonePrefix" value="973" readOnly style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
+                ) : (
                 <select name="phonePrefix" value={formData.phonePrefix} onChange={handleChange} style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}>
                   <option value="973">+973 (BH)</option>
                   <option value="966">+966 (SA)</option>
@@ -459,6 +510,7 @@ const CheckoutPage = () => {
                   <option value="20">+20 (EG)</option>
                   <option value="962">+962 (JO)</option>
                 </select>
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <label>{t('phoneLabel') || 'Phone'} *</label>
@@ -467,8 +519,8 @@ const CheckoutPage = () => {
             </div>
 
             <div>
-              <label>{t('emailLabel') || 'Email *'}</label>
-              <input name="email" value={formData.email} onChange={handleChange} type="email" required autoComplete="email" style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
+              <label>{t('emailOptionalLabel') || t('emailLabel') || 'Email'}{isLocalCheckout ? '' : ' *'}</label>
+              <input name="email" value={formData.email} onChange={handleChange} type="email" required={!isLocalCheckout} autoComplete="email" style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
             </div>
 
             {requiresAddress && (
@@ -485,16 +537,20 @@ const CheckoutPage = () => {
                     <label>{t('cityLabel') || 'City'} *</label>
                     <input name="city" value={formData.city} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
                   </div>
+                  {!isLocalCheckout && (
                   <div style={{ flex: 1, minWidth: '220px' }}>
                     <label>{t('stateLabel') || 'State'} *</label>
                     <input name="state" value={formData.state} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
                   </div>
+                  )}
                 </div>
 
+                {!isLocalCheckout && (
                 <div>
                   <label>{t('addressLabel') || 'Address'} *</label>
                   <input name="address" value={formData.address} onChange={handleChange} required style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }} />
                 </div>
+                )}
 
                 <div className="checkout-row checkout-row-split" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: '220px' }}>
@@ -520,6 +576,21 @@ const CheckoutPage = () => {
               </div>
             )}
 
+            {isLocalCheckout && (
+              <div>
+                <label>{t('staffCodeLabel')} *</label>
+                <input
+                  name="staffCode"
+                  value={formData.staffCode}
+                  onChange={handleChange}
+                  type="password"
+                  required
+                  autoComplete="off"
+                  style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+                />
+              </div>
+            )}
+
             <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
               <input type="checkbox" name="agree" checked={formData.agree} onChange={handleChange} required id="agreeCb" style={{ marginTop: '0.2rem' }} />
               <label htmlFor="agreeCb" style={{ fontSize: '0.9rem', color: '#ccc' }}>
@@ -530,7 +601,7 @@ const CheckoutPage = () => {
             <button type="submit" className="primary-action-btn" disabled={isLoading} style={{ padding: '1rem', fontWeight: 'bold', fontSize: '1.2rem', border: 'none', borderRadius: '8px', cursor: isLoading ? 'not-allowed' : 'pointer', marginTop: '1rem' }}>
               {loadingAction === 'payment'
                 ? <LoadingInline label={t('paymentProcessing') || 'Processing...'} />
-                : (t('placeOrderBtn') || 'Place Order')}
+                : (isLocalCheckout ? (t('payInStoreBtn') || 'Pay in shop') : (t('placeOrderBtn') || 'Place Order'))}
             </button>
           </form>
         </div>

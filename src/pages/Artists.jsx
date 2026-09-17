@@ -5,7 +5,7 @@ import { i18n } from '../i18n.js';
 import ShopPrice from '../components/ShopPrice.jsx';
 import { addShopDesignToCart } from '../utils/shopCart.js';
 import { fetchArtistCatalog, fetchArtistCategories } from '../services/backendApi.js';
-import { withAllCategory } from '../lib/artistProducts.js';
+import { withAllCategory, isArtistSold } from '../lib/artistProducts.js';
 import LoadingState from '../components/LoadingState.jsx';
 
 function CartIcon() {
@@ -188,10 +188,12 @@ function ArtistsPage() {
           {designs.length === 0 && (
             <p className="shop-empty">{t('shopEmptyCategory')}</p>
           )}
-          {designs.map((design) => (
+          {designs.map((design) => {
+            const sold = isArtistSold(design);
+            return (
             <article
               key={design.id}
-              className="shop-card"
+              className={`shop-card${sold ? ' is-sold' : ''}`}
               onClick={() => navigate(`/artists/${design.id}`)}
               role="link"
               tabIndex={0}
@@ -203,6 +205,7 @@ function ArtistsPage() {
               }}
             >
               <div className="shop-card-media">
+                {sold ? <span className="shop-sold-badge">{t('shopSold')}</span> : null}
                 <img src={design.image} alt={isAr ? design.nameAr : design.nameEn} />
               </div>
               <div className="shop-card-body">
@@ -216,14 +219,15 @@ function ArtistsPage() {
                   type="button"
                   className="shop-card-cart"
                   aria-label={t('addToCart')}
-                  disabled={design.quantity != null && Number(design.quantity) <= 0}
+                  disabled={sold}
                   onClick={(event) => addDesign(event, design)}
                 >
                   <CartIcon />
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </section>
     </div>

@@ -80,6 +80,7 @@ const defaultSettings = {
   maintenanceMessageAr: '',
   maintenanceMessageEn: '',
   inStoreEmployeePassword: '',
+  inStoreStaff: [],
   baseControllerLowStockThreshold: 5
 };
 
@@ -199,7 +200,14 @@ const AdminSettings = ({ lang = 'ar' }) => {
             smtpPort: normalizeSmtpPort(data.smtpPort),
             smtpSecure: normalizeSmtpPort(data.smtpPort) === NAMECHEAP_SMTP_PORT_SSL,
             smtpPass: '',
-            inStoreEmployeePassword: ''
+            inStoreEmployeePassword: '',
+            inStoreStaff: Array.isArray(data.inStoreStaff)
+              ? data.inStoreStaff.map((row, index) => ({
+                  id: row.id || `staff_${index}`,
+                  name: row.name || '',
+                  code: row.code || ''
+                }))
+              : []
           });
         }
       } catch (error) {
@@ -254,6 +262,13 @@ const AdminSettings = ({ lang = 'ar' }) => {
       if (!String(formData.inStoreEmployeePassword || '').trim()) {
         delete nextPayload.inStoreEmployeePassword;
       }
+      nextPayload.inStoreStaff = (formData.inStoreStaff || [])
+        .map((row, index) => ({
+          id: String(row.id || `staff_${index}`),
+          name: String(row.name || '').trim(),
+          code: String(row.code || '').trim()
+        }))
+        .filter((row) => row.name && row.code);
 
       await adminPatchDoc('admin_settings/general', nextPayload);
       setHasStoredSmtpPass(hasStoredSmtpPass || Boolean(String(formData.smtpPass || '').trim()));
@@ -407,6 +422,70 @@ const AdminSettings = ({ lang = 'ar' }) => {
                 style={fieldStyle}
               />
             </label>
+          </div>
+
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <div style={{ fontWeight: 700, textAlign: adminAlign(isAr) }}>
+              {isAr ? 'رموز تأكيد الموظفين' : 'Staff confirmation codes'}
+            </div>
+            <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '0.9rem', textAlign: adminAlign(isAr) }}>
+              {isAr
+                ? 'كل موظف له رمز يظهر اسمه في الطلب عند الدفع في المتجر.'
+                : 'Each staff member has a code. Their name is stored on in-shop orders.'}
+            </p>
+            {(formData.inStoreStaff || []).map((member, index) => (
+              <div key={member.id || index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.65rem', alignItems: 'end' }}>
+                <label style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
+                  <span>{isAr ? 'الاسم' : 'Name'}</span>
+                  <input
+                    value={member.name}
+                    onChange={(e) => {
+                      const next = [...formData.inStoreStaff];
+                      next[index] = { ...next[index], name: e.target.value };
+                      setFormData((current) => ({ ...current, inStoreStaff: next }));
+                    }}
+                    style={fieldStyle}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: '0.35rem', textAlign: adminAlign(isAr) }}>
+                  <span>{isAr ? 'الرمز' : 'Code'}</span>
+                  <input
+                    value={member.code}
+                    onChange={(e) => {
+                      const next = [...formData.inStoreStaff];
+                      next[index] = { ...next[index], code: e.target.value };
+                      setFormData((current) => ({ ...current, inStoreStaff: next }));
+                    }}
+                    style={fieldStyle}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = formData.inStoreStaff.filter((_, i) => i !== index);
+                    setFormData((current) => ({ ...current, inStoreStaff: next }));
+                  }}
+                  style={{ ...fieldStyle, width: 'auto', cursor: 'pointer' }}
+                >
+                  {isAr ? 'حذف' : 'Remove'}
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setFormData((current) => ({
+                  ...current,
+                  inStoreStaff: [
+                    ...(current.inStoreStaff || []),
+                    { id: `staff_${Date.now()}`, name: '', code: '' }
+                  ]
+                }));
+              }}
+              style={{ ...fieldStyle, width: 'fit-content', cursor: 'pointer' }}
+            >
+              {isAr ? 'إضافة موظف' : 'Add staff'}
+            </button>
           </div>
 
           <div style={grid2}>

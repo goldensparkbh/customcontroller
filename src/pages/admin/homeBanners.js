@@ -19,23 +19,28 @@ export {
  * @returns {Promise<{ ar: import('../../lib/homeBanners.js').HomeBanner[], en: import('../../lib/homeBanners.js').HomeBanner[] }>}
  */
 export async function loadHomeBanners() {
-  const snap = await adminGetDoc(HOME_BANNERS_PATH);
-  const data = snap && snap.data && typeof snap.data === 'object' ? snap.data : null;
+  let snap = null;
+  try {
+    snap = await adminGetDoc(HOME_BANNERS_PATH);
+  } catch {
+    snap = null;
+  }
 
-  if (!data) {
+  const data = snap && typeof snap === 'object' ? snap : {};
+  const nested = data.data && typeof data.data === 'object' ? data.data : data;
+  const hasSavedLists = Array.isArray(nested.ar) || Array.isArray(nested.en);
+
+  if (!hasSavedLists) {
     return {
       ar: getDefaultHomeBanners('ar'),
       en: getDefaultHomeBanners('en'),
     };
   }
 
-  const ar = normalizeBannerList(data.ar, 'ar');
-  const en = normalizeBannerList(data.en, 'en');
+  const ar = normalizeBannerList(nested.ar, 'ar');
+  const en = normalizeBannerList(nested.en, 'en');
 
-  return {
-    ar: ar.length ? ar : getDefaultHomeBanners('ar'),
-    en: en.length ? en : getDefaultHomeBanners('en'),
-  };
+  return { ar, en };
 }
 
 /**
