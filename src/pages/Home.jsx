@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { i18n } from '../i18n.js';
-import { useCurrency } from '../context/CurrencyContext.jsx';
 import { fetchHomeBanners } from '../services/backendApi.js';
 import { getBannerDurationMs, getDefaultHomeBanners } from '../lib/homeBanners.js';
 
@@ -55,7 +54,6 @@ function FeatureIcon({ type }) {
 
 function HomePage() {
   const navigate = useNavigate();
-  const { formatFromBhd } = useCurrency();
   const [lang, setLang] = useState(() => localStorage.getItem('ez_lang') || 'ar');
   const [trackIndex, setTrackIndex] = useState(0);
   const [bannerTransition, setBannerTransition] = useState(true);
@@ -119,16 +117,6 @@ function HomePage() {
       alive = false;
     };
   }, [lang]);
-
-  useEffect(() => {
-    const heroNote = document.querySelector('[data-hero-price-bhd]');
-    if (!heroNote) return;
-    const fromPrice = formatFromBhd(4);
-    heroNote.innerHTML =
-      lang === 'ar'
-        ? `الأسعار تبدأ من <strong>${fromPrice}</strong>. بدون اشتراك — منتجات مخصصة بالكامل.`
-        : `Prices start from <strong>${fromPrice}</strong>. No subscription — just fully custom gear.`;
-  }, [formatFromBhd, lang]);
 
   useEffect(() => {
     if (isBannerPaused || bannerSlides.length <= 1) return undefined;
@@ -414,7 +402,6 @@ function HomePage() {
           <div>
             <h1 className="hero-title" data-i18n-html="heroTitle"></h1>
             <p className="hero-sub" data-i18n="heroSub"></p>
-            <p className="hero-note" data-hero-price-bhd style={{ marginTop: '0.75rem', opacity: 0.9 }} />
             <div className="hero-actions">
               <button className="hero-btn primary" type="button" data-i18n="heroCreateBtn" onClick={goToConfigurator}></button>
             </div>
