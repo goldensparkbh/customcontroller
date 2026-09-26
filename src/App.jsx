@@ -28,7 +28,7 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy.jsx'));
 const TermsConditions = lazy(() => import('./pages/TermsConditions.jsx'));
 const ReturnPolicy = lazy(() => import('./pages/ReturnPolicy.jsx'));
 import { adminMe } from './services/backendApi.js';
-import { gtagPageView } from './analytics.js';
+import { gtagPageView, metaPageView } from './analytics.js';
 
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin.jsx'));
 const AdminPage = lazy(() => import('./pages/Admin.jsx'));
@@ -72,13 +72,13 @@ function App() {
     document.body.classList.remove('theme-dark');
   }, []);
 
-  const gaFirstNavigation = React.useRef(true);
+  const lastTrackedPage = React.useRef(`${location.pathname}${location.search}`);
   React.useEffect(() => {
-    if (gaFirstNavigation.current) {
-      gaFirstNavigation.current = false;
-      return;
-    }
+    const page = `${location.pathname}${location.search}`;
+    if (lastTrackedPage.current === page) return;
+    lastTrackedPage.current = page;
     gtagPageView(location.pathname, location.search);
+    metaPageView();
   }, [location.pathname, location.search]);
 
   return (

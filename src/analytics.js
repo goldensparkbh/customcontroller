@@ -1,6 +1,12 @@
 /** GA4 measurement ID — keep in sync with gtag snippet in index.html */
 export const GA_MEASUREMENT_ID = 'G-WGDL8JNPTZ';
 
+/** Send a PageView for SPA navigations; index.html handles the initial load. */
+export function metaPageView() {
+  if (typeof window === 'undefined' || typeof window.fbq !== 'function') return;
+  window.fbq('track', 'PageView');
+}
+
 /**
  * Send a page_view for SPA navigations (initial load is handled by gtag config in index.html).
  */
